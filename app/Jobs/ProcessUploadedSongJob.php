@@ -10,6 +10,7 @@ use App\Models\Artist;
 use App\Models\Song;
 use App\Services\Library\MetadataExtractorService;
 use App\Services\Library\SmartFolderService;
+use App\Services\Library\TagService;
 use App\Services\Storage\R2StorageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,6 +40,7 @@ class ProcessUploadedSongJob implements ShouldQueue
         R2StorageService $r2Storage,
         MetadataExtractorService $metadataExtractor,
         SmartFolderService $smartFolderService,
+        TagService $tagService,
     ): void {
         // Download file temporarily
         $tempPath = tempnam(sys_get_temp_dir(), 'muzakily_upload_');
@@ -83,7 +85,7 @@ class ProcessUploadedSongJob implements ShouldQueue
             $smartFolder = $smartFolderService->assignFromPath($this->storagePath);
 
             // Create song
-            Song::create([
+            $song = Song::create([
                 'album_id' => $album?->id,
                 'artist_id' => $artist?->id,
                 'smart_folder_id' => $smartFolder?->id,
@@ -106,6 +108,12 @@ class ProcessUploadedSongJob implements ShouldQueue
 
             // Update smart folder song count
             $smartFolder?->updateSongCount();
+
+            // Assign tag based on folder path
+            if (config('muzakily.tags.auto_create_from_folders', true)) {
+                $tag = $tagService->assignFromPath($song);
+                $tag?->updateSongCount();
+            }
 
             // Queue metadata enrichment
             EnrichMetadataJob::dispatch([$this->storagePath]);

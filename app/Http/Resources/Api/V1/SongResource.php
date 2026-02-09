@@ -36,6 +36,7 @@ class SongResource extends JsonResource
         'is_favorite',
         'play_count',
         'smart_folder',
+        'tags',
         'created_at',
     ];
 
@@ -72,6 +73,15 @@ class SongResource extends JsonResource
                     'name' => $this->smartFolder->name,
                     'path' => $this->smartFolder->path_prefix,
                 ]
+            ),
+            'tags' => $this->when(
+                $this->relationLoaded('tags'),
+                fn () => $this->tags->map(fn ($tag): array => [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                    'slug' => $tag->slug,
+                    'color' => $tag->color,
+                ])->all()
             ),
             'created_at' => $this->created_at->toIso8601String(),
         ];

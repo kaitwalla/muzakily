@@ -32,7 +32,7 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'role' => UserRole::User,
+            'role' => UserRole::USER,
             'preferences' => [],
             'remember_token' => Str::random(10),
         ];
@@ -54,7 +54,7 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'role' => UserRole::Admin,
+            'role' => UserRole::ADMIN,
         ]);
     }
 }

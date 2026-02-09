@@ -43,6 +43,7 @@ use Illuminate\Support\Str;
  * @property-read Artist|null $artist
  * @property-read SmartFolder|null $smartFolder
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Genre> $genres
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Tag> $tags
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Playlist> $playlists
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Interaction> $interactions
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Transcode> $transcodes
@@ -188,6 +189,17 @@ class Song extends Model
     public function genres(): BelongsToMany
     {
         return $this->belongsToMany(Genre::class);
+    }
+
+    /**
+     * Get the song's tags.
+     *
+     * @return BelongsToMany<Tag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'song_tag')
+            ->withPivot('auto_assigned', 'created_at');
     }
 
     /**

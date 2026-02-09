@@ -19,6 +19,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tags Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure how tags are created and assigned to songs.
+    |
+    */
+    'tags' => [
+        // Whether to automatically create tags from folder paths during scanning
+        'auto_create_from_folders' => env('MUZAKILY_TAGS_AUTO_CREATE', true),
+
+        // Folders that use second-level categorization (same logic as smart folders)
+        'special_folders' => explode(',', env('MUZAKILY_SPECIAL_FOLDERS', 'Xmas,Holiday,Seasonal')),
+
+        // Default colors for common tags
+        'default_colors' => [
+            'Rock' => '#e74c3c',
+            'Jazz' => '#9b59b6',
+            'Classical' => '#3498db',
+            'Pop' => '#e91e63',
+            'Hip-Hop' => '#ff5722',
+            'Country' => '#795548',
+            'Electronic' => '#00bcd4',
+            'R&B' => '#673ab7',
+            'Xmas' => '#27ae60',
+            'Holiday' => '#27ae60',
+            'Seasonal' => '#8bc34a',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | R2 Storage Configuration
     |--------------------------------------------------------------------------
     |

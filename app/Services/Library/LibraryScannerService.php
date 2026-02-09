@@ -10,6 +10,7 @@ use App\Models\Artist;
 use App\Models\ScanCache;
 use App\Models\SmartFolder;
 use App\Models\Song;
+use App\Services\Library\TagService;
 use App\Services\Storage\R2StorageService;
 use Closure;
 
@@ -19,6 +20,7 @@ class LibraryScannerService
         private R2StorageService $r2Storage,
         private MetadataExtractorService $metadataExtractor,
         private SmartFolderService $smartFolderService,
+        private TagService $tagService,
     ) {}
 
     /**
@@ -70,6 +72,9 @@ class LibraryScannerService
 
         // Update smart folder song counts
         SmartFolder::all()->each->updateSongCount();
+
+        // Update tag song counts
+        \App\Models\Tag::all()->each->updateSongCount();
 
         if ($onProgress) {
             $onProgress($stats);
@@ -155,10 +160,16 @@ class LibraryScannerService
 
             if ($existingSong) {
                 $existingSong->update($songData);
+                $song = $existingSong;
                 $result = 'updated';
             } else {
-                Song::create($songData);
+                $song = Song::create($songData);
                 $result = 'new';
+            }
+
+            // Assign tag based on folder path
+            if (config('muzakily.tags.auto_create_from_folders', true)) {
+                $this->tagService->assignFromPath($song);
             }
 
             // Update cache

@@ -41,7 +41,7 @@ class SongFactory extends Factory
             'artist_name' => $artistName,
             'length' => fake()->randomFloat(2, 60, 600),
             'track' => fake()->optional(0.8)->numberBetween(1, 20),
-            'disc' => fake()->optional(0.3)->numberBetween(1, 3),
+            'disc' => fake()->numberBetween(1, 3),
             'year' => fake()->optional(0.7)->numberBetween(1960, 2024),
             'lyrics' => fake()->optional(0.2)->paragraphs(4, true),
             'storage_path' => sprintf(
@@ -54,9 +54,9 @@ class SongFactory extends Factory
             'file_hash' => fake()->sha256(),
             'file_size' => fake()->numberBetween(1_000_000, 50_000_000),
             'mime_type' => match ($format) {
-                AudioFormat::Mp3 => 'audio/mpeg',
-                AudioFormat::Aac => 'audio/aac',
-                AudioFormat::Flac => 'audio/flac',
+                AudioFormat::MP3 => 'audio/mpeg',
+                AudioFormat::AAC => 'audio/aac',
+                AudioFormat::FLAC => 'audio/flac',
             },
             'audio_format' => $format,
             'r2_etag' => fake()->optional()->sha256(),
@@ -72,7 +72,7 @@ class SongFactory extends Factory
     public function mp3(): static
     {
         return $this->state(fn (array $attributes) => [
-            'audio_format' => AudioFormat::Mp3,
+            'audio_format' => AudioFormat::MP3,
             'mime_type' => 'audio/mpeg',
             'storage_path' => preg_replace('/\.\w+$/', '.mp3', $attributes['storage_path']),
         ]);
@@ -84,7 +84,7 @@ class SongFactory extends Factory
     public function aac(): static
     {
         return $this->state(fn (array $attributes) => [
-            'audio_format' => AudioFormat::Aac,
+            'audio_format' => AudioFormat::AAC,
             'mime_type' => 'audio/aac',
             'storage_path' => preg_replace('/\.\w+$/', '.aac', $attributes['storage_path']),
         ]);
@@ -96,7 +96,7 @@ class SongFactory extends Factory
     public function flac(): static
     {
         return $this->state(fn (array $attributes) => [
-            'audio_format' => AudioFormat::Flac,
+            'audio_format' => AudioFormat::FLAC,
             'mime_type' => 'audio/flac',
             'storage_path' => preg_replace('/\.\w+$/', '.flac', $attributes['storage_path']),
         ]);

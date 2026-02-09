@@ -11,7 +11,9 @@ use App\Http\Controllers\Api\V1\RemoteControlController;
 use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\SmartFolderController;
 use App\Http\Controllers\Api\V1\SongController;
+use App\Http\Controllers\Api\V1\SongTagController;
 use App\Http\Controllers\Api\V1\StreamController;
+use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\Admin\LibraryController;
 use App\Http\Controllers\Api\V1\Admin\MetadataController;
@@ -44,6 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('songs', SongController::class)->only(['index', 'show', 'update']);
     Route::get('songs/{song}/stream', [StreamController::class, 'stream'])->name('songs.stream');
     Route::get('songs/{song}/download', [StreamController::class, 'download'])->name('songs.download');
+    Route::post('songs/{song}/tags', [SongTagController::class, 'store'])->name('songs.tags.store');
+    Route::delete('songs/{song}/tags', [SongTagController::class, 'destroy'])->name('songs.tags.destroy');
 
     // Albums
     Route::apiResource('albums', AlbumController::class)->only(['index', 'show']);
@@ -64,6 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Smart Folders
     Route::get('smart-folders', [SmartFolderController::class, 'index'])->name('smart-folders.index');
     Route::get('smart-folders/{smartFolder}/songs', [SmartFolderController::class, 'songs'])->name('smart-folders.songs');
+
+    // Tags
+    Route::apiResource('tags', TagController::class);
+    Route::get('tags/{tag}/songs', [TagController::class, 'songs'])->name('tags.songs');
 
     // Favorites
     Route::get('favorites', [FavoriteController::class, 'index'])->name('favorites.index');

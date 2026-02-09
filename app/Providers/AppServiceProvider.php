@@ -6,8 +6,10 @@ namespace App\Providers;
 
 use App\Models\Playlist;
 use App\Models\Song;
+use App\Models\Tag;
 use App\Policies\PlaylistPolicy;
 use App\Policies\SongPolicy;
+use App\Policies\TagPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,5 +30,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(Song::class, SongPolicy::class);
         Gate::policy(Playlist::class, PlaylistPolicy::class);
+        Gate::policy(Tag::class, TagPolicy::class);
     }
 }
