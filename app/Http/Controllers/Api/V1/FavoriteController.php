@@ -29,29 +29,44 @@ class FavoriteController extends Controller
 
         $data = [];
 
+        // Fetch favorite IDs by type and use whereIn to avoid PostgreSQL type mismatch
+        // (morph ID is stored as varchar but primary keys can be int/bigint/uuid)
+
         if (!$type || $type === 'song') {
-            $songs = Song::whereHas('favorites', fn ($q) => $q->where('user_id', $user->id))
-                ->with(['artist', 'album', 'smartFolder', 'genres'])
+            $songIds = Favorite::where('user_id', $user->id)
+                ->where('favoritable_type', Song::class)
+                ->pluck('favoritable_id');
+            $songs = Song::whereIn('id', $songIds)
+                ->with(['artist', 'album', 'smartFolder', 'genres', 'tags'])
                 ->get();
             $data['songs'] = SongResource::collection($songs);
         }
 
         if (!$type || $type === 'album') {
-            $albums = Album::whereHas('favorites', fn ($q) => $q->where('user_id', $user->id))
+            $albumIds = Favorite::where('user_id', $user->id)
+                ->where('favoritable_type', Album::class)
+                ->pluck('favoritable_id')
+                ->map(fn ($id) => (int) $id);
+            $albums = Album::whereIn('id', $albumIds)
                 ->with('artist')
                 ->get();
             $data['albums'] = AlbumResource::collection($albums);
         }
 
         if (!$type || $type === 'artist') {
-            $artists = Artist::whereHas('favorites', fn ($q) => $q->where('user_id', $user->id))
-                ->get();
+            $artistIds = Favorite::where('user_id', $user->id)
+                ->where('favoritable_type', Artist::class)
+                ->pluck('favoritable_id')
+                ->map(fn ($id) => (int) $id);
+            $artists = Artist::whereIn('id', $artistIds)->get();
             $data['artists'] = ArtistResource::collection($artists);
         }
 
         if (!$type || $type === 'playlist') {
-            $playlists = Playlist::whereHas('favorites', fn ($q) => $q->where('user_id', $user->id))
-                ->get();
+            $playlistIds = Favorite::where('user_id', $user->id)
+                ->where('favoritable_type', Playlist::class)
+                ->pluck('favoritable_id');
+            $playlists = Playlist::whereIn('id', $playlistIds)->get();
             $data['playlists'] = PlaylistResource::collection($playlists);
         }
 
