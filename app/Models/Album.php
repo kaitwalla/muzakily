@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 
 /**
  * @property int $id
@@ -31,6 +32,7 @@ class Album extends Model
 {
     /** @use HasFactory<\Database\Factories\AlbumFactory> */
     use HasFactory;
+    use Searchable;
 
     /**
      * The attributes that are mass assignable.
@@ -165,5 +167,30 @@ class Album extends Model
             ],
             ['name' => $name]
         );
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'artist_id' => $this->artist_id,
+            'artist_name' => $this->artist?->name,
+            'year' => $this->year,
+            'created_at' => $this->created_at->timestamp,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'albums';
     }
 }

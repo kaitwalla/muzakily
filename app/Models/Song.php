@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 
 /**
  * @property string $id
@@ -53,6 +54,7 @@ class Song extends Model
     /** @use HasFactory<\Database\Factories\SongFactory> */
     use HasFactory;
     use HasUuids;
+    use Searchable;
 
     /**
      * The primary key for the model.
@@ -287,5 +289,37 @@ class Song extends Model
     public static function findByStoragePath(string $path): ?self
     {
         return self::where('storage_path', $path)->first();
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'artist_name' => $this->artist_name,
+            'album_name' => $this->album_name,
+            'artist_id' => $this->artist_id,
+            'album_id' => $this->album_id,
+            'smart_folder_id' => $this->smart_folder_id,
+            'year' => $this->year,
+            'audio_format' => $this->audio_format->value,
+            'lyrics' => $this->lyrics,
+            'tag_ids' => $this->tags->pluck('id')->toArray(),
+            'genre_ids' => $this->genres->pluck('id')->toArray(),
+            'created_at' => $this->created_at->timestamp,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'songs';
     }
 }

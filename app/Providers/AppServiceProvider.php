@@ -12,6 +12,7 @@ use App\Policies\SongPolicy;
 use App\Policies\TagPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Meilisearch\Client;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,7 +21,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(Client::class, function () {
+            /** @var string $host */
+            $host = config('scout.meilisearch.host', 'http://localhost:7700');
+            /** @var string|null $key */
+            $key = config('scout.meilisearch.key');
+
+            return new Client($host, $key);
+        });
     }
 
     /**

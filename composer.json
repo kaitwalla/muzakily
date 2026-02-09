@@ -10,8 +10,10 @@
         "james-heinrich/getid3": "^1.9",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.3",
+        "laravel/scout": "^10.23",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.31",
+        "meilisearch/meilisearch-php": "^1.16",
         "pusher/pusher-php-server": "^7.2",
         "spatie/laravel-data": "^4.19"
     },

@@ -8,14 +8,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AlbumResource;
 use App\Http\Resources\Api\V1\ArtistResource;
 use App\Http\Resources\Api\V1\SongResource;
-use App\Models\Album;
-use App\Models\Artist;
-use App\Models\Song;
+use App\Services\Search\SearchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SearchController extends Controller
 {
+    public function __construct(
+        private SearchService $searchService,
+    ) {}
+
     /**
      * Search songs, albums, and artists.
      */
@@ -25,69 +27,51 @@ class SearchController extends Controller
             'q' => ['required', 'string', 'min:2'],
             'type' => ['nullable', 'string', 'in:song,album,artist'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'filters' => ['nullable', 'array'],
+            'filters.year' => ['nullable', 'integer'],
+            'filters.tag' => ['nullable', 'string'],
+            'filters.genre' => ['nullable', 'string'],
+            'filters.format' => ['nullable', 'string', 'in:MP3,AAC,FLAC,mp3,aac,flac'],
+            'filters.artist_id' => ['nullable', 'string'],
+            'filters.album_id' => ['nullable', 'string'],
         ]);
 
         $query = $request->input('q');
-        $escapedQuery = $this->escapeLike($query);
-        $type = $request->input('type');
-        $limit = (int) $request->input('limit', 10);
+        $options = [
+            'type' => $request->input('type'),
+            'limit' => (int) $request->input('limit', 10),
+            'filters' => $request->input('filters', []),
+        ];
 
+        $results = $this->searchService->search($query, $options);
+
+        // Transform the results using resources
         $data = [];
 
-        // Search songs
-        if (!$type || $type === 'song') {
-            $songs = Song::where(function ($q) use ($escapedQuery) {
-                $q->where('title', 'ilike', "%{$escapedQuery}%")
-                    ->orWhere('artist_name', 'ilike', "%{$escapedQuery}%")
-                    ->orWhere('album_name', 'ilike', "%{$escapedQuery}%");
-            })
-                ->with(['artist', 'album', 'smartFolder', 'genres'])
-                ->limit($limit)
-                ->get();
-
+        if (isset($results['songs'])) {
             $data['songs'] = [
-                'data' => SongResource::collection($songs),
-                'total' => Song::where(function ($q) use ($escapedQuery) {
-                    $q->where('title', 'ilike', "%{$escapedQuery}%")
-                        ->orWhere('artist_name', 'ilike', "%{$escapedQuery}%")
-                        ->orWhere('album_name', 'ilike', "%{$escapedQuery}%");
-                })->count(),
+                'data' => SongResource::collection($results['songs']['data']),
+                'total' => $results['songs']['total'],
             ];
         }
 
-        // Search albums
-        if (!$type || $type === 'album') {
-            $albums = Album::where('name', 'ilike', "%{$escapedQuery}%")
-                ->with('artist')
-                ->limit($limit)
-                ->get();
-
+        if (isset($results['albums'])) {
             $data['albums'] = [
-                'data' => AlbumResource::collection($albums),
-                'total' => Album::where('name', 'ilike', "%{$escapedQuery}%")->count(),
+                'data' => AlbumResource::collection($results['albums']['data']),
+                'total' => $results['albums']['total'],
             ];
         }
 
-        // Search artists
-        if (!$type || $type === 'artist') {
-            $artists = Artist::where('name', 'ilike', "%{$escapedQuery}%")
-                ->limit($limit)
-                ->get();
-
+        if (isset($results['artists'])) {
             $data['artists'] = [
-                'data' => ArtistResource::collection($artists),
-                'total' => Artist::where('name', 'ilike', "%{$escapedQuery}%")->count(),
+                'data' => ArtistResource::collection($results['artists']['data']),
+                'total' => $results['artists']['total'],
             ];
         }
 
-        return response()->json(['data' => $data]);
-    }
-
-    /**
-     * Escape LIKE metacharacters.
-     */
-    private function escapeLike(string $value): string
-    {
-        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+        return response()->json([
+            'data' => $data,
+            'meta' => $results['meta'] ?? [],
+        ]);
     }
 }
