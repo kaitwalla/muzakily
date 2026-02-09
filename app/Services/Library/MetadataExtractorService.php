@@ -1,0 +1,163 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Library;
+
+use getID3;
+
+class MetadataExtractorService
+{
+    private getID3 $getID3;
+
+    public function __construct()
+    {
+        $this->getID3 = new getID3();
+        $this->getID3->option_md5_data = false;
+        $this->getID3->option_md5_data_source = false;
+    }
+
+    /**
+     * Extract metadata from an audio file.
+     *
+     * @return array{
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: string|null,
+     * }
+     */
+    public function extract(string $filePath): array
+    {
+        $info = $this->getID3->analyze($filePath);
+
+        // Get tags from various sources
+        $tags = $this->extractTags($info);
+
+        return [
+            'title' => $tags['title'] ?? null,
+            'artist' => $tags['artist'] ?? null,
+            'album' => $tags['album'] ?? null,
+            'year' => $this->extractYear($tags),
+            'track' => $this->extractTrack($tags),
+            'disc' => $this->extractDisc($tags),
+            'genre' => $tags['genre'] ?? null,
+            'duration' => (float) ($info['playtime_seconds'] ?? 0),
+            'bitrate' => isset($info['audio']['bitrate']) ? (int) $info['audio']['bitrate'] : null,
+            'lyrics' => $tags['unsynchronised_lyric'] ?? $tags['lyrics'] ?? null,
+        ];
+    }
+
+    /**
+     * Extract tags from getID3 info.
+     *
+     * @param array<string, mixed> $info
+     * @return array<string, mixed>
+     */
+    private function extractTags(array $info): array
+    {
+        $tags = [];
+
+        // Priority: ID3v2 > ID3v1 > Vorbis > APE
+        $tagSources = [
+            'tags.id3v2' => $info['tags']['id3v2'] ?? [],
+            'tags.id3v1' => $info['tags']['id3v1'] ?? [],
+            'tags.vorbiscomment' => $info['tags']['vorbiscomment'] ?? [],
+            'tags.ape' => $info['tags']['ape'] ?? [],
+        ];
+
+        $mappings = [
+            'title' => ['title', 'TIT2'],
+            'artist' => ['artist', 'TPE1', 'band'],
+            'album' => ['album', 'TALB'],
+            'year' => ['year', 'date', 'TDRC', 'TYER'],
+            'track' => ['track_number', 'tracknumber', 'TRCK', 'track'],
+            'disc' => ['disc_number', 'discnumber', 'TPOS', 'part_of_set'],
+            'genre' => ['genre', 'TCON'],
+            'unsynchronised_lyric' => ['unsynchronised_lyric', 'USLT', 'lyrics'],
+        ];
+
+        foreach ($mappings as $key => $possibleKeys) {
+            foreach ($tagSources as $source) {
+                foreach ($possibleKeys as $possibleKey) {
+                    if (isset($source[$possibleKey])) {
+                        $value = $source[$possibleKey];
+                        $tags[$key] = is_array($value) ? $value[0] : $value;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return $tags;
+    }
+
+    /**
+     * Extract year as integer.
+     *
+     * @param array<string, mixed> $tags
+     */
+    private function extractYear(array $tags): ?int
+    {
+        $year = $tags['year'] ?? null;
+
+        if ($year === null) {
+            return null;
+        }
+
+        // Handle "2023-01-01" format
+        if (preg_match('/^(\d{4})/', (string) $year, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return is_numeric($year) ? (int) $year : null;
+    }
+
+    /**
+     * Extract track number as integer.
+     *
+     * @param array<string, mixed> $tags
+     */
+    private function extractTrack(array $tags): ?int
+    {
+        $track = $tags['track'] ?? null;
+
+        if ($track === null) {
+            return null;
+        }
+
+        // Handle "5/12" format
+        if (preg_match('/^(\d+)/', (string) $track, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return is_numeric($track) ? (int) $track : null;
+    }
+
+    /**
+     * Extract disc number as integer.
+     *
+     * @param array<string, mixed> $tags
+     */
+    private function extractDisc(array $tags): ?int
+    {
+        $disc = $tags['disc'] ?? null;
+
+        if ($disc === null) {
+            return null;
+        }
+
+        // Handle "1/2" format
+        if (preg_match('/^(\d+)/', (string) $disc, $matches)) {
+            return (int) $matches[1];
+        }
+
+        return is_numeric($disc) ? (int) $disc : null;
+    }
+}

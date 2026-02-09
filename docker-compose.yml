@@ -1,0 +1,63 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: muzakily-app
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - composer_cache:/root/.composer/cache
+      - npm_cache:/root/.npm
+    ports:
+      - "18000:8000"
+      - "15173:5173"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - APP_ENV=local
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=muzakily
+      - DB_USERNAME=muzakily
+      - DB_PASSWORD=secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - muzakily
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: muzakily-postgres
+    environment:
+      POSTGRES_DB: muzakily
+      POSTGRES_USER: muzakily
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5480:5432"
+    networks:
+      - muzakily
+
+  redis:
+    image: redis:7-alpine
+    container_name: muzakily-redis
+    ports:
+      - "6390:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - muzakily
+
+networks:
+  muzakily:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  composer_cache:
+  npm_cache:
