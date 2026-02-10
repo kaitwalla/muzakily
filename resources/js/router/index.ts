@@ -20,6 +20,78 @@ const routes: RouteRecordRaw[] = [
         },
     },
     {
+        path: '/songs',
+        name: 'songs',
+        component: () => import('@/views/SongsView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/albums',
+        name: 'albums',
+        component: () => import('@/views/AlbumsView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/albums/:slug',
+        name: 'album-detail',
+        component: () => import('@/views/AlbumDetailView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/artists',
+        name: 'artists',
+        component: () => import('@/views/ArtistsView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/artists/:slug',
+        name: 'artist-detail',
+        component: () => import('@/views/ArtistDetailView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/playlists',
+        name: 'playlists',
+        component: () => import('@/views/PlaylistsView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/playlists/:slug',
+        name: 'playlist-detail',
+        component: () => import('@/views/PlaylistDetailView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/search',
+        name: 'search',
+        component: () => import('@/views/SearchView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
+        path: '/settings',
+        name: 'settings',
+        component: () => import('@/views/SettingsView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
         component: () => import('@/views/NotFoundView.vue'),

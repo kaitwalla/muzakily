@@ -139,6 +139,33 @@ export const usePlayerStore = defineStore('player', () => {
         });
     }
 
+    function insertAfterCurrent(song: Song): void {
+        const queueItem: QueueItem = {
+            id: generateQueueId(),
+            song,
+        };
+        const insertIndex = currentIndex.value + 1;
+        queue.value.splice(insertIndex, 0, queueItem);
+    }
+
+    function moveQueueItem(fromIndex: number, toIndex: number): void {
+        if (fromIndex === toIndex) return;
+        if (fromIndex < 0 || fromIndex >= queue.value.length) return;
+        if (toIndex < 0 || toIndex >= queue.value.length) return;
+
+        const [removed] = queue.value.splice(fromIndex, 1);
+        queue.value.splice(toIndex, 0, removed);
+
+        // Adjust currentIndex if needed
+        if (fromIndex === currentIndex.value) {
+            currentIndex.value = toIndex;
+        } else if (fromIndex < currentIndex.value && toIndex >= currentIndex.value) {
+            currentIndex.value--;
+        } else if (fromIndex > currentIndex.value && toIndex <= currentIndex.value) {
+            currentIndex.value++;
+        }
+    }
+
     function removeFromQueue(queueItemId: string): void {
         const index = queue.value.findIndex((item) => item.id === queueItemId);
         if (index === -1) return;
@@ -190,6 +217,18 @@ export const usePlayerStore = defineStore('player', () => {
                 isPlaying.value = false;
             });
         }
+    }
+
+    function resume(): void {
+        if (!audioElement) return;
+        audioElement.play().catch(() => {
+            isPlaying.value = false;
+        });
+    }
+
+    function pause(): void {
+        if (!audioElement) return;
+        audioElement.pause();
     }
 
     function next(): void {
@@ -285,6 +324,10 @@ export const usePlayerStore = defineStore('player', () => {
         repeatMode.value = modes[(currentModeIndex + 1) % modes.length];
     }
 
+    function setRepeatMode(mode: RepeatMode): void {
+        repeatMode.value = mode;
+    }
+
     return {
         // State
         queue,
@@ -308,9 +351,13 @@ export const usePlayerStore = defineStore('player', () => {
         play,
         playSong,
         addToQueue,
+        insertAfterCurrent,
+        moveQueueItem,
         removeFromQueue,
         clearQueue,
         togglePlayPause,
+        resume,
+        pause,
         next,
         previous,
         seek,
@@ -318,5 +365,6 @@ export const usePlayerStore = defineStore('player', () => {
         toggleMute,
         toggleShuffle,
         cycleRepeatMode,
+        setRepeatMode,
     };
 });

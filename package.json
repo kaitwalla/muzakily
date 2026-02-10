@@ -5,10 +5,16 @@
     "scripts": {
         "build": "vue-tsc --noEmit && vite build",
         "dev": "vite",
-        "type-check": "vue-tsc --noEmit"
+        "type-check": "vue-tsc --noEmit",
+        "test": "vitest",
+        "test:run": "vitest run",
+        "test:coverage": "vitest run --coverage"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
+        "@vue/test-utils": "^2.4.6",
+        "jsdom": "^26.0.0",
+        "vitest": "^3.1.0",
         "@types/node": "^25.2.2",
         "@vitejs/plugin-vue": "^6.0.4",
         "axios": "^1.11.0",
