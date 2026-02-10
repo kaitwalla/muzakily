@@ -133,4 +133,131 @@ class R2StorageService
             }
         }
     }
+
+    /**
+     * Download partial content of a file using HTTP Range requests.
+     *
+     * This fetches only the header and footer of a file, which is sufficient
+     * for extracting metadata from audio files without downloading the entire file.
+     *
+     * @param string $key The S3 object key
+     * @param int $headerSize Bytes to fetch from the start (default 512KB)
+     * @param int $footerSize Bytes to fetch from the end (default 128KB)
+     * @return array{header: string, footer: string, file_size: int}|null
+     */
+    public function downloadPartial(
+        string $key,
+        int $headerSize = 524288,
+        int $footerSize = 131072
+    ): ?array {
+        try {
+            // Get file size first
+            $headResult = $this->client->headObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+            ]);
+
+            $fileSize = (int) $headResult['ContentLength'];
+
+            // If file is smaller than header + footer, download entire file
+            if ($fileSize <= $headerSize + $footerSize) {
+                $result = $this->client->getObject([
+                    'Bucket' => $this->bucket,
+                    'Key' => $key,
+                ]);
+
+                return [
+                    'header' => (string) $result['Body'],
+                    'footer' => '',
+                    'file_size' => $fileSize,
+                ];
+            }
+
+            // Fetch header (first N bytes)
+            $headerResult = $this->client->getObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+                'Range' => 'bytes=0-' . ($headerSize - 1),
+            ]);
+
+            // Fetch footer (last N bytes)
+            $footerStart = $fileSize - $footerSize;
+            $footerResult = $this->client->getObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+                'Range' => 'bytes=' . $footerStart . '-' . ($fileSize - 1),
+            ]);
+
+            return [
+                'header' => (string) $headerResult['Body'],
+                'footer' => (string) $footerResult['Body'],
+                'file_size' => $fileSize,
+            ];
+        } catch (\Exception $e) {
+            report($e);
+            return null;
+        }
+    }
+
+    /**
+     * Create a temporary file with header and footer content for metadata extraction.
+     *
+     * This creates a file that has the header at the beginning, zeros in the middle,
+     * and the footer at the end, maintaining the correct file size for metadata tools.
+     *
+     * @param string $headerContent Content from the file header
+     * @param string $footerContent Content from the file footer
+     * @param int $fileSize Total size of the original file
+     * @return string|false Path to the temp file, or false on failure
+     */
+    public function createPartialTempFile(
+        string $headerContent,
+        string $footerContent,
+        int $fileSize
+    ): string|false {
+        $tempPath = tempnam(sys_get_temp_dir(), 'muzakily_partial_');
+
+        if ($tempPath === false) {
+            return false;
+        }
+
+        $handle = fopen($tempPath, 'wb');
+
+        if ($handle === false) {
+            @unlink($tempPath);
+            return false;
+        }
+
+        try {
+            // Write header
+            fwrite($handle, $headerContent);
+
+            // Calculate gap size (the part we didn't download)
+            $gapSize = $fileSize - strlen($headerContent) - strlen($footerContent);
+
+            // Guard against negative gap size (header + footer > fileSize)
+            // This can happen with small files or inconsistent data
+            if ($gapSize < 0) {
+                // File is smaller than header + footer combined
+                // Just write header up to fileSize (footer already included in header for small files)
+                ftruncate($handle, $fileSize);
+                return $tempPath;
+            }
+
+            if ($gapSize > 0) {
+                // Seek to the footer position and write zeros to extend the file
+                fseek($handle, strlen($headerContent) + $gapSize);
+            }
+
+            // Write footer
+            fwrite($handle, $footerContent);
+
+            // Ensure file is the correct size
+            ftruncate($handle, $fileSize);
+
+            return $tempPath;
+        } finally {
+            fclose($handle);
+        }
+    }
 }

@@ -13,6 +13,7 @@ use App\Models\Song;
 use App\Services\Library\TagService;
 use App\Services\Storage\R2StorageService;
 use Closure;
+use Illuminate\Support\Facades\DB;
 
 class LibraryScannerService
 {
@@ -26,12 +27,15 @@ class LibraryScannerService
     /**
      * Scan the R2 bucket for music files.
      *
-     * @param Closure(array{total_files: int, scanned_files: int, new_songs: int, updated_songs: int, errors: int}): void|null $onProgress
+     * @param Closure(array{total_files: int, scanned_files: int, new_songs: int, updated_songs: int, errors: int, removed_songs: int}): void|null $onProgress
      */
     public function scan(bool $force = false, ?Closure $onProgress = null): void
     {
         $bucket = config('filesystems.disks.r2.bucket');
         $extensions = config('muzakily.scanning.extensions', ['mp3', 'aac', 'm4a', 'flac']);
+
+        // Record scan start time for orphan detection
+        $scanStartedAt = now();
 
         $stats = [
             'total_files' => 0,
@@ -39,6 +43,7 @@ class LibraryScannerService
             'new_songs' => 0,
             'updated_songs' => 0,
             'errors' => 0,
+            'removed_songs' => 0,
         ];
 
         foreach ($this->r2Storage->listObjects() as $object) {
@@ -70,6 +75,9 @@ class LibraryScannerService
             }
         }
 
+        // Prune orphaned entries (files that no longer exist in R2)
+        $stats['removed_songs'] = $this->pruneOrphans($bucket, $scanStartedAt);
+
         // Update smart folder song counts
         SmartFolder::all()->each->updateSongCount();
 
@@ -79,6 +87,41 @@ class LibraryScannerService
         if ($onProgress) {
             $onProgress($stats);
         }
+    }
+
+    /**
+     * Remove database entries for files that no longer exist in R2.
+     *
+     * Files that weren't seen during the scan (last_scanned_at < scan start time)
+     * are considered deleted from R2 and their database entries are removed.
+     *
+     * @return int Number of songs removed
+     */
+    public function pruneOrphans(string $bucket, \DateTimeInterface $scanStartedAt): int
+    {
+        $removedCount = 0;
+
+        // Find stale cache entries (not scanned during this run)
+        $staleEntries = ScanCache::stale($bucket, $scanStartedAt)->get();
+
+        foreach ($staleEntries as $entry) {
+            DB::transaction(function () use ($entry, &$removedCount) {
+                // Delete associated song if exists
+                $song = Song::findByStoragePath($entry->object_key);
+                if ($song) {
+                    // Detach from tags
+                    $song->tags()->detach();
+                    // Delete the song
+                    $song->delete();
+                    $removedCount++;
+                }
+
+                // Delete the cache entry
+                $entry->delete();
+            });
+        }
+
+        return $removedCount;
     }
 
     /**
@@ -99,26 +142,27 @@ class LibraryScannerService
         // Check if song already exists
         $existingSong = Song::findByStoragePath($object['key']);
 
-        // Download file temporarily for metadata extraction
-        $tempPath = tempnam(sys_get_temp_dir(), 'muzakily_scan_');
+        // Try partial download first for efficiency
+        $metadata = $this->extractMetadataWithPartialDownload($object);
 
-        if ($tempPath === false) {
-            throw new \RuntimeException('Failed to create temporary file for metadata extraction');
+        // Fall back to full download if partial extraction failed or has no duration
+        if ($metadata === null || ($metadata['duration'] <= 0)) {
+            $metadata = $this->extractMetadataWithFullDownload($object['key']);
         }
 
-        try {
-            $this->r2Storage->download($object['key'], $tempPath);
+        if ($metadata === null) {
+            return null;
+        }
 
-            // Extract metadata
-            $metadata = $this->metadataExtractor->extract($tempPath);
+        // Determine audio format
+        $format = AudioFormat::fromExtension(pathinfo($object['key'], PATHINFO_EXTENSION));
 
-            // Determine audio format
-            $format = AudioFormat::fromExtension(pathinfo($object['key'], PATHINFO_EXTENSION));
+        if (!$format) {
+            return null;
+        }
 
-            if (!$format) {
-                return null;
-            }
-
+        // Wrap all database operations in a transaction to prevent partial state
+        return DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache) {
             // Find or create artist
             $artist = null;
             if ($metadata['artist'] ?? null) {
@@ -176,6 +220,87 @@ class LibraryScannerService
             $cache->updateFromScan($object['etag'], $object['size'], $object['last_modified']);
 
             return $result;
+        });
+    }
+
+    /**
+     * Extract metadata using partial download (header + footer only).
+     *
+     * This is more efficient for large files as it only downloads the parts
+     * of the file that contain metadata, typically ~640KB instead of the full file.
+     *
+     * @param array{key: string, size: int, last_modified: \DateTimeInterface, etag: string} $object
+     * @return array{
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: string|null,
+     * }|null
+     */
+    private function extractMetadataWithPartialDownload(array $object): ?array
+    {
+        $partial = $this->r2Storage->downloadPartial($object['key']);
+
+        if ($partial === null) {
+            return null;
+        }
+
+        $tempPath = $this->r2Storage->createPartialTempFile(
+            $partial['header'],
+            $partial['footer'],
+            $partial['file_size']
+        );
+
+        if ($tempPath === false) {
+            return null;
+        }
+
+        try {
+            return $this->metadataExtractor->extractWithEstimation($tempPath, $object['size']);
+        } finally {
+            @unlink($tempPath);
+        }
+    }
+
+    /**
+     * Extract metadata using full file download.
+     *
+     * This is used as a fallback when partial download fails or doesn't
+     * provide complete metadata (e.g., missing duration).
+     *
+     * @return array{
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: string|null,
+     * }|null
+     */
+    private function extractMetadataWithFullDownload(string $key): ?array
+    {
+        $tempPath = tempnam(sys_get_temp_dir(), 'muzakily_scan_');
+
+        if ($tempPath === false) {
+            throw new \RuntimeException('Failed to create temporary file for metadata extraction');
+        }
+
+        try {
+            if (!$this->r2Storage->download($key, $tempPath)) {
+                return null;
+            }
+
+            return $this->metadataExtractor->extract($tempPath);
         } finally {
             @unlink($tempPath);
         }

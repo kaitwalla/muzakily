@@ -17,6 +17,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProcessUploadedSongJob implements ShouldQueue
 {
@@ -24,6 +26,27 @@ class ProcessUploadedSongJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 3;
+
+    /**
+     * The maximum number of seconds the job can run.
+     *
+     * @var int
+     */
+    public $timeout = 300;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     *
+     * @var array<int, int>
+     */
+    public $backoff = [30, 60, 120];
 
     /**
      * Create a new job instance.
@@ -66,59 +89,85 @@ class ProcessUploadedSongJob implements ShouldQueue
                 throw new \RuntimeException("Unsupported audio format: {$extension}");
             }
 
-            // Find or create artist
-            $artist = null;
-            if ($metadata['artist'] ?? null) {
-                $artist = Artist::findOrCreateByName($metadata['artist']);
-            }
-
-            // Find or create album
-            $album = null;
-            if ($metadata['album'] ?? null) {
-                $album = Album::findOrCreateByNameAndArtist($metadata['album'], $artist);
-                if ($metadata['year'] ?? null) {
-                    $album->update(['year' => $metadata['year']]);
+            // Wrap all database operations in a transaction to prevent partial state
+            $song = DB::transaction(function () use ($metadata, $format, $r2Metadata, $smartFolderService, $tagService) {
+                // Find or create artist
+                $artist = null;
+                if ($metadata['artist'] ?? null) {
+                    $artist = Artist::findOrCreateByName($metadata['artist']);
                 }
-            }
 
-            // Assign smart folder
-            $smartFolder = $smartFolderService->assignFromPath($this->storagePath);
+                // Find or create album
+                $album = null;
+                if ($metadata['album'] ?? null) {
+                    $album = Album::findOrCreateByNameAndArtist($metadata['album'], $artist);
+                    if ($metadata['year'] ?? null) {
+                        $album->update(['year' => $metadata['year']]);
+                    }
+                }
 
-            // Create song
-            $song = Song::create([
-                'album_id' => $album?->id,
-                'artist_id' => $artist?->id,
-                'smart_folder_id' => $smartFolder?->id,
-                'title' => $metadata['title'] ?? pathinfo($this->originalFilename, PATHINFO_FILENAME),
-                'album_name' => $metadata['album'] ?? null,
-                'artist_name' => $metadata['artist'] ?? null,
-                'length' => $metadata['duration'],
-                'track' => $metadata['track'] ?? null,
-                'disc' => $metadata['disc'] ?? 1,
-                'year' => $metadata['year'] ?? null,
-                'lyrics' => $metadata['lyrics'] ?? null,
-                'storage_path' => $this->storagePath,
-                'file_hash' => $r2Metadata['etag'] ?? null,
-                'file_size' => $r2Metadata['size'] ?? 0,
-                'mime_type' => $format->mimeType(),
-                'audio_format' => $format->value,
-                'r2_etag' => $r2Metadata['etag'] ?? null,
-                'r2_last_modified' => $r2Metadata['last_modified'] ?? null,
-            ]);
+                // Assign smart folder
+                $smartFolder = $smartFolderService->assignFromPath($this->storagePath);
 
-            // Update smart folder song count
-            $smartFolder?->updateSongCount();
+                // Create song
+                $song = Song::create([
+                    'album_id' => $album?->id,
+                    'artist_id' => $artist?->id,
+                    'smart_folder_id' => $smartFolder?->id,
+                    'title' => $metadata['title'] ?? pathinfo($this->originalFilename, PATHINFO_FILENAME),
+                    'album_name' => $metadata['album'] ?? null,
+                    'artist_name' => $metadata['artist'] ?? null,
+                    'length' => $metadata['duration'],
+                    'track' => $metadata['track'] ?? null,
+                    'disc' => $metadata['disc'] ?? 1,
+                    'year' => $metadata['year'] ?? null,
+                    'lyrics' => $metadata['lyrics'] ?? null,
+                    'storage_path' => $this->storagePath,
+                    'file_hash' => $r2Metadata['etag'] ?? null,
+                    'file_size' => $r2Metadata['size'] ?? 0,
+                    'mime_type' => $format->mimeType(),
+                    'audio_format' => $format->value,
+                    'r2_etag' => $r2Metadata['etag'] ?? null,
+                    'r2_last_modified' => $r2Metadata['last_modified'] ?? null,
+                ]);
 
-            // Assign tag based on folder path
-            if (config('muzakily.tags.auto_create_from_folders', true)) {
-                $tag = $tagService->assignFromPath($song);
-                $tag?->updateSongCount();
-            }
+                // Update smart folder song count
+                $smartFolder?->updateSongCount();
 
-            // Queue metadata enrichment
-            EnrichMetadataJob::dispatch([$this->storagePath]);
+                // Assign tag based on folder path
+                if (config('muzakily.tags.auto_create_from_folders', true)) {
+                    $tag = $tagService->assignFromPath($song);
+                    $tag?->updateSongCount();
+                }
+
+                return $song;
+            });
+
+            // Queue metadata enrichment (outside transaction as it dispatches a job)
+            EnrichMetadataJob::dispatch([$song->id]);
         } finally {
             @unlink($tempPath);
         }
+    }
+
+    /**
+     * Determine if the job should retry based on the exception.
+     */
+    public function retryUntil(): \DateTime
+    {
+        return now()->addMinutes(10);
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('ProcessUploadedSongJob failed permanently', [
+            'storage_path' => $this->storagePath,
+            'original_filename' => $this->originalFilename,
+            'exception' => $exception->getMessage(),
+            'attempts' => $this->attempts(),
+        ]);
     }
 }

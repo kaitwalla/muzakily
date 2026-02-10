@@ -160,4 +160,78 @@ class MetadataExtractorService
 
         return is_numeric($disc) ? (int) $disc : null;
     }
+
+    /**
+     * Extract metadata with duration estimation support for partial files.
+     *
+     * When extracting from a partial file (header+footer only), the duration
+     * may be missing or inaccurate. This method can estimate duration from
+     * the bitrate and file size when needed.
+     *
+     * @param string $filePath Path to the (possibly partial) audio file
+     * @param int|null $actualFileSize The actual file size (for estimation)
+     * @return array{
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: string|null,
+     *     duration_estimated: bool,
+     * }
+     */
+    public function extractWithEstimation(string $filePath, ?int $actualFileSize = null): array
+    {
+        $info = $this->getID3->analyze($filePath);
+
+        $tags = $this->extractTags($info);
+        $bitrate = isset($info['audio']['bitrate']) ? (int) $info['audio']['bitrate'] : null;
+        $duration = (float) ($info['playtime_seconds'] ?? 0);
+        $durationEstimated = false;
+
+        // If duration is missing or zero and we have bitrate and file size, estimate it
+        if ($duration <= 0 && $bitrate !== null && $bitrate > 0 && $actualFileSize !== null) {
+            $duration = $this->estimateDuration($bitrate, $actualFileSize);
+            $durationEstimated = true;
+        }
+
+        return [
+            'title' => $tags['title'] ?? null,
+            'artist' => $tags['artist'] ?? null,
+            'album' => $tags['album'] ?? null,
+            'year' => $this->extractYear($tags),
+            'track' => $this->extractTrack($tags),
+            'disc' => $this->extractDisc($tags),
+            'genre' => $tags['genre'] ?? null,
+            'duration' => $duration,
+            'bitrate' => $bitrate,
+            'lyrics' => $tags['unsynchronised_lyric'] ?? $tags['lyrics'] ?? null,
+            'duration_estimated' => $durationEstimated,
+        ];
+    }
+
+    /**
+     * Estimate duration from bitrate and file size.
+     *
+     * This is less accurate for VBR files but provides a reasonable estimate
+     * when the actual duration cannot be determined from file headers.
+     *
+     * @param int $bitrate Bitrate in bits per second
+     * @param int $fileSize File size in bytes
+     * @return float Estimated duration in seconds
+     */
+    public function estimateDuration(int $bitrate, int $fileSize): float
+    {
+        if ($bitrate <= 0) {
+            return 0.0;
+        }
+
+        // Duration = (file_size_in_bits) / bitrate
+        // file_size_in_bits = file_size_in_bytes * 8
+        return ($fileSize * 8) / $bitrate;
+    }
 }

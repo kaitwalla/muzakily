@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class ScanR2BucketJob implements ShouldQueue
 {
@@ -22,9 +23,13 @@ class ScanR2BucketJob implements ShouldQueue
     /**
      * The number of times the job may be attempted.
      *
+     * Scanning is a long-running operation that processes files individually.
+     * Individual file failures are handled within the scanner and don't fail the job.
+     * We allow 2 tries to handle initial connection issues to R2.
+     *
      * @var int
      */
-    public $tries = 1;
+    public $tries = 2;
 
     /**
      * The maximum number of seconds the job can run.
@@ -32,6 +37,14 @@ class ScanR2BucketJob implements ShouldQueue
      * @var int
      */
     public $timeout = 3600;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     * Uses longer backoff as this is a heavy operation.
+     *
+     * @var array<int, int>
+     */
+    public $backoff = [120];
 
     /**
      * Create a new job instance.
@@ -96,5 +109,20 @@ class ScanR2BucketJob implements ShouldQueue
         $current['progress'] = array_merge($current['progress'] ?? [], $progress);
 
         Cache::put("scan_status:{$this->jobId}", $current, 3600);
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('ScanR2BucketJob failed permanently', [
+            'job_id' => $this->jobId,
+            'force' => $this->force,
+            'exception' => $exception->getMessage(),
+            'attempts' => $this->attempts(),
+        ]);
+
+        $this->updateStatus('failed', $exception->getMessage());
     }
 }
