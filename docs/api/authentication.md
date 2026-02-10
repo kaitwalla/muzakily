@@ -1,0 +1,130 @@
+# Authentication
+
+Muzakily uses Laravel Sanctum for API authentication via bearer tokens.
+
+## Obtaining a Token
+
+Send a POST request to `/api/v1/auth/login` with your credentials:
+
+```bash
+curl -X POST https://your-domain.com/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{"email": "user@example.com", "password": "your-password"}'
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "token": "1|abc123def456...",
+    "user": {
+      "id": 1,
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "name": "John Doe",
+      "email": "user@example.com",
+      "role": "user",
+      "created_at": "2024-01-01T00:00:00.000000Z"
+    }
+  }
+}
+```
+
+## Using the Token
+
+Include the token in the `Authorization` header for all authenticated requests:
+
+```bash
+curl https://your-domain.com/api/v1/songs \
+  -H "Authorization: Bearer 1|abc123def456..." \
+  -H "Accept: application/json"
+```
+
+## Token Lifetime
+
+By default, Sanctum tokens do not expire automatically. However, you can configure token expiration in your application:
+
+```php
+// config/sanctum.php
+'expiration' => 60 * 24, // Token expires after 24 hours (in minutes)
+```
+
+Tokens can also be revoked:
+
+- **Logout**: The current token is revoked when you call `/api/v1/auth/logout`
+- **Admin revocation**: Administrators can revoke user tokens
+- **Expiration**: If configured, tokens expire automatically after the specified time
+
+## Logout
+
+Revoke your current token:
+
+```bash
+curl -X DELETE https://your-domain.com/api/v1/auth/logout \
+  -H "Authorization: Bearer 1|abc123def456..." \
+  -H "Accept: application/json"
+```
+
+**Response:** `204 No Content`
+
+## Get Current User
+
+Retrieve the authenticated user's profile:
+
+```bash
+curl https://your-domain.com/api/v1/auth/me \
+  -H "Authorization: Bearer 1|abc123def456..." \
+  -H "Accept: application/json"
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "id": 1,
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "John Doe",
+    "email": "user@example.com",
+    "role": "user",
+    "created_at": "2024-01-01T00:00:00.000000Z"
+  }
+}
+```
+
+## Error Responses
+
+### Invalid Credentials (422)
+
+```json
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "email": ["The provided credentials are incorrect."]
+  }
+}
+```
+
+### Missing/Invalid Token (401)
+
+```json
+{
+  "message": "Unauthenticated."
+}
+```
+
+### Insufficient Permissions (403)
+
+```json
+{
+  "message": "This action is unauthorized."
+}
+```
+
+## Security Best Practices
+
+1. **Store tokens securely** - Never expose tokens in URLs or client-side code
+2. **Use HTTPS** - Always use encrypted connections in production
+3. **Logout when done** - Revoke tokens when users log out
+4. **One token per device** - Generate separate tokens for each device/session

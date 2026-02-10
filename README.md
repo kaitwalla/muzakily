@@ -1,59 +1,187 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Muzakily
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A self-hosted music streaming application with smart playlists, multi-device sync, and a modern Vue.js interface.
 
-## About Laravel
+## Features
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Music Library Management** - Automatic scanning and organization from cloud storage
+- **Smart Playlists** - Dynamic playlists based on rules (genre, year, play count, etc.)
+- **Smart Folders** - Automatic organization based on file structure
+- **Tagging System** - Hierarchical tags with auto-assignment patterns
+- **Full-Text Search** - Fast, typo-tolerant search powered by Meilisearch
+- **Remote Player Control** - Control playback across devices via Pusher
+- **Multi-Format Support** - MP3, AAC, FLAC with on-demand transcoding
+- **Modern SPA** - Vue 3 + TypeScript frontend with responsive design
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tech Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Backend
 
-## Learning Laravel
+- Laravel 12
+- PostgreSQL
+- Redis (cache, queues, sessions)
+- Cloudflare R2 (S3-compatible storage)
+- Meilisearch (full-text search)
+- Laravel Sanctum (API authentication)
+- Pusher (real-time events)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Frontend
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Vue 3 + TypeScript
+- Pinia (state management)
+- Vue Router
+- Tailwind CSS
+- Vite
 
-## Laravel Sponsors
+## Requirements
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- Docker & Docker Compose
+- Node.js 20+
 
-### Premium Partners
+## Quick Start
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 1. Clone and Configure
 
-## Contributing
+```bash
+git clone https://github.com/your-org/muzakily.git
+cd muzakily
+cp .env.example .env
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Edit `.env` with your configuration (see [Configuration](docs/developer/configuration.md)).
 
-## Code of Conduct
+### 2. Start Services
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+docker compose up -d
+```
 
-## Security Vulnerabilities
+### 3. Install Dependencies
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+docker compose exec app composer install
+npm install
+```
+
+### 4. Initialize Database
+
+```bash
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate --seed
+```
+
+### 5. Start Development
+
+```bash
+npm run dev
+```
+
+Access the application at http://localhost
+
+### Default Credentials
+
+| Email | Password | Role |
+|-------|----------|------|
+| admin@example.com | password | Admin |
+| user@example.com | password | User |
+
+## Development Commands
+
+```bash
+# Run PHP tests
+docker compose exec app php artisan test
+
+# Run PHPStan (level 6)
+docker compose exec app ./vendor/bin/phpstan analyse --level=6
+
+# Run frontend tests
+npm run test
+
+# Type check
+npm run type-check
+
+# Build for production
+npm run build
+```
+
+## Documentation
+
+### User Guide
+
+- [Getting Started](docs/user-guide/getting-started.md)
+- [Browsing Library](docs/user-guide/browsing-library.md)
+- [Playlists](docs/user-guide/playlists.md)
+- [Smart Playlists](docs/user-guide/smart-playlists.md)
+- [Search](docs/user-guide/search.md)
+- [Remote Control](docs/user-guide/remote-control.md)
+
+### API Documentation
+
+- [OpenAPI Specification](docs/api/openapi.yaml)
+- [Authentication](docs/api/authentication.md)
+- [Error Handling](docs/api/errors.md)
+- [Endpoints](docs/api/endpoints/)
+
+### Developer Guide
+
+- [Architecture](docs/developer/architecture.md)
+- [Setup](docs/developer/setup.md)
+- [Configuration](docs/developer/configuration.md)
+- [Testing](docs/developer/testing.md)
+- [Contributing](docs/developer/contributing.md)
+
+## Project Structure
+
+```
+muzakily/
+├── app/
+│   ├── Http/Controllers/Api/V1/  # API controllers
+│   ├── Models/                    # Eloquent models
+│   └── Services/                  # Business logic
+├── database/
+│   ├── factories/                 # Model factories
+│   └── migrations/                # Database migrations
+├── docs/                          # Documentation
+├── resources/js/                  # Vue frontend
+│   ├── api/                       # API client
+│   ├── components/                # Vue components
+│   ├── stores/                    # Pinia stores
+│   └── views/                     # Page components
+├── routes/api/                    # API routes
+└── tests/                         # PHPUnit tests
+```
+
+## API Overview
+
+All API endpoints are prefixed with `/api/v1/` and require authentication via Bearer token.
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /auth/login` | Authenticate and get token |
+| `GET /songs` | List/search songs |
+| `GET /songs/{id}/stream` | Get streaming URL |
+| `GET /albums` | List albums |
+| `GET /artists` | List artists |
+| `GET /playlists` | List user playlists |
+| `GET /search` | Full-text search |
+| `POST /player/control` | Remote player control |
+
+See [API Documentation](docs/api/openapi.yaml) for complete reference.
+
+## Environment Variables
+
+Key configuration options:
+
+| Variable | Description |
+|----------|-------------|
+| `DB_*` | PostgreSQL connection |
+| `REDIS_*` | Redis connection |
+| `R2_*` | Cloudflare R2 storage |
+| `MEILISEARCH_*` | Search engine |
+| `PUSHER_*` | Real-time events |
+
+See [Configuration Guide](docs/developer/configuration.md) for all options.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT License - see [LICENSE](LICENSE) for details.

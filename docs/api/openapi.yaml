@@ -1,0 +1,2060 @@
+openapi: 3.0.3
+info:
+  title: Muzakily API
+  description: |
+    RESTful API for the Muzakily music streaming application.
+
+    ## Authentication
+    All endpoints except `/api/v1/auth/login` require authentication via Laravel Sanctum.
+    Include the token in the Authorization header: `Authorization: Bearer {token}`
+
+    ## Pagination
+    List endpoints return paginated responses with `data`, `links`, and `meta` keys.
+    Use `per_page` (max 100) and `page` query parameters to control pagination.
+
+    ## Error Handling
+    - 400: Business logic errors (e.g., adding songs to smart playlist)
+    - 401: Authentication required or invalid token
+    - 403: Insufficient permissions
+    - 404: Resource not found
+    - 415: Unsupported media type (file uploads)
+    - 422: Validation errors
+  version: 1.0.0
+  contact:
+    name: Muzakily Support
+  license:
+    name: MIT
+
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Songs
+    description: Song browsing, streaming, and management
+  - name: Albums
+    description: Album browsing and details
+  - name: Artists
+    description: Artist browsing and details
+  - name: Playlists
+    description: Regular and smart playlist management
+  - name: Smart Folders
+    description: Folder-based song organization
+  - name: Tags
+    description: Hierarchical tagging system
+  - name: Favorites
+    description: User favorites across all content types
+  - name: Interactions
+    description: Play tracking and user interactions
+  - name: Search
+    description: Full-text search across the library
+  - name: Upload
+    description: Audio file upload
+  - name: Player
+    description: Remote player control and device management
+  - name: Admin
+    description: Administrative operations (requires admin role)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum Token
+
+  schemas:
+    Song:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        artist_id:
+          type: string
+          format: uuid
+        artist_name:
+          type: string
+        album_id:
+          type: string
+          format: uuid
+        album_name:
+          type: string
+        album_cover:
+          type: string
+          nullable: true
+        length:
+          type: integer
+          description: Duration in seconds
+        track:
+          type: integer
+          nullable: true
+        disc:
+          type: integer
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        genre:
+          type: string
+          nullable: true
+        audio_format:
+          type: string
+          enum: [MP3, AAC, FLAC]
+        is_favorite:
+          type: boolean
+        play_count:
+          type: integer
+        smart_folder:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/SmartFolderBasic'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagBasic'
+        created_at:
+          type: string
+          format: date-time
+
+    Album:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        artist_id:
+          type: string
+          format: uuid
+        artist_name:
+          type: string
+        cover:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        song_count:
+          type: integer
+        total_length:
+          type: integer
+          description: Total duration in seconds
+        created_at:
+          type: string
+          format: date-time
+
+    Artist:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        image:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        album_count:
+          type: integer
+        song_count:
+          type: integer
+        musicbrainz_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    Playlist:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+          nullable: true
+        cover:
+          type: string
+          nullable: true
+        is_smart:
+          type: boolean
+        rules:
+          type: array
+          nullable: true
+          description: Smart playlist rules (only if is_smart=true)
+        song_count:
+          type: integer
+        total_length:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SmartFolder:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        path:
+          type: string
+        depth:
+          type: integer
+        song_count:
+          type: integer
+        parent_id:
+          type: integer
+          nullable: true
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmartFolder'
+
+    SmartFolderBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        path:
+          type: string
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        color:
+          type: string
+          description: Hex color code
+        song_count:
+          type: integer
+        parent_id:
+          type: integer
+          nullable: true
+        depth:
+          type: integer
+        is_special:
+          type: boolean
+        auto_assign_pattern:
+          type: string
+          nullable: true
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        created_at:
+          type: string
+          format: date-time
+
+    TagBasic:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        color:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, user]
+        created_at:
+          type: string
+          format: date-time
+
+    Device:
+      type: object
+      properties:
+        device_id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [web, mobile, desktop]
+        is_playing:
+          type: boolean
+        current_song:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/Song'
+        position:
+          type: number
+          description: Playback position in seconds
+        volume:
+          type: number
+          minimum: 0
+          maximum: 1
+        last_seen:
+          type: string
+          format: date-time
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        from:
+          type: integer
+        last_page:
+          type: integer
+        per_page:
+          type: integer
+        to:
+          type: integer
+        total:
+          type: integer
+
+    PaginationLinks:
+      type: object
+      properties:
+        first:
+          type: string
+        last:
+          type: string
+        prev:
+          type: string
+          nullable: true
+        next:
+          type: string
+          nullable: true
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    BusinessError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login and obtain API token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+        '422':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /auth/logout:
+    delete:
+      tags: [Authentication]
+      summary: Logout and revoke token
+      responses:
+        '204':
+          description: Logged out successfully
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /songs:
+    get:
+      tags: [Songs]
+      summary: List songs
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: artist_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: album_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: genre
+          in: query
+          schema:
+            type: string
+        - name: smart_folder_id
+          in: query
+          schema:
+            type: integer
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [MP3, AAC, FLAC]
+        - name: favorited
+          in: query
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, artist_name, album_name, year, created_at]
+            default: title
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Paginated list of songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /songs/{song}:
+    get:
+      tags: [Songs]
+      summary: Get song details
+      parameters:
+        - name: song
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Song details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Song'
+        '404':
+          description: Song not found
+    patch:
+      tags: [Songs]
+      summary: Update song metadata (admin only)
+      parameters:
+        - name: song
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                artist_name:
+                  type: string
+                  nullable: true
+                album_name:
+                  type: string
+                  nullable: true
+                year:
+                  type: integer
+                  nullable: true
+                track:
+                  type: integer
+                  nullable: true
+                disc:
+                  type: integer
+                genre:
+                  type: string
+                  nullable: true
+                lyrics:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Song updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Song'
+        '403':
+          description: Not authorized
+
+  /songs/{song}/stream:
+    get:
+      tags: [Songs]
+      summary: Get streaming URL
+      parameters:
+        - name: song
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            default: original
+        - name: bitrate
+          in: query
+          schema:
+            type: integer
+            default: 256
+      responses:
+        '200':
+          description: Streaming URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      url:
+                        type: string
+                        description: Presigned streaming URL
+                      audio_format:
+                        type: string
+                      audio_length:
+                        type: integer
+
+  /songs/{song}/download:
+    get:
+      tags: [Songs]
+      summary: Download song
+      parameters:
+        - name: song
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '302':
+          description: Redirect to presigned download URL
+
+  /songs/{song}/tags:
+    post:
+      tags: [Songs]
+      summary: Add tags to song
+      parameters:
+        - name: song
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_ids]
+              properties:
+                tag_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Tags added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      song_id:
+                        type: string
+                        format: uuid
+                      tags:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TagBasic'
+    delete:
+      tags: [Songs]
+      summary: Remove tags from song
+      parameters:
+        - name: song
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tag_ids]
+              properties:
+                tag_ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Tags removed
+
+  /albums:
+    get:
+      tags: [Albums]
+      summary: List albums
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: artist_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: year
+          in: query
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, year, created_at]
+            default: name
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Paginated list of albums
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Album'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /albums/{album}:
+    get:
+      tags: [Albums]
+      summary: Get album details
+      parameters:
+        - name: album
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Album details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Album'
+
+  /albums/{album}/songs:
+    get:
+      tags: [Albums]
+      summary: Get album songs
+      parameters:
+        - name: album
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Album songs ordered by disc and track
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+
+  /artists:
+    get:
+      tags: [Artists]
+      summary: List artists
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [name, created_at]
+            default: name
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Paginated list of artists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Artist'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /artists/{artist}:
+    get:
+      tags: [Artists]
+      summary: Get artist details
+      parameters:
+        - name: artist
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Artist details with bio
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Artist'
+
+  /artists/{artist}/albums:
+    get:
+      tags: [Artists]
+      summary: Get artist albums
+      parameters:
+        - name: artist
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Artist albums ordered by year
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Album'
+
+  /artists/{artist}/songs:
+    get:
+      tags: [Artists]
+      summary: Get artist songs
+      parameters:
+        - name: artist
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [album_name, title]
+            default: album_name
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Paginated artist songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /playlists:
+    get:
+      tags: [Playlists]
+      summary: List user playlists
+      responses:
+        '200':
+          description: User playlists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Playlist'
+    post:
+      tags: [Playlists]
+      summary: Create playlist
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  maxLength: 1000
+                is_smart:
+                  type: boolean
+                  default: false
+                rules:
+                  type: array
+                  description: Required if is_smart=true
+                  items:
+                    type: object
+                    properties:
+                      logic:
+                        type: string
+                        enum: [and, or]
+                      rules:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            field:
+                              type: string
+                            operator:
+                              type: string
+                            value:
+                              type: string
+                song_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '201':
+          description: Playlist created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+
+  /playlists/{playlist}:
+    get:
+      tags: [Playlists]
+      summary: Get playlist details
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Playlist details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+    patch:
+      tags: [Playlists]
+      summary: Update playlist
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                  nullable: true
+                is_smart:
+                  type: boolean
+                rules:
+                  type: array
+      responses:
+        '200':
+          description: Playlist updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+    delete:
+      tags: [Playlists]
+      summary: Delete playlist
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Playlist deleted
+
+  /playlists/{playlist}/songs:
+    get:
+      tags: [Playlists]
+      summary: Get playlist songs
+      description: For smart playlists, rules are evaluated dynamically
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Playlist songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+    post:
+      tags: [Playlists]
+      summary: Add songs to playlist
+      description: Cannot add songs to smart playlists
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [song_ids]
+              properties:
+                song_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                position:
+                  type: integer
+      responses:
+        '200':
+          description: Songs added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+        '400':
+          description: Cannot modify smart playlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+    delete:
+      tags: [Playlists]
+      summary: Remove songs from playlist
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [song_ids]
+              properties:
+                song_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Songs removed
+
+  /playlists/{playlist}/songs/reorder:
+    put:
+      tags: [Playlists]
+      summary: Reorder playlist songs
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [song_ids]
+              properties:
+                song_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Songs reordered
+
+  /smart-folders:
+    get:
+      tags: [Smart Folders]
+      summary: List smart folders hierarchy
+      responses:
+        '200':
+          description: Smart folders tree
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SmartFolder'
+
+  /smart-folders/{smartFolder}/songs:
+    get:
+      tags: [Smart Folders]
+      summary: Get songs in smart folder
+      parameters:
+        - name: smartFolder
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, artist_name, album_name, year]
+            default: title
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Smart folder songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List tags
+      parameters:
+        - name: flat
+          in: query
+          description: Return flat list instead of hierarchy
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Tags list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tag'
+    post:
+      tags: [Tags]
+      summary: Create tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                  description: Hex color code
+                parent_id:
+                  type: integer
+                auto_assign_pattern:
+                  type: string
+                  description: Regex pattern for auto-assignment
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tag'
+
+  /tags/{tag}:
+    get:
+      tags: [Tags]
+      summary: Get tag details
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tag details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Tag'
+    patch:
+      tags: [Tags]
+      summary: Update tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                color:
+                  type: string
+                parent_id:
+                  type: integer
+                auto_assign_pattern:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Tag updated
+        '422':
+          description: Circular hierarchy detected
+    delete:
+      tags: [Tags]
+      summary: Delete tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Tag deleted
+
+  /tags/{tag}/songs:
+    get:
+      tags: [Tags]
+      summary: Get songs with tag
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: include_children
+          in: query
+          description: Include songs from child tags
+          schema:
+            type: boolean
+            default: false
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Tagged songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+
+  /favorites:
+    get:
+      tags: [Favorites]
+      summary: Get user favorites
+      parameters:
+        - name: type
+          in: query
+          description: Filter by type
+          schema:
+            type: string
+            enum: [song, album, artist, playlist]
+      responses:
+        '200':
+          description: User favorites grouped by type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      songs:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Song'
+                      albums:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Album'
+                      artists:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Artist'
+                      playlists:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Playlist'
+    post:
+      tags: [Favorites]
+      summary: Add to favorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, id]
+              properties:
+                type:
+                  type: string
+                  enum: [song, album, artist, playlist]
+                id:
+                  type: string
+      responses:
+        '201':
+          description: Added to favorites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      favorited:
+                        type: boolean
+    delete:
+      tags: [Favorites]
+      summary: Remove from favorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, id]
+              properties:
+                type:
+                  type: string
+                  enum: [song, album, artist, playlist]
+                id:
+                  type: string
+      responses:
+        '204':
+          description: Removed from favorites
+
+  /interactions/play:
+    post:
+      tags: [Interactions]
+      summary: Record song play
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [song_id]
+              properties:
+                song_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Play recorded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      song_id:
+                        type: string
+                        format: uuid
+                      play_count:
+                        type: integer
+                      last_played_at:
+                        type: string
+                        format: date-time
+
+  /search:
+    get:
+      tags: [Search]
+      summary: Full-text search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: type
+          in: query
+          description: Search specific type only
+          schema:
+            type: string
+            enum: [song, album, artist]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            maximum: 50
+            default: 10
+        - name: filters[year]
+          in: query
+          schema:
+            type: integer
+        - name: filters[tag]
+          in: query
+          schema:
+            type: string
+        - name: filters[genre]
+          in: query
+          schema:
+            type: string
+        - name: filters[format]
+          in: query
+          schema:
+            type: string
+            enum: [MP3, AAC, FLAC]
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      songs:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Song'
+                          total:
+                            type: integer
+                      albums:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Album'
+                          total:
+                            type: integer
+                      artists:
+                        type: object
+                        properties:
+                          data:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Artist'
+                          total:
+                            type: integer
+
+  /upload:
+    post:
+      tags: [Upload]
+      summary: Upload audio file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file (mp3, m4a, flac, max 100MB)
+      responses:
+        '202':
+          description: Upload accepted for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      job_id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                      filename:
+                        type: string
+        '415':
+          description: Unsupported file format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+
+  /player/devices:
+    get:
+      tags: [Player]
+      summary: List user devices
+      responses:
+        '200':
+          description: User devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+    post:
+      tags: [Player]
+      summary: Register device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_id, name, type]
+              properties:
+                device_id:
+                  type: string
+                  maxLength: 64
+                name:
+                  type: string
+                  maxLength: 255
+                type:
+                  type: string
+                  enum: [web, mobile, desktop]
+      responses:
+        '201':
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Device'
+
+  /player/devices/{device}:
+    delete:
+      tags: [Player]
+      summary: Unregister device
+      parameters:
+        - name: device
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Device unregistered
+
+  /player/control:
+    post:
+      tags: [Player]
+      summary: Send remote control command
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [target_device_id, command]
+              properties:
+                target_device_id:
+                  type: string
+                command:
+                  type: string
+                  enum: [play, pause, stop, next, prev, seek, volume, queue_add, queue_clear]
+                payload:
+                  type: object
+      responses:
+        '200':
+          description: Command sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      target_device_id:
+                        type: string
+                      command:
+                        type: string
+
+  /player/state:
+    get:
+      tags: [Player]
+      summary: Get playback state
+      responses:
+        '200':
+          description: Current playback state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      active_device:
+                        type: object
+                        nullable: true
+                        properties:
+                          device_id:
+                            type: string
+                          name:
+                            type: string
+                      is_playing:
+                        type: boolean
+                      current_song:
+                        nullable: true
+                        allOf:
+                          - $ref: '#/components/schemas/Song'
+                      position:
+                        type: number
+                      volume:
+                        type: number
+                      queue:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Song'
+
+  /player/sync:
+    post:
+      tags: [Player]
+      summary: Sync queue across devices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [queue]
+              properties:
+                queue:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                current_index:
+                  type: integer
+                position:
+                  type: number
+      responses:
+        '200':
+          description: Queue synced
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      devices_notified:
+                        type: integer
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List users
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [admin, user]
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+    post:
+      tags: [Admin]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                role:
+                  type: string
+                  enum: [admin, user]
+                  default: user
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+
+  /admin/users/{user}:
+    get:
+      tags: [Admin]
+      summary: Get user details
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+    patch:
+      tags: [Admin]
+      summary: Update user
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                role:
+                  type: string
+                  enum: [admin, user]
+      responses:
+        '200':
+          description: User updated
+    delete:
+      tags: [Admin]
+      summary: Delete user
+      parameters:
+        - name: user
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: User deleted
+
+  /admin/library/scan:
+    post:
+      tags: [Admin]
+      summary: Trigger library scan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force:
+                  type: boolean
+                  default: false
+      responses:
+        '202':
+          description: Scan started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      job_id:
+                        type: string
+                      status:
+                        type: string
+
+  /admin/library/scan/status:
+    get:
+      tags: [Admin]
+      summary: Get scan status
+      responses:
+        '200':
+          description: Scan status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [started, idle]
+                      progress:
+                        type: object
+                        properties:
+                          total_files:
+                            type: integer
+                          scanned_files:
+                            type: integer
+                          new_songs:
+                            type: integer
+                          updated_songs:
+                            type: integer
+                          errors:
+                            type: integer
+                      started_at:
+                        type: string
+                        format: date-time
+
+  /admin/metadata/enrich:
+    post:
+      tags: [Admin]
+      summary: Enrich song metadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                song_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Specific songs to enrich (null for all)
+      responses:
+        '202':
+          description: Enrichment started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                      message:
+                        type: string
