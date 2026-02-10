@@ -2,6 +2,10 @@
 import AppNavbar from '@/components/AppNavbar.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import PlayerBar from '@/components/PlayerBar.vue';
+import { useRemotePlayer } from '@/composables/useRemotePlayer';
+
+// Initialize remote player for multi-device support
+useRemotePlayer();
 </script>
 
 <template>

@@ -262,7 +262,11 @@ class LibraryScannerService
         }
 
         try {
-            return $this->metadataExtractor->extractWithEstimation($tempPath, $object['size']);
+            // We use the regular extract method because createPartialTempFile makes a valid-looking file
+            return $this->metadataExtractor->extract($tempPath);
+        } catch (\Throwable $e) {
+            // If extraction fails on partial file, return null to trigger fallback
+            return null;
         } finally {
             @unlink($tempPath);
         }

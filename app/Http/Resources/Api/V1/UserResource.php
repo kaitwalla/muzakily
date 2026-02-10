@@ -23,6 +23,7 @@ class UserResource extends JsonResource
         'name',
         'email',
         'role',
+        'preferences',
         'created_at',
     ];
 
@@ -39,6 +40,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'role' => $this->role->value,
+            'preferences' => $this->preferences ?? [],
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

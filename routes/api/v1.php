@@ -40,9 +40,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::delete('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('me', [AuthController::class, 'me'])->name('auth.me');
+        Route::patch('me', [AuthController::class, 'updateProfile'])->name('auth.update-profile');
     });
 
     // Songs
+    Route::get('songs/recently-played', [SongController::class, 'recentlyPlayed'])->name('songs.recently-played');
     Route::apiResource('songs', SongController::class)->only(['index', 'show', 'update']);
     Route::get('songs/{song}/stream', [StreamController::class, 'stream'])->name('songs.stream');
     Route::get('songs/{song}/download', [StreamController::class, 'download'])->name('songs.download');

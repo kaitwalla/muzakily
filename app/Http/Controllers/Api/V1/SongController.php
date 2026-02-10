@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\UpdateSongRequest;
 use App\Http\Resources\Api\V1\SongResource;
+use App\Models\Interaction;
 use App\Models\Song;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -95,6 +96,30 @@ class SongController extends Controller
 
         return response()->json([
             'data' => new SongResource($song->fresh(['artist', 'album', 'smartFolder', 'genres'])),
+        ]);
+    }
+
+    /**
+     * Get recently played songs for the authenticated user.
+     */
+    public function recentlyPlayed(Request $request): JsonResponse
+    {
+        $limit = min((int) $request->input('limit', 10), 50);
+
+        $interactions = Interaction::where('user_id', $request->user()?->id)
+            ->whereNotNull('last_played_at')
+            ->orderBy('last_played_at', 'desc')
+            ->limit($limit)
+            ->with(['song.artist', 'song.album'])
+            ->get();
+
+        $songs = $interactions
+            ->map(fn (Interaction $interaction) => $interaction->song)
+            ->filter()
+            ->values();
+
+        return response()->json([
+            'data' => SongResource::collection($songs),
         ]);
     }
 }

@@ -59,4 +59,35 @@ class AuthController extends Controller
             'data' => new UserResource($request->user()),
         ]);
     }
+
+    /**
+     * Update the authenticated user's profile.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:255'],
+            'preferences' => ['sometimes', 'array'],
+            'preferences.audio_quality' => ['sometimes', 'string', 'in:auto,high,normal,low'],
+            'preferences.crossfade' => ['sometimes', 'integer', 'in:0,3,5,10'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        if (isset($validated['name'])) {
+            $user->name = $validated['name'];
+        }
+
+        if (isset($validated['preferences'])) {
+            $currentPreferences = $user->preferences ?? [];
+            $user->preferences = array_merge($currentPreferences, $validated['preferences']);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'data' => new UserResource($user),
+        ]);
+    }
 }

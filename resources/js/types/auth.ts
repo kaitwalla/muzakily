@@ -1,10 +1,21 @@
+export interface UserPreferences {
+    audio_quality?: 'auto' | 'high' | 'normal' | 'low';
+    crossfade?: 0 | 3 | 5 | 10;
+}
+
 export interface User {
     id: number;
+    uuid: string;
     name: string;
     email: string;
-    email_verified_at: string | null;
+    role: string;
+    preferences: UserPreferences;
     created_at: string;
-    updated_at: string;
+}
+
+export interface UpdateProfileRequest {
+    name?: string;
+    preferences?: Partial<UserPreferences>;
 }
 
 export interface LoginRequest {

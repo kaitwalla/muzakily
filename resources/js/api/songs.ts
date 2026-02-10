@@ -50,3 +50,10 @@ export async function removeTagsFromSong(songId: number, tagIds: number[]): Prom
     const response = await apiClient.delete<ApiResponse<Song>>(`/songs/${songId}/tags`, { data: { tag_ids: tagIds } });
     return response.data.data;
 }
+
+export async function getRecentlyPlayed(limit = 10): Promise<Song[]> {
+    const response = await apiClient.get<{ data: Song[] }>('/songs/recently-played', {
+        params: { limit },
+    });
+    return response.data.data;
+}

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
+import { useDevicesStore } from '@/stores/devices';
+import type { PlayerDevice } from '@/api/devices';
 
 export interface Device {
     id: string;
     name: string;
     type: 'browser' | 'speaker' | 'tv' | 'mobile';
     isActive: boolean;
+    isOnline: boolean;
 }
 
 const emit = defineEmits<{
@@ -13,17 +16,33 @@ const emit = defineEmits<{
     'select-device': [device: Device];
 }>();
 
-const devices = ref<Device[]>([
-    {
-        id: 'this-device',
-        name: 'This Browser',
-        type: 'browser',
-        isActive: true,
-    },
-]);
+const devicesStore = useDevicesStore();
 
-const loading = ref(false);
-const error = ref<string | null>(null);
+const loading = computed(() => devicesStore.loading);
+const error = computed(() => devicesStore.error);
+
+const devices = computed<Device[]>(() => {
+    return devicesStore.devices.map((device: PlayerDevice) => ({
+        id: device.device_id,
+        name: device.device_id === devicesStore.thisDeviceId ? 'This Browser' : device.name,
+        type: mapDeviceType(device.type),
+        isActive: device.device_id === devicesStore.activeDeviceId,
+        isOnline: devicesStore.isOnline(device),
+    }));
+});
+
+function mapDeviceType(type: string): 'browser' | 'speaker' | 'tv' | 'mobile' {
+    switch (type) {
+        case 'web':
+            return 'browser';
+        case 'mobile':
+            return 'mobile';
+        case 'desktop':
+            return 'tv';
+        default:
+            return 'browser';
+    }
+}
 
 function getDeviceIcon(type: Device['type']): string {
     switch (type) {
@@ -41,28 +60,16 @@ function getDeviceIcon(type: Device['type']): string {
 }
 
 function selectDevice(device: Device): void {
-    // Mark all devices as inactive
-    devices.value.forEach((d) => (d.isActive = false));
-    // Mark selected device as active
-    device.isActive = true;
+    devicesStore.selectDevice(device.id);
     emit('select-device', device);
 }
 
 async function refreshDevices(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-
+    devicesStore.clearError();
     try {
-        // In a real implementation, this would fetch available devices from an API
-        // For now, we just simulate with a delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // Simulated devices (in reality, these would come from an API)
-        // devices.value = [...fetchedDevices];
-    } catch (e) {
-        error.value = 'Failed to load devices';
-    } finally {
-        loading.value = false;
+        await devicesStore.fetchDevices();
+    } catch {
+        // Error is handled by the store
     }
 }
 
@@ -112,13 +119,19 @@ onMounted(() => {
 
         <!-- Device list -->
         <div v-else class="py-2">
+            <div v-if="devices.length === 0" class="px-4 py-8 text-center">
+                <p class="text-gray-400">No devices found</p>
+                <p class="text-sm text-gray-500 mt-1">Start playing on another device to see it here</p>
+            </div>
             <button
                 v-for="device in devices"
                 :key="device.id"
                 @click="selectDevice(device)"
+                :disabled="!device.isOnline"
                 :class="[
                     'w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-700/50 transition-colors',
-                    device.isActive ? 'text-green-500' : 'text-white',
+                    device.isActive ? 'text-green-500' : device.isOnline ? 'text-white' : 'text-gray-500',
+                    !device.isOnline && 'opacity-50 cursor-not-allowed',
                 ]"
             >
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -127,6 +140,7 @@ onMounted(() => {
                 <div class="flex-1 text-left">
                     <p class="font-medium">{{ device.name }}</p>
                     <p v-if="device.isActive" class="text-xs text-green-500">Currently playing</p>
+                    <p v-else-if="!device.isOnline" class="text-xs text-gray-500">Offline</p>
                 </div>
                 <svg
                     v-if="device.isActive"
@@ -137,6 +151,12 @@ onMounted(() => {
                 >
                     <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
+                <!-- Online indicator -->
+                <span
+                    v-if="device.isOnline && !device.isActive"
+                    class="w-2 h-2 bg-green-500 rounded-full"
+                    aria-label="Online"
+                />
             </button>
         </div>
 

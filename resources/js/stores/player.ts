@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Song } from '@/types/models';
 import type { PlaybackState, QueueItem, RepeatMode } from '@/types/player';
+import * as interactionsApi from '@/api/interactions';
 
 export const usePlayerStore = defineStore('player', () => {
     // Queue state
@@ -204,6 +205,11 @@ export const usePlayerStore = defineStore('player', () => {
         audioElement.load();
         audioElement.play().catch(() => {
             isPlaying.value = false;
+        });
+
+        // Record the play interaction
+        interactionsApi.recordPlay(currentSong.value.id).catch(() => {
+            // Silently fail - don't interrupt playback for analytics
         });
     }
 

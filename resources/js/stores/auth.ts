@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { User, LoginRequest, RegisterRequest } from '@/types/auth';
+import type { User, LoginRequest, RegisterRequest, UpdateProfileRequest, UserPreferences } from '@/types/auth';
 import * as authApi from '@/api/auth';
 import { getAuthToken } from '@/api/client';
 
@@ -67,6 +67,19 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
+    async function updateProfile(data: UpdateProfileRequest): Promise<void> {
+        loading.value = true;
+        try {
+            user.value = await authApi.updateProfile(data);
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    async function updatePreferences(preferences: Partial<UserPreferences>): Promise<void> {
+        await updateProfile({ preferences });
+    }
+
     return {
         user,
         loading,
@@ -76,5 +89,7 @@ export const useAuthStore = defineStore('auth', () => {
         login,
         register,
         logout,
+        updateProfile,
+        updatePreferences,
     };
 });
