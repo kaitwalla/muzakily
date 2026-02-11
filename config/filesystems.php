@@ -72,6 +72,13 @@ return [
             'report' => false,
         ],
 
+        'music' => [
+            'driver' => 'local',
+            'root' => env('MUSIC_LOCAL_PATH', storage_path('app/music')),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

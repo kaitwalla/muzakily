@@ -3,6 +3,19 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Storage Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the storage driver for music files.
+    | Supported: "r2", "local"
+    |
+    */
+    'storage' => [
+        'driver' => env('MUSIC_STORAGE_DRIVER', 'r2'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Smart Folders Configuration
     |--------------------------------------------------------------------------
     |
@@ -29,8 +42,8 @@ return [
         // Whether to automatically create tags from folder paths during scanning
         'auto_create_from_folders' => env('MUZAKILY_TAGS_AUTO_CREATE', true),
 
-        // Folders that use second-level categorization (same logic as smart folders)
-        'special_folders' => explode(',', env('MUZAKILY_SPECIAL_FOLDERS', 'Xmas,Holiday,Seasonal')),
+        // Folders that create multiple tags (top-level + combined second-level)
+        'special_folders' => explode(',', env('MUZAKILY_SPECIAL_FOLDERS', 'Xmas')),
 
         // Default colors for common tags
         'default_colors' => [

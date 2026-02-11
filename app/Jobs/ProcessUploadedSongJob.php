@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Models\Album;
 use App\Models\Artist;
@@ -11,7 +12,6 @@ use App\Models\Song;
 use App\Services\Library\MetadataExtractorService;
 use App\Services\Library\SmartFolderService;
 use App\Services\Library\TagService;
-use App\Services\Storage\R2StorageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -60,7 +60,7 @@ class ProcessUploadedSongJob implements ShouldQueue
      * Execute the job.
      */
     public function handle(
-        R2StorageService $r2Storage,
+        MusicStorageInterface $storage,
         MetadataExtractorService $metadataExtractor,
         SmartFolderService $smartFolderService,
         TagService $tagService,
@@ -73,10 +73,10 @@ class ProcessUploadedSongJob implements ShouldQueue
         }
 
         try {
-            $r2Storage->download($this->storagePath, $tempPath);
+            $storage->download($this->storagePath, $tempPath);
 
-            // Get file metadata from R2
-            $r2Metadata = $r2Storage->getMetadata($this->storagePath);
+            // Get file metadata from storage
+            $storageMetadata = $storage->getMetadata($this->storagePath);
 
             // Extract audio metadata
             $metadata = $metadataExtractor->extract($tempPath);
@@ -90,7 +90,7 @@ class ProcessUploadedSongJob implements ShouldQueue
             }
 
             // Wrap all database operations in a transaction to prevent partial state
-            $song = DB::transaction(function () use ($metadata, $format, $r2Metadata, $smartFolderService, $tagService) {
+            $song = DB::transaction(function () use ($metadata, $format, $storageMetadata, $smartFolderService, $tagService) {
                 // Find or create artist
                 $artist = null;
                 if ($metadata['artist'] ?? null) {
@@ -123,21 +123,23 @@ class ProcessUploadedSongJob implements ShouldQueue
                     'year' => $metadata['year'] ?? null,
                     'lyrics' => $metadata['lyrics'] ?? null,
                     'storage_path' => $this->storagePath,
-                    'file_hash' => $r2Metadata['etag'] ?? null,
-                    'file_size' => $r2Metadata['size'] ?? 0,
+                    'file_hash' => $storageMetadata['etag'] ?? null,
+                    'file_size' => $storageMetadata['size'] ?? 0,
                     'mime_type' => $format->mimeType(),
                     'audio_format' => $format->value,
-                    'r2_etag' => $r2Metadata['etag'] ?? null,
-                    'r2_last_modified' => $r2Metadata['last_modified'] ?? null,
+                    'r2_etag' => $storageMetadata['etag'] ?? null,
+                    'r2_last_modified' => $storageMetadata['last_modified'] ?? null,
                 ]);
 
                 // Update smart folder song count
                 $smartFolder?->updateSongCount();
 
-                // Assign tag based on folder path
+                // Assign tags based on folder path
                 if (config('muzakily.tags.auto_create_from_folders', true)) {
-                    $tag = $tagService->assignFromPath($song);
-                    $tag?->updateSongCount();
+                    $tags = $tagService->assignFromPath($song);
+                    foreach ($tags as $tag) {
+                        $tag->updateSongCount();
+                    }
                 }
 
                 return $song;

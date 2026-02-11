@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Jobs\TranscodeSongJob;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Song;
 use App\Models\Transcode;
-use App\Services\Storage\R2StorageService;
 use App\Services\Streaming\TranscodingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -23,15 +23,15 @@ class TranscodingServiceTest extends TestCase
     use RefreshDatabase;
 
     private TranscodingService $service;
-    private R2StorageService&MockInterface $r2Mock;
+    private MusicStorageInterface&MockInterface $storageMock;
     private Song $song;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->r2Mock = Mockery::mock(R2StorageService::class);
-        $this->service = new TranscodingService($this->r2Mock);
+        $this->storageMock = Mockery::mock(MusicStorageInterface::class);
+        $this->service = new TranscodingService($this->storageMock);
 
         $artist = Artist::factory()->create();
         $album = Album::factory()->create(['artist_id' => $artist->id]);
@@ -48,7 +48,7 @@ class TranscodingServiceTest extends TestCase
     public function test_get_stream_url_returns_original_for_original_format(): void
     {
         $expectedUrl = 'https://r2.example.com/presigned/music/test-song.flac';
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->with('music/test-song.flac', 3600)
             ->andReturn($expectedUrl);
@@ -62,7 +62,7 @@ class TranscodingServiceTest extends TestCase
     public function test_get_stream_url_returns_original_when_format_matches(): void
     {
         $expectedUrl = 'https://r2.example.com/presigned/music/test-song.flac';
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->with('music/test-song.flac', 3600)
             ->andReturn($expectedUrl);
@@ -83,7 +83,7 @@ class TranscodingServiceTest extends TestCase
         ]);
 
         $expectedUrl = 'https://r2.example.com/presigned/transcodes/test/mp3_256.mp3';
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->with($transcode->storage_key, 3600)
             ->andReturn($expectedUrl);
@@ -97,7 +97,7 @@ class TranscodingServiceTest extends TestCase
     public function test_get_stream_url_queues_job_when_transcode_missing(): void
     {
         $expectedUrl = 'https://r2.example.com/presigned/music/test-song.flac';
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->with('music/test-song.flac', 3600)
             ->andReturn($expectedUrl);
@@ -125,7 +125,7 @@ class TranscodingServiceTest extends TestCase
         ]);
 
         // Request 320 bitrate
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->andReturn('https://r2.example.com/original');
 
@@ -138,7 +138,7 @@ class TranscodingServiceTest extends TestCase
 
     public function test_get_stream_url_for_aac_format(): void
     {
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->andReturn('https://r2.example.com/original');
 
@@ -158,7 +158,7 @@ class TranscodingServiceTest extends TestCase
             'storage_path' => 'music/test-song.mp3',
         ]);
 
-        $this->r2Mock->shouldReceive('getPresignedUrl')
+        $this->storageMock->shouldReceive('getStreamUrl')
             ->once()
             ->with('music/test-song.mp3', 3600)
             ->andReturn('https://r2.example.com/mp3');

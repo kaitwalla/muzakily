@@ -26,6 +26,12 @@ docker compose exec app composer <command>
 - Always stage specific files, not `git add .` or `git add -A`
 - Never push unless explicitly asked
 
+## Dangerous Commands - NEVER RUN
+
+- **NEVER run `php artisan migrate:fresh`** - destroys all data
+- **NEVER run `php artisan db:wipe`** - destroys all data
+- **NEVER run `php artisan db:fresh`** - destroys all data
+
 ## Development Practices
 
 - **Always create tests** - Follow TDD: write tests before implementation

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import type {
     SmartPlaylistRule,
     SmartPlaylistFieldValue,
     SmartPlaylistOperatorValue,
-    SmartFolder,
 } from '@/config/smartPlaylist';
 import {
     smartPlaylistFields,
@@ -12,26 +11,21 @@ import {
     getOperatorsForFieldType,
     operatorRequiresRange,
     operatorIsDateRange,
-    isFolderField,
 } from '@/config/smartPlaylist';
 
 interface Props {
     rule: SmartPlaylistRule;
     canRemove?: boolean;
-    smartFolders?: SmartFolder[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
     canRemove: true,
-    smartFolders: () => [],
 });
 
 const emit = defineEmits<{
     update: [updates: Partial<SmartPlaylistRule>];
     remove: [];
 }>();
-
-const showFolderPicker = ref(false);
 
 const fieldType = computed(() => getFieldType(props.rule.field));
 
@@ -47,20 +41,11 @@ const isDateRangeOperator = computed(() => {
     return operatorIsDateRange(props.rule.operator);
 });
 
-const showFolderField = computed(() => {
-    return isFolderField(props.rule.field);
-});
-
 const rangeValue = computed(() => {
     if (Array.isArray(props.rule.value)) {
         return props.rule.value;
     }
     return ['', ''];
-});
-
-const selectedFolder = computed(() => {
-    if (!showFolderField.value) return null;
-    return props.smartFolders.find((f) => f.id === props.rule.value);
 });
 
 function handleFieldChange(event: Event): void {
@@ -93,11 +78,6 @@ function handleRangeValueChange(index: 0 | 1, event: Event): void {
     const newRange = [...rangeValue.value] as [string | number, string | number];
     newRange[index] = fieldType.value === 'number' ? Number(target.value) : target.value;
     emit('update', { value: newRange });
-}
-
-function handleFolderSelect(folder: SmartFolder): void {
-    emit('update', { value: folder.id });
-    showFolderPicker.value = false;
 }
 
 function getInputType(): string {
@@ -159,33 +139,7 @@ function getPlaceholder(): string {
         </select>
 
         <!-- Value input(s) -->
-        <template v-if="showFolderField">
-            <!-- Folder picker -->
-            <div class="relative">
-                <button
-                    @click="showFolderPicker = !showFolderPicker"
-                    class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500 min-w-32 text-left"
-                >
-                    {{ selectedFolder?.name || 'Select folder...' }}
-                </button>
-
-                <div
-                    v-if="showFolderPicker && smartFolders.length > 0"
-                    class="absolute top-full left-0 mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg z-10 min-w-48"
-                >
-                    <button
-                        v-for="folder in smartFolders"
-                        :key="folder.id"
-                        @click="handleFolderSelect(folder)"
-                        class="w-full px-3 py-2 text-left text-sm text-white hover:bg-gray-600 first:rounded-t-lg last:rounded-b-lg"
-                    >
-                        {{ folder.name }}
-                    </button>
-                </div>
-            </div>
-        </template>
-
-        <template v-else-if="showRangeInputs">
+        <template v-if="showRangeInputs">
             <!-- Range inputs -->
             <input
                 :type="getInputType()"

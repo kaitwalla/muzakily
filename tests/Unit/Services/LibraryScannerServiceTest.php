@@ -95,11 +95,11 @@ class LibraryScannerServiceTest extends TestCase
             ->with('header_content', 'footer_content', $fileSize)
             ->andReturn($tempPath);
 
-        // Mock metadata extraction with estimation
+        // Mock metadata extraction
         $this->metadataExtractorMock
-            ->shouldReceive('extractWithEstimation')
+            ->shouldReceive('extract')
             ->once()
-            ->with($tempPath, $fileSize)
+            ->with($tempPath)
             ->andReturn([
                 'title' => 'Test Song',
                 'artist' => 'Test Artist',
@@ -111,7 +111,6 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 180.0,
                 'bitrate' => 320000,
                 'lyrics' => null,
-                'duration_estimated' => false,
             ]);
 
         // Mock smart folder assignment
@@ -246,7 +245,7 @@ class LibraryScannerServiceTest extends TestCase
 
         // Metadata extraction returns zero duration (can't determine from partial)
         $this->metadataExtractorMock
-            ->shouldReceive('extractWithEstimation')
+            ->shouldReceive('extract')
             ->once()
             ->andReturn([
                 'title' => 'Test Song',
@@ -257,9 +256,8 @@ class LibraryScannerServiceTest extends TestCase
                 'disc' => null,
                 'genre' => null,
                 'duration' => 0.0, // Zero duration
-                'bitrate' => null, // No bitrate to estimate from
+                'bitrate' => null,
                 'lyrics' => null,
-                'duration_estimated' => false,
             ]);
 
         // Fall back to full download

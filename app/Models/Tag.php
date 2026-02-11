@@ -115,84 +115,107 @@ class Tag extends Model
     /**
      * Extract tag name from a storage path.
      *
+     * @deprecated Use extractTagNamesFromPath instead
      * @param list<string> $specialFolders
      */
     public static function extractFromPath(string $path, array $specialFolders = []): ?string
     {
+        $tagNames = static::extractTagNamesFromPath($path, $specialFolders);
+
+        return $tagNames[0] ?? null;
+    }
+
+    /**
+     * Extract tag names from a storage path.
+     * For special folders (like xmas), returns multiple tags.
+     *
+     * @param list<string> $specialFolders
+     * @return list<string>
+     */
+    public static function extractTagNamesFromPath(string $path, array $specialFolders = []): array
+    {
         if (empty($path)) {
-            return null;
+            return [];
         }
 
         $parts = explode('/', $path);
 
         // Need at least 2 parts (folder/file)
         if (count($parts) < 2) {
-            return null;
+            return [];
         }
 
         $topLevel = $parts[0];
 
-        // Check if it's a special folder and has a subfolder
-        if (in_array($topLevel, $specialFolders, true) && count($parts) >= 3) {
-            return $topLevel . '/' . $parts[1];
+        // Check if it's a special folder (case-insensitive) and has a subfolder
+        $isSpecial = false;
+        foreach ($specialFolders as $specialFolder) {
+            if (strcasecmp($topLevel, $specialFolder) === 0) {
+                $isSpecial = true;
+                break;
+            }
         }
 
-        return $topLevel;
+        if ($isSpecial && count($parts) >= 3) {
+            // Return both the parent tag and the combined "Parent - Child" tag
+            return [
+                strtolower($topLevel),
+                strtolower($topLevel) . ' - ' . strtolower($parts[1]),
+            ];
+        }
+
+        // For special folders without subfolder, lowercase
+        if ($isSpecial) {
+            return [strtolower($topLevel)];
+        }
+
+        return [$topLevel];
     }
 
     /**
      * Find or create a tag from a storage path.
      *
+     * @deprecated Use findOrCreateTagsFromPath instead
      * @param list<string> $specialFolders
      */
     public static function findOrCreateFromPath(string $path, array $specialFolders = []): ?self
     {
-        $tagName = static::extractFromPath($path, $specialFolders);
+        $tags = static::findOrCreateTagsFromPath($path, $specialFolders);
 
-        if ($tagName === null) {
-            return null;
+        return $tags->first();
+    }
+
+    /**
+     * Find or create tags from a storage path.
+     * For special folders (like xmas), creates multiple flat tags.
+     *
+     * @param list<string> $specialFolders
+     * @return \Illuminate\Database\Eloquent\Collection<int, self>
+     */
+    public static function findOrCreateTagsFromPath(string $path, array $specialFolders = []): \Illuminate\Database\Eloquent\Collection
+    {
+        $tagNames = static::extractTagNamesFromPath($path, $specialFolders);
+
+        if (empty($tagNames)) {
+            return new \Illuminate\Database\Eloquent\Collection();
         }
 
-        // Check if it's a hierarchical tag (contains /)
-        if (str_contains($tagName, '/')) {
-            [$parentName, $childName] = explode('/', $tagName, 2);
+        $tags = [];
 
-            // Find or create parent - check by name first for consistency
-            $parent = static::where('name', $parentName)->first();
-            if (!$parent) {
-                $parent = static::create([
-                    'name' => $parentName,
-                    'slug' => static::generateUniqueSlug($parentName),
-                    'is_special' => true,
+        foreach ($tagNames as $tagName) {
+            // Check by name first (case-insensitive for consistency)
+            $tag = static::whereRaw('LOWER(name) = ?', [strtolower($tagName)])->first();
+            if (!$tag) {
+                $tag = static::create([
+                    'name' => $tagName,
+                    'slug' => static::generateUniqueSlug($tagName),
                     'depth' => 1,
                 ]);
             }
-
-            // Find or create child - check by name first
-            $child = static::where('name', $tagName)->first();
-            if (!$child) {
-                $child = static::create([
-                    'name' => $tagName,
-                    'slug' => static::generateUniqueSlug($parentName . '-' . $childName),
-                    'parent_id' => $parent->id,
-                    'depth' => 2,
-                ]);
-            }
-
-            return $child;
+            $tags[] = $tag;
         }
 
-        // Simple top-level tag - check by name first
-        $tag = static::where('name', $tagName)->first();
-        if (!$tag) {
-            $tag = static::create([
-                'name' => $tagName,
-                'slug' => static::generateUniqueSlug($tagName),
-                'depth' => 1,
-            ]);
-        }
-
-        return $tag;
+        return new \Illuminate\Database\Eloquent\Collection($tags);
     }
 
     /**

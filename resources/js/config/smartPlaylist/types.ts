@@ -15,7 +15,6 @@ export type SmartPlaylistFieldValue =
     | 'play_count'
     | 'last_played'
     | 'date_added'
-    | 'smart_folder'
     | 'audio_format';
 
 export type SmartPlaylistOperatorValue =

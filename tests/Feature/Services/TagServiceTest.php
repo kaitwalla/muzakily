@@ -26,11 +26,11 @@ class TagServiceTest extends TestCase
     {
         $song = Song::factory()->create(['storage_path' => 'Rock/Artist/Album/song.mp3']);
 
-        $tag = $this->tagService->assignFromPath($song);
+        $tags = $this->tagService->assignFromPath($song);
 
-        $this->assertNotNull($tag);
-        $this->assertEquals('Rock', $tag->name);
-        $this->assertTrue($song->tags->contains($tag));
+        $this->assertCount(1, $tags);
+        $this->assertEquals('Rock', $tags->first()->name);
+        $this->assertTrue($song->tags->contains($tags->first()));
     }
 
     public function test_assign_from_path_reuses_existing_tag(): void
@@ -38,31 +38,34 @@ class TagServiceTest extends TestCase
         $existingTag = Tag::factory()->create(['name' => 'Rock', 'slug' => 'rock']);
         $song = Song::factory()->create(['storage_path' => 'Rock/Artist/Album/song.mp3']);
 
-        $tag = $this->tagService->assignFromPath($song);
+        $tags = $this->tagService->assignFromPath($song);
 
-        $this->assertEquals($existingTag->id, $tag->id);
+        $this->assertCount(1, $tags);
+        $this->assertEquals($existingTag->id, $tags->first()->id);
         $this->assertDatabaseCount('tags', 1);
     }
 
-    public function test_assign_from_path_creates_hierarchical_tags_for_special_folders(): void
+    public function test_assign_from_path_creates_multiple_tags_for_special_folders(): void
     {
         $song = Song::factory()->create(['storage_path' => 'Xmas/Contemporary/Artist/song.mp3']);
 
-        $tag = $this->tagService->assignFromPath($song);
+        $tags = $this->tagService->assignFromPath($song);
 
-        $this->assertNotNull($tag);
-        $this->assertEquals('Xmas/Contemporary', $tag->name);
-        $this->assertNotNull($tag->parent);
-        $this->assertEquals('Xmas', $tag->parent->name);
+        $this->assertCount(2, $tags);
+        $tagNames = $tags->pluck('name')->toArray();
+        $this->assertContains('xmas', $tagNames);
+        $this->assertContains('xmas - contemporary', $tagNames);
+        $this->assertTrue($song->tags->contains(fn ($t) => $t->name === 'xmas'));
+        $this->assertTrue($song->tags->contains(fn ($t) => $t->name === 'xmas - contemporary'));
     }
 
-    public function test_assign_from_path_returns_null_for_root_file(): void
+    public function test_assign_from_path_returns_empty_collection_for_root_file(): void
     {
         $song = Song::factory()->create(['storage_path' => 'song.mp3']);
 
-        $tag = $this->tagService->assignFromPath($song);
+        $tags = $this->tagService->assignFromPath($song);
 
-        $this->assertNull($tag);
+        $this->assertCount(0, $tags);
     }
 
     public function test_find_or_create_creates_new_tag(): void
@@ -186,9 +189,9 @@ class TagServiceTest extends TestCase
     {
         $song = Song::factory()->create(['storage_path' => 'Rock/Artist/Album/song.mp3']);
 
-        $tag = $this->tagService->assignFromPath($song);
+        $tags = $this->tagService->assignFromPath($song);
 
-        $pivot = $song->tags()->where('tag_id', $tag->id)->first()->pivot;
+        $pivot = $song->tags()->where('tag_id', $tags->first()->id)->first()->pivot;
         $this->assertTrue($pivot->auto_assigned);
     }
 

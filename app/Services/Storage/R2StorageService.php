@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Storage;
 
+use App\Contracts\MusicStorageInterface;
 use Aws\S3\S3Client;
 use Illuminate\Support\Facades\Storage;
 
-class R2StorageService
+class R2StorageService implements MusicStorageInterface
 {
     private S3Client $client;
     private string $bucket;
@@ -42,6 +43,14 @@ class R2StorageService
         ]);
 
         return (string) $this->client->createPresignedRequest($cmd, "+{$expiry} seconds")->getUri();
+    }
+
+    /**
+     * Get a URL for streaming the file.
+     */
+    public function getStreamUrl(string $key, int $expiry = 3600): string
+    {
+        return $this->getPresignedUrl($key, $expiry, 'inline');
     }
 
     /**

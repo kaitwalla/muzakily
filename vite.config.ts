@@ -26,6 +26,11 @@ export default defineConfig({
         },
     },
     server: {
+        host: '0.0.0.0',
+        hmr: {
+            host: 'localhost',
+            clientPort: 28901,
+        },
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

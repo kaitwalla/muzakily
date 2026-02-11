@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api\V1;
 
+use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Jobs\TranscodeSongJob;
 use App\Models\Album;
@@ -11,7 +12,6 @@ use App\Models\Artist;
 use App\Models\Song;
 use App\Models\Transcode;
 use App\Models\User;
-use App\Services\Storage\R2StorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Mockery\MockInterface;
@@ -51,8 +51,8 @@ class StreamingEndpointTest extends TestCase
 
     public function test_stream_returns_presigned_url(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
                 ->andReturn('https://r2.example.com/presigned/music/test-song.flac');
         });
 
@@ -68,8 +68,8 @@ class StreamingEndpointTest extends TestCase
 
     public function test_stream_with_format_parameter(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
                 ->andReturn('https://r2.example.com/presigned/original');
         });
 
@@ -86,8 +86,8 @@ class StreamingEndpointTest extends TestCase
 
     public function test_stream_with_bitrate_parameter(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
                 ->andReturn('https://r2.example.com/presigned/original');
         });
 
@@ -110,8 +110,8 @@ class StreamingEndpointTest extends TestCase
             'storage_key' => 'transcodes/test/mp3_256.mp3',
         ]);
 
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
                 ->with('transcodes/test/mp3_256.mp3', 3600)
                 ->andReturn('https://r2.example.com/presigned/transcodes/test/mp3_256.mp3');
         });
@@ -128,8 +128,8 @@ class StreamingEndpointTest extends TestCase
 
     public function test_stream_original_format_no_transcoding(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
                 ->andReturn('https://r2.example.com/presigned/original');
         });
 
@@ -143,8 +143,8 @@ class StreamingEndpointTest extends TestCase
 
     public function test_stream_same_format_no_transcoding(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
                 ->andReturn('https://r2.example.com/presigned/original');
         });
 
@@ -158,7 +158,7 @@ class StreamingEndpointTest extends TestCase
 
     public function test_download_requires_authentication(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             // No expectations - should not be called
         });
 
@@ -167,23 +167,23 @@ class StreamingEndpointTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_download_redirects_to_presigned_url(): void
+    public function test_download_redirects_to_stream_url(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getPresignedUrl')
-                ->with('music/test-song.flac', 3600, 'attachment')
-                ->andReturn('https://r2.example.com/presigned/download?disposition=attachment');
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('getStreamUrl')
+                ->with('music/test-song.flac', 3600)
+                ->andReturn('https://storage.example.com/music/test-song.flac');
         });
 
         $response = $this->actingAs($this->user)
             ->get("/api/v1/songs/{$this->song->id}/download");
 
-        $response->assertRedirect('https://r2.example.com/presigned/download?disposition=attachment');
+        $response->assertRedirect('https://storage.example.com/music/test-song.flac');
     }
 
     public function test_stream_returns_404_for_nonexistent_song(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             // No expectations - should not be called
         });
 

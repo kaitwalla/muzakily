@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Services\Streaming;
 
+use App\Contracts\MusicStorageInterface;
 use App\Jobs\TranscodeSongJob;
 use App\Models\Song;
 use App\Models\Transcode;
-use App\Services\Storage\R2StorageService;
 use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Support\Facades\Process;
 
 class TranscodingService
 {
     public function __construct(
-        private R2StorageService $storage,
+        private MusicStorageInterface $storage,
     ) {}
 
     /**
@@ -24,7 +24,7 @@ class TranscodingService
     {
         // Original format - no transcoding needed
         if ($format === 'original' || $song->audio_format->value === $format) {
-            return $this->storage->getPresignedUrl(
+            return $this->storage->getStreamUrl(
                 $song->storage_path,
                 config('muzakily.r2.presigned_expiry', 3600)
             );
@@ -33,7 +33,7 @@ class TranscodingService
         // Check for cached transcode
         $transcode = Transcode::findForSong($song, $format, $bitrate);
         if ($transcode) {
-            return $this->storage->getPresignedUrl(
+            return $this->storage->getStreamUrl(
                 $transcode->storage_key,
                 config('muzakily.r2.presigned_expiry', 3600)
             );
@@ -42,7 +42,7 @@ class TranscodingService
         // Queue transcoding job, return original for now
         TranscodeSongJob::dispatch($song, $format, $bitrate);
 
-        return $this->storage->getPresignedUrl(
+        return $this->storage->getStreamUrl(
             $song->storage_path,
             config('muzakily.r2.presigned_expiry', 3600)
         );

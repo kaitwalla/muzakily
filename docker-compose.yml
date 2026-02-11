@@ -10,12 +10,15 @@ services:
       - composer_cache:/root/.composer/cache
       - npm_cache:/root/.npm
     ports:
-      - "18000:8000"
-      - "15173:5173"
+      - "${APP_PORT:-18000}:8000"
+      - "${VITE_PORT:-15173}:5173"
     depends_on:
       - postgres
       - redis
       - meilisearch
+    command: >
+      bash -c "php artisan serve --host=0.0.0.0 --port=8000 &
+               npm run dev -- --host 0.0.0.0 --port 5173"
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql
@@ -42,7 +45,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5480:5432"
+      - "${DB_FORWARD_PORT:-5480}:5432"
     networks:
       - muzakily
 
@@ -50,7 +53,7 @@ services:
     image: redis:7-alpine
     container_name: muzakily-redis
     ports:
-      - "6390:6379"
+      - "${REDIS_FORWARD_PORT:-6390}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -66,7 +69,7 @@ services:
     volumes:
       - meilisearch_data:/meili_data
     ports:
-      - "7780:7700"
+      - "${MEILI_FORWARD_PORT:-7780}:7700"
     networks:
       - muzakily
 

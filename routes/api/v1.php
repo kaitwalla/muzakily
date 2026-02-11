@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\ArtistController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\FavoriteController;
 use App\Http\Controllers\Api\V1\InteractionController;
+use App\Http\Controllers\Api\V1\LocalStreamController;
 use App\Http\Controllers\Api\V1\PlayerDeviceController;
 use App\Http\Controllers\Api\V1\PlaylistController;
 use App\Http\Controllers\Api\V1\RemoteControlController;
@@ -33,6 +34,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->name('auth.login');
 });
+
+// Local streaming (uses signed URL for auth)
+Route::get('stream/local', [LocalStreamController::class, 'stream'])->name('stream.local');
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {

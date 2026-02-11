@@ -20,20 +20,23 @@ class TagTest extends TestCase
         $this->assertEquals('Rock', $tagName);
     }
 
-    public function test_extracts_second_level_for_special_folders(): void
+    public function test_extracts_multiple_tags_for_special_folders(): void
     {
         $path = 'Xmas/Contemporary/Artist/song.mp3';
-        $tagName = Tag::extractFromPath($path, ['Xmas']);
+        $tagNames = Tag::extractTagNamesFromPath($path, ['Xmas']);
 
-        $this->assertEquals('Xmas/Contemporary', $tagName);
+        $this->assertCount(2, $tagNames);
+        $this->assertContains('xmas', $tagNames);
+        $this->assertContains('xmas - contemporary', $tagNames);
     }
 
-    public function test_extracts_special_folder_only_when_has_subfolder(): void
+    public function test_extracts_special_folder_only_when_no_subfolder(): void
     {
         $path = 'Xmas/song.mp3';
-        $tagName = Tag::extractFromPath($path, ['Xmas']);
+        $tagNames = Tag::extractTagNamesFromPath($path, ['Xmas']);
 
-        $this->assertEquals('Xmas', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('xmas', $tagNames);
     }
 
     public function test_returns_null_for_empty_path(): void
@@ -75,32 +78,36 @@ class TagTest extends TestCase
         $this->assertDatabaseCount('tags', 1);
     }
 
-    public function test_find_or_create_from_path_creates_parent_for_special_folder(): void
+    public function test_find_or_create_tags_from_path_creates_multiple_for_special_folder(): void
     {
         $path = 'Xmas/Contemporary/Artist/song.mp3';
 
-        $tag = Tag::findOrCreateFromPath($path, ['Xmas']);
+        $tags = Tag::findOrCreateTagsFromPath($path, ['Xmas']);
 
-        $this->assertNotNull($tag);
-        $this->assertEquals('Xmas/Contemporary', $tag->name);
-        $this->assertEquals('xmas-contemporary', $tag->slug);
-        $this->assertNotNull($tag->parent);
-        $this->assertEquals('Xmas', $tag->parent->name);
+        $this->assertCount(2, $tags);
+        $tagNames = $tags->pluck('name')->toArray();
+        $this->assertContains('xmas', $tagNames);
+        $this->assertContains('xmas - contemporary', $tagNames);
+
+        // Tags should be flat (no parent-child relationship)
+        foreach ($tags as $tag) {
+            $this->assertNull($tag->parent_id);
+        }
     }
 
     public function test_tag_has_parent_relationship(): void
     {
-        $parent = Tag::factory()->create(['name' => 'Xmas']);
-        $child = Tag::factory()->create(['name' => 'Xmas/Contemporary', 'parent_id' => $parent->id]);
+        $parent = Tag::factory()->create(['name' => 'Parent']);
+        $child = Tag::factory()->create(['name' => 'Child', 'parent_id' => $parent->id]);
 
         $this->assertEquals($parent->id, $child->parent->id);
     }
 
     public function test_tag_has_children_relationship(): void
     {
-        $parent = Tag::factory()->create(['name' => 'Xmas']);
-        $child1 = Tag::factory()->create(['name' => 'Xmas/Classic', 'parent_id' => $parent->id]);
-        $child2 = Tag::factory()->create(['name' => 'Xmas/Contemporary', 'parent_id' => $parent->id]);
+        $parent = Tag::factory()->create(['name' => 'Parent']);
+        $child1 = Tag::factory()->create(['name' => 'Child1', 'parent_id' => $parent->id]);
+        $child2 = Tag::factory()->create(['name' => 'Child2', 'parent_id' => $parent->id]);
 
         $this->assertCount(2, $parent->children);
         $this->assertTrue($parent->children->contains($child1));
@@ -116,8 +123,8 @@ class TagTest extends TestCase
 
     public function test_scope_roots_returns_only_top_level_tags(): void
     {
-        $parent = Tag::factory()->create(['name' => 'Xmas', 'parent_id' => null]);
-        $child = Tag::factory()->create(['name' => 'Xmas/Contemporary', 'parent_id' => $parent->id]);
+        $parent = Tag::factory()->create(['name' => 'Parent', 'parent_id' => null]);
+        $child = Tag::factory()->create(['name' => 'Child', 'parent_id' => $parent->id]);
         $anotherRoot = Tag::factory()->create(['name' => 'Rock', 'parent_id' => null]);
 
         $roots = Tag::roots()->get();
@@ -126,6 +133,16 @@ class TagTest extends TestCase
         $this->assertTrue($roots->contains($parent));
         $this->assertTrue($roots->contains($anotherRoot));
         $this->assertFalse($roots->contains($child));
+    }
+
+    public function test_special_folder_matching_is_case_insensitive(): void
+    {
+        $path = 'xmas/contemporary/song.mp3';
+        $tagNames = Tag::extractTagNamesFromPath($path, ['Xmas']);
+
+        $this->assertCount(2, $tagNames);
+        $this->assertContains('xmas', $tagNames);
+        $this->assertContains('xmas - contemporary', $tagNames);
     }
 
     public function test_generates_slug_from_name(): void

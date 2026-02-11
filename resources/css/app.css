@@ -4,8 +4,122 @@
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+@source '../**/*.vue';
+
+:root {
+    /* Base Colors - Slate */
+    --color-surface-50: #f8fafc;
+    --color-surface-100: #f1f5f9;
+    --color-surface-200: #e2e8f0;
+    --color-surface-300: #cbd5e1;
+    --color-surface-400: #94a3b8;
+    --color-surface-500: #64748b;
+    --color-surface-600: #475569;
+    --color-surface-700: #334155;
+    --color-surface-800: #1e293b;
+    --color-surface-900: #0f172a;
+    --color-surface-950: #020617;
+
+    /* Primary - Indigo */
+    --color-primary-50: #eef2ff;
+    --color-primary-100: #e0e7ff;
+    --color-primary-200: #c7d2fe;
+    --color-primary-300: #a5b4fc;
+    --color-primary-400: #818cf8;
+    --color-primary-500: #6366f1;
+    --color-primary-600: #4f46e5;
+    --color-primary-700: #4338ca;
+    --color-primary-800: #3730a3;
+    --color-primary-900: #312e81;
+    --color-primary-950: #1e1b4b;
+}
+
+/* Neon Theme */
+/* A high contrast dark theme with vibrant accents */
+.theme-neon {
+    /* Darker, cooler surface */
+    --color-surface-50: #fbfbfe;
+    --color-surface-100: #f2f3fc;
+    --color-surface-200: #e6e8f9;
+    --color-surface-300: #d0d5f3;
+    --color-surface-400: #aab5eb;
+    --color-surface-500: #7c8ee0;
+    --color-surface-600: #586bd2;
+    --color-surface-700: #4655c1;
+    --color-surface-800: #3b46a1;
+    --color-surface-900: #323b81;
+    --color-surface-950: #050511;
+
+    /* Vibrant Pink/Purple Primary */
+    --color-primary-50: #fdf2f8;
+    --color-primary-100: #fce7f3;
+    --color-primary-200: #fbcfe8;
+    --color-primary-300: #f9a8d4;
+    --color-primary-400: #f472b6;
+    --color-primary-500: #ec4899;
+    --color-primary-600: #db2777;
+    --color-primary-700: #be185d;
+    --color-primary-800: #9d174d;
+    --color-primary-900: #831843;
+    --color-primary-950: #500724;
+}
+
+/* Retro Theme */
+/* Warm, sepia-toned colors */
+.theme-retro {
+    /* Warm Sand/Beige Surface */
+    --color-surface-50: #fdfcf8;
+    --color-surface-100: #fbf8f0;
+    --color-surface-200: #f6efe1;
+    --color-surface-300: #ede0c6;
+    --color-surface-400: #e0c8a2;
+    --color-surface-500: #d2ac80;
+    --color-surface-600: #c59163;
+    --color-surface-700: #a47650;
+    --color-surface-800: #866045;
+    --color-surface-900: #6d4e3b;
+    --color-surface-950: #3c291e;
+
+    /* Orange/Rust Primary */
+    --color-primary-50: #fff7ed;
+    --color-primary-100: #ffedd5;
+    --color-primary-200: #fed7aa;
+    --color-primary-300: #fdba74;
+    --color-primary-400: #fb923c;
+    --color-primary-500: #f97316;
+    --color-primary-600: #ea580c;
+    --color-primary-700: #c2410c;
+    --color-primary-800: #9a3412;
+    --color-primary-900: #7c2d12;
+    --color-primary-950: #431407;
+}
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-surface-50: var(--color-surface-50);
+    --color-surface-100: var(--color-surface-100);
+    --color-surface-200: var(--color-surface-200);
+    --color-surface-300: var(--color-surface-300);
+    --color-surface-400: var(--color-surface-400);
+    --color-surface-500: var(--color-surface-500);
+    --color-surface-600: var(--color-surface-600);
+    --color-surface-700: var(--color-surface-700);
+    --color-surface-800: var(--color-surface-800);
+    --color-surface-900: var(--color-surface-900);
+    --color-surface-950: var(--color-surface-950);
+
+    --color-primary-50: var(--color-primary-50);
+    --color-primary-100: var(--color-primary-100);
+    --color-primary-200: var(--color-primary-200);
+    --color-primary-300: var(--color-primary-300);
+    --color-primary-400: var(--color-primary-400);
+    --color-primary-500: var(--color-primary-500);
+    --color-primary-600: var(--color-primary-600);
+    --color-primary-700: var(--color-primary-700);
+    --color-primary-800: var(--color-primary-800);
+    --color-primary-900: var(--color-primary-900);
+    --color-primary-950: var(--color-primary-950);
+    
+    --font-heading: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
+

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\MusicStorageInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Song;
-use App\Services\Storage\R2StorageService;
 use App\Services\Streaming\TranscodingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 class StreamController extends Controller
 {
     public function __construct(
-        private R2StorageService $r2Storage,
+        private MusicStorageInterface $storage,
         private TranscodingService $transcodingService,
     ) {}
 
@@ -40,14 +40,13 @@ class StreamController extends Controller
     }
 
     /**
-     * Download a song (redirect to presigned URL with download disposition).
+     * Download a song (redirect to stream URL).
      */
     public function download(Song $song): RedirectResponse
     {
-        $url = $this->r2Storage->getPresignedUrl(
+        $url = $this->storage->getStreamUrl(
             $song->storage_path,
-            config('muzakily.r2.presigned_expiry', 3600),
-            'attachment'
+            config('muzakily.r2.presigned_expiry', 3600)
         );
 
         return redirect()->away($url);

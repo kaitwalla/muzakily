@@ -21,88 +21,97 @@ class TagExtractionTest extends TestCase
     {
         $path = 'Rock/Artist Name/Album Name/01 - Song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Rock', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('Rock', $tagNames);
     }
 
-    public function test_extracts_second_level_for_special_folders(): void
+    public function test_extracts_multiple_tags_for_special_folders(): void
     {
         $path = 'Xmas/Contemporary/Artist/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Xmas/Contemporary', $tagName);
+        $this->assertCount(2, $tagNames);
+        $this->assertContains('xmas', $tagNames);
+        $this->assertContains('xmas - contemporary', $tagNames);
     }
 
-    public function test_handles_holiday_as_special_folder(): void
+    public function test_holiday_is_not_a_special_folder(): void
     {
         $path = 'Holiday/Classic/Artist/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Holiday/Classic', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('Holiday', $tagNames);
     }
 
-    public function test_handles_seasonal_as_special_folder(): void
+    public function test_seasonal_is_not_a_special_folder(): void
     {
         $path = 'Seasonal/Winter/Artist/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Seasonal/Winter', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('Seasonal', $tagNames);
     }
 
     public function test_special_folder_without_subfolder_returns_folder_only(): void
     {
         $path = 'Xmas/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Xmas', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('xmas', $tagNames);
     }
 
-    public function test_returns_null_for_empty_path(): void
+    public function test_returns_empty_for_empty_path(): void
     {
-        $tagName = $this->tagService->extractTagNameFromPath('');
+        $tagNames = $this->tagService->extractTagNamesFromPath('');
 
-        $this->assertNull($tagName);
+        $this->assertEmpty($tagNames);
     }
 
-    public function test_returns_null_for_root_file(): void
+    public function test_returns_empty_for_root_file(): void
     {
-        $tagName = $this->tagService->extractTagNameFromPath('song.mp3');
+        $tagNames = $this->tagService->extractTagNamesFromPath('song.mp3');
 
-        $this->assertNull($tagName);
+        $this->assertEmpty($tagNames);
     }
 
     public function test_handles_deep_nested_paths(): void
     {
         $path = 'Jazz/Miles Davis/Kind of Blue/01 - So What.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Jazz', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('Jazz', $tagNames);
     }
 
     public function test_handles_paths_with_special_characters(): void
     {
         $path = 'Rock & Roll/Artist (Live)/Album [2024]/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('Rock & Roll', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertContains('Rock & Roll', $tagNames);
     }
 
-    public function test_case_sensitive_special_folder_matching(): void
+    public function test_case_insensitive_special_folder_matching(): void
     {
-        // lowercase 'xmas' should NOT be treated as special
+        // lowercase 'xmas' SHOULD be treated as special (case insensitive)
         $path = 'xmas/Contemporary/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        // Should still extract as a regular folder (just the top level)
-        $this->assertEquals('xmas', $tagName);
+        $this->assertCount(2, $tagNames);
+        $this->assertContains('xmas', $tagNames);
+        $this->assertContains('xmas - contemporary', $tagNames);
     }
 
     public function test_custom_special_folders_can_be_configured(): void
@@ -111,8 +120,10 @@ class TagExtractionTest extends TestCase
 
         $path = 'CustomSpecial/SubFolder/song.mp3';
 
-        $tagName = $this->tagService->extractTagNameFromPath($path);
+        $tagNames = $this->tagService->extractTagNamesFromPath($path);
 
-        $this->assertEquals('CustomSpecial/SubFolder', $tagName);
+        $this->assertCount(2, $tagNames);
+        $this->assertContains('customspecial', $tagNames);
+        $this->assertContains('customspecial - subfolder', $tagNames);
     }
 }

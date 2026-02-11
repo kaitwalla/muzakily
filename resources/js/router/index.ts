@@ -92,6 +92,14 @@ const routes: RouteRecordRaw[] = [
         },
     },
     {
+        path: '/upload',
+        name: 'upload',
+        component: () => import('@/views/UploadView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
         path: '/:pathMatch(.*)*',
         name: 'not-found',
         component: () => import('@/views/NotFoundView.vue'),

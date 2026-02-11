@@ -26,27 +26,47 @@ class TagService
 
     /**
      * Extract tag name from a storage path.
+     *
+     * @deprecated Use extractTagNamesFromPath instead
      */
     public function extractTagNameFromPath(string $path): ?string
     {
-        return Tag::extractFromPath($path, $this->getSpecialFolders());
+        $tagNames = $this->extractTagNamesFromPath($path);
+
+        return $tagNames[0] ?? null;
     }
 
     /**
-     * Assign a tag to a song based on its storage path.
+     * Extract tag names from a storage path.
+     *
+     * @return list<string>
      */
-    public function assignFromPath(Song $song): ?Tag
+    public function extractTagNamesFromPath(string $path): array
     {
-        $tag = Tag::findOrCreateFromPath($song->storage_path, $this->getSpecialFolders());
+        return Tag::extractTagNamesFromPath($path, $this->getSpecialFolders());
+    }
 
-        if ($tag === null) {
-            return null;
+    /**
+     * Assign tags to a song based on its storage path.
+     *
+     * @return Collection<int, Tag>
+     */
+    public function assignFromPath(Song $song): Collection
+    {
+        $tags = Tag::findOrCreateTagsFromPath($song->storage_path, $this->getSpecialFolders());
+
+        if ($tags->isEmpty()) {
+            return $tags;
         }
 
-        // Attach tag if not already attached (atomic operation)
-        $song->tags()->syncWithoutDetaching([$tag->id => ['auto_assigned' => true]]);
+        // Attach all tags if not already attached (atomic operation)
+        $syncData = [];
+        foreach ($tags as $tag) {
+            $syncData[$tag->id] = ['auto_assigned' => true];
+        }
+        $song->tags()->syncWithoutDetaching($syncData);
 
-        return $tag;
+        return $tags;
     }
 
     /**

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\SongResource;
 use App\Jobs\ProcessUploadedSongJob;
-use App\Services\Storage\R2StorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 class UploadController extends Controller
 {
     public function __construct(
-        private R2StorageService $r2Storage,
+        private MusicStorageInterface $storage,
     ) {}
 
     /**
@@ -57,7 +57,7 @@ class UploadController extends Controller
         $fullTempPath = storage_path('app/' . $tempPath);
 
         try {
-            $this->r2Storage->upload($storagePath, $fullTempPath);
+            $this->storage->upload($storagePath, $fullTempPath);
         } finally {
             @unlink($fullTempPath);
         }

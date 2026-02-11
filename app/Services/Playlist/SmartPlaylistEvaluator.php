@@ -8,7 +8,6 @@ use App\Enums\SmartPlaylistField;
 use App\Enums\SmartPlaylistOperator;
 use App\Models\Playlist;
 use App\Models\Song;
-use App\Models\SmartFolder;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,7 +25,7 @@ class SmartPlaylistEvaluator
             return new Collection();
         }
 
-        $query = Song::query()->with(['artist', 'album', 'smartFolder', 'genres']);
+        $query = Song::query()->with(['artist', 'album', 'genres']);
 
         foreach ($playlist->rules as $ruleGroup) {
             $this->applyRuleGroup($query, $ruleGroup, $user);
@@ -70,12 +69,6 @@ class SmartPlaylistEvaluator
             return;
         }
 
-        // Special handling for smart folder field
-        if ($field === SmartPlaylistField::SMART_FOLDER) {
-            $this->applySmartFolderRule($query, $operator, $value, $method);
-            return;
-        }
-
         // Special handling for play count (needs user context)
         if ($field === SmartPlaylistField::PLAY_COUNT && $user) {
             $this->applyPlayCountRule($query, $operator, $value, $method, $user);
@@ -103,24 +96,6 @@ class SmartPlaylistEvaluator
             SmartPlaylistOperator::IN_LAST => $this->applyInLast($query, $column, $value, $method),
             SmartPlaylistOperator::NOT_IN_LAST => $this->applyNotInLast($query, $column, $value, $method),
         };
-    }
-
-    /**
-     * Apply smart folder rule.
-     *
-     * @param Builder<Song> $query
-     */
-    private function applySmartFolderRule(Builder $query, SmartPlaylistOperator $operator, mixed $value, string $method): void
-    {
-        $query->$method(function (Builder $q) use ($operator, $value) {
-            match ($operator) {
-                SmartPlaylistOperator::IS => $q->whereHas('smartFolder', fn ($sq) => $sq->where('path_prefix', $value)),
-                SmartPlaylistOperator::IS_NOT => $q->whereDoesntHave('smartFolder', fn ($sq) => $sq->where('path_prefix', $value)),
-                SmartPlaylistOperator::BEGINS_WITH => $q->whereHas('smartFolder', fn ($sq) => $sq->where('path_prefix', 'ilike', "{$value}%")),
-                SmartPlaylistOperator::CONTAINS => $q->whereHas('smartFolder', fn ($sq) => $sq->where('path_prefix', 'ilike', "%{$value}%")),
-                default => null,
-            };
-        });
     }
 
     /**

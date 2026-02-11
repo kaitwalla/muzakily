@@ -13,7 +13,6 @@ export const smartPlaylistFields: SmartPlaylistField[] = [
     { value: 'play_count', label: 'Play Count', type: 'number' },
     { value: 'last_played', label: 'Last Played', type: 'date' },
     { value: 'date_added', label: 'Date Added', type: 'date' },
-    { value: 'smart_folder', label: 'Folder', type: 'text' },
     { value: 'audio_format', label: 'Format', type: 'text' },
 ];
 
@@ -31,9 +30,3 @@ export function getFieldType(value: SmartPlaylistFieldValue): FieldType {
     return getFieldByValue(value)?.type ?? 'text';
 }
 
-/**
- * Check if a field is a folder picker field.
- */
-export function isFolderField(value: SmartPlaylistFieldValue): boolean {
-    return value === 'smart_folder';
-}

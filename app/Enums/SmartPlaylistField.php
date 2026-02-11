@@ -15,7 +15,6 @@ enum SmartPlaylistField: string
     case PLAY_COUNT = 'play_count';
     case LAST_PLAYED = 'last_played';
     case DATE_ADDED = 'date_added';
-    case SMART_FOLDER = 'smart_folder';
     case AUDIO_FORMAT = 'audio_format';
 
     /**
@@ -28,7 +27,6 @@ enum SmartPlaylistField: string
             self::ARTIST_NAME,
             self::ALBUM_NAME,
             self::GENRE,
-            self::SMART_FOLDER,
             self::AUDIO_FORMAT => 'text',
 
             self::YEAR,
@@ -87,7 +85,6 @@ enum SmartPlaylistField: string
             self::PLAY_COUNT => 'play_count',
             self::LAST_PLAYED => 'last_played_at',
             self::DATE_ADDED => 'created_at',
-            self::SMART_FOLDER => 'smart_folder_id',
             self::AUDIO_FORMAT => 'audio_format',
         };
     }
@@ -107,7 +104,6 @@ enum SmartPlaylistField: string
             self::PLAY_COUNT => 'Play Count',
             self::LAST_PLAYED => 'Last Played',
             self::DATE_ADDED => 'Date Added',
-            self::SMART_FOLDER => 'Folder',
             self::AUDIO_FORMAT => 'Format',
         };
     }

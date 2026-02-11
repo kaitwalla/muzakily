@@ -28,12 +28,18 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     (error: AxiosError<ApiError>) => {
-        const isAuthEndpoint = error.config?.url?.startsWith('/auth/');
+        const url = error.config?.url;
+        const isLoginEndpoint = url === '/auth/login';
         const isOnLoginPage = window.location.pathname === '/login';
 
-        if (error.response?.status === 401 && !isAuthEndpoint && !isOnLoginPage) {
+        if (error.response?.status === 401 && !isLoginEndpoint) {
+            // Clear invalid token
             localStorage.removeItem(TOKEN_KEY);
-            window.location.href = '/login';
+
+            // Redirect to login if not already there
+            if (!isOnLoginPage) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

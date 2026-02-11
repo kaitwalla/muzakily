@@ -2,16 +2,14 @@
 import { watch } from 'vue';
 import { useSmartPlaylist } from '@/composables';
 import RuleBuilder from './RuleBuilder.vue';
-import type { SmartPlaylistRuleGroup, SmartFolder, RuleLogic } from '@/config/smartPlaylist';
+import type { SmartPlaylistRuleGroup, RuleLogic } from '@/config/smartPlaylist';
 
 interface Props {
     initialRules?: SmartPlaylistRuleGroup[];
-    smartFolders?: SmartFolder[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
     initialRules: () => [],
-    smartFolders: () => [],
 });
 
 const emit = defineEmits<{
@@ -103,7 +101,6 @@ function handleLogicChange(groupId: number, event: Event): void {
                     :key="rule.id"
                     :rule="rule"
                     :can-remove="group.rules.length > 1"
-                    :smart-folders="smartFolders"
                     @update="updateRule(group.id, rule.id, $event)"
                     @remove="removeRule(group.id, rule.id)"
                 />

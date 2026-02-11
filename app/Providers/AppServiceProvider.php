@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\MusicStorageInterface;
 use App\Models\Playlist;
 use App\Models\Song;
 use App\Models\Tag;
@@ -11,6 +12,8 @@ use App\Policies\PlaylistPolicy;
 use App\Policies\SongPolicy;
 use App\Policies\TagPolicy;
 use App\Models\User;
+use App\Services\Storage\LocalStorageService;
+use App\Services\Storage\R2StorageService;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Meilisearch\Client;
@@ -29,6 +32,15 @@ class AppServiceProvider extends ServiceProvider
             $key = config('scout.meilisearch.key');
 
             return new Client($host, $key);
+        });
+
+        $this->app->singleton(MusicStorageInterface::class, function () {
+            $driver = config('muzakily.storage.driver', 'r2');
+
+            return match ($driver) {
+                'local' => new LocalStorageService(),
+                default => new R2StorageService(),
+            };
         });
     }
 

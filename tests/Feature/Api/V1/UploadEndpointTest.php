@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api\V1;
 
+use App\Contracts\MusicStorageInterface;
 use App\Jobs\ProcessUploadedSongJob;
 use App\Models\User;
-use App\Services\Storage\R2StorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -72,7 +72,7 @@ class UploadEndpointTest extends TestCase
 
     public function test_upload_accepts_mp3(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             $mock->shouldReceive('upload')
                 ->once()
                 ->andReturn(true);
@@ -96,7 +96,7 @@ class UploadEndpointTest extends TestCase
 
     public function test_upload_accepts_flac(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             $mock->shouldReceive('upload')
                 ->once()
                 ->andReturn(true);
@@ -116,7 +116,7 @@ class UploadEndpointTest extends TestCase
 
     public function test_upload_accepts_m4a(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             $mock->shouldReceive('upload')
                 ->once()
                 ->andReturn(true);
@@ -148,7 +148,7 @@ class UploadEndpointTest extends TestCase
 
     public function test_upload_dispatches_processing_job(): void
     {
-        $this->mock(R2StorageService::class, function (MockInterface $mock): void {
+        $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             $mock->shouldReceive('upload')
                 ->once()
                 ->andReturn(true);
