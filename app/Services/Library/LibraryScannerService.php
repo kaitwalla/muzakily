@@ -29,7 +29,7 @@ class LibraryScannerService
      *
      * @param Closure(array{total_files: int, scanned_files: int, new_songs: int, updated_songs: int, errors: int, removed_songs: int}): void|null $onProgress
      */
-    public function scan(bool $force = false, ?Closure $onProgress = null): void
+    public function scan(bool $force = false, ?int $limit = null, ?Closure $onProgress = null): void
     {
         $bucket = config('filesystems.disks.r2.bucket');
         $extensions = config('muzakily.scanning.extensions', ['mp3', 'aac', 'm4a', 'flac']);
@@ -72,6 +72,11 @@ class LibraryScannerService
 
             if ($onProgress && $stats['scanned_files'] % 10 === 0) {
                 $onProgress($stats);
+            }
+
+            // Check if limit reached
+            if ($limit !== null && $stats['scanned_files'] >= $limit) {
+                break;
             }
         }
 

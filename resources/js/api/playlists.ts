@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { Playlist, Song } from '@/types/models';
+import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
 
 export interface PlaylistFilters {
@@ -11,12 +12,15 @@ export interface CreatePlaylistData {
     name: string;
     description?: string;
     is_public?: boolean;
+    is_smart?: boolean;
+    rules?: SmartPlaylistRuleGroup[];
 }
 
 export interface UpdatePlaylistData {
     name?: string;
     description?: string;
     is_public?: boolean;
+    rules?: SmartPlaylistRuleGroup[];
 }
 
 export async function getPlaylists(filters: PlaylistFilters = {}): Promise<PaginatedResponse<Playlist>> {

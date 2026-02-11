@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -22,6 +23,8 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $password
  * @property UserRole $role
  * @property array<string, mixed>|null $preferences
+ * @property string|null $avatar_path
+ * @property-read string|null $avatar_url
  * @property string|null $remember_token
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
@@ -48,6 +51,7 @@ class User extends Authenticatable
         'password',
         'role',
         'preferences',
+        'avatar_path',
     ];
 
     /**
@@ -156,6 +160,18 @@ class User extends Authenticatable
         $preferences = $this->preferences ?? [];
         data_set($preferences, $key, $value);
         $this->preferences = $preferences;
+    }
+
+    /**
+     * Get the avatar URL.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (!$this->avatar_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->avatar_path);
     }
 
     /**

@@ -10,12 +10,17 @@ export interface User {
     email: string;
     role: string;
     preferences: UserPreferences;
+    avatar_url: string | null;
     created_at: string;
 }
 
 export interface UpdateProfileRequest {
     name?: string;
     preferences?: Partial<UserPreferences>;
+    avatar?: File;
+    current_password?: string;
+    password?: string;
+    password_confirmation?: string;
 }
 
 export interface LoginRequest {

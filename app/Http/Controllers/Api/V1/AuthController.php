@@ -11,6 +11,8 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -69,6 +71,9 @@ class AuthController extends Controller
             'preferences' => ['sometimes', 'array'],
             'preferences.audio_quality' => ['sometimes', 'string', 'in:auto,high,normal,low'],
             'preferences.crossfade' => ['sometimes', 'integer', 'in:0,3,5,10'],
+            'avatar' => ['nullable', 'image', 'max:2048'],
+            'current_password' => ['required_with:password', 'current_password'],
+            'password' => ['sometimes', 'string', Password::min(8), 'confirmed'],
         ]);
 
         /** @var User $user */
@@ -81,6 +86,24 @@ class AuthController extends Controller
         if (isset($validated['preferences'])) {
             $currentPreferences = $user->preferences ?? [];
             $user->preferences = array_merge($currentPreferences, $validated['preferences']);
+        }
+
+        // Handle avatar upload
+        if ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($user->avatar_path) {
+                Storage::disk('public')->delete($user->avatar_path);
+            }
+
+            $path = $request->file('avatar')->store('avatars', 'public');
+            if ($path !== false) {
+                $user->avatar_path = $path;
+            }
+        }
+
+        // Handle password change
+        if (isset($validated['password'])) {
+            $user->password = $validated['password'];
         }
 
         $user->save();

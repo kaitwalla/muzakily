@@ -40,6 +40,7 @@ docker compose exec app composer <command>
 - Use null-safe operator (`?->`) when accessing properties that could be null
 - Handle `tempnam()` failures (can return `false`)
 - Use `firstOrCreate` to handle race conditions in concurrent scenarios
+- NEVER re-run coderabbit without explicitly asking
 
 ## Project Stack
 

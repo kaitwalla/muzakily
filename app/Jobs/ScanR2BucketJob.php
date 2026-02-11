@@ -64,6 +64,7 @@ class ScanR2BucketJob implements ShouldQueue
 
             $scanner->scan(
                 force: $this->force,
+                limit: null,
                 onProgress: fn (array $progress) => $this->updateProgress($progress),
             );
 

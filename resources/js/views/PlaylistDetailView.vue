@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, watch, ref } from 'vue';
+import { onMounted, watch, ref, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
 import { usePlaylistsStore } from '@/stores/playlists';
 import { usePlayerStore } from '@/stores/player';
+import SmartPlaylistEditor from '@/components/playlist/SmartPlaylistEditor.vue';
 import type { Song } from '@/types/models';
+import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
 
 const route = useRoute();
 const router = useRouter();
@@ -12,6 +14,13 @@ const playerStore = usePlayerStore();
 
 const showDeleteConfirm = ref(false);
 const isDeleting = ref(false);
+const showEditModal = ref(false);
+const editPlaylistName = ref('');
+const editPlaylistDescription = ref('');
+const editPlaylistRules = ref<SmartPlaylistRuleGroup[]>([]);
+const isUpdating = ref(false);
+
+const isSmartPlaylist = computed(() => playlistsStore.currentPlaylist?.is_smart ?? false);
 
 async function loadPlaylist(): Promise<void> {
     const slug = route.params.slug as string;
@@ -49,6 +58,52 @@ async function deletePlaylist(): Promise<void> {
     } finally {
         isDeleting.value = false;
         showDeleteConfirm.value = false;
+    }
+}
+
+function openEditModal(): void {
+    if (!playlistsStore.currentPlaylist) return;
+    editPlaylistName.value = playlistsStore.currentPlaylist.name;
+    editPlaylistDescription.value = playlistsStore.currentPlaylist.description ?? '';
+    editPlaylistRules.value = playlistsStore.currentPlaylist.rules ?? [];
+    showEditModal.value = true;
+}
+
+function closeEditModal(): void {
+    showEditModal.value = false;
+    editPlaylistName.value = '';
+    editPlaylistDescription.value = '';
+    editPlaylistRules.value = [];
+}
+
+function handleEditRulesUpdate(rules: SmartPlaylistRuleGroup[]): void {
+    editPlaylistRules.value = rules;
+}
+
+async function handleEditSmartPlaylistSave(rules: SmartPlaylistRuleGroup[]): Promise<void> {
+    editPlaylistRules.value = rules;
+    await updatePlaylist();
+}
+
+async function updatePlaylist(): Promise<void> {
+    if (!playlistsStore.currentPlaylist || !editPlaylistName.value.trim() || isUpdating.value) return;
+
+    isUpdating.value = true;
+    try {
+        await playlistsStore.updatePlaylist(playlistsStore.currentPlaylist.id, {
+            name: editPlaylistName.value.trim(),
+            description: editPlaylistDescription.value.trim() || undefined,
+            rules: isSmartPlaylist.value ? editPlaylistRules.value : undefined,
+        });
+        // Reload songs in case smart playlist rules changed
+        if (isSmartPlaylist.value && playlistsStore.currentPlaylist) {
+            await playlistsStore.fetchPlaylistSongs(playlistsStore.currentPlaylist.id);
+        }
+        closeEditModal();
+    } catch {
+        // Error handled by store
+    } finally {
+        isUpdating.value = false;
     }
 }
 
@@ -96,7 +151,9 @@ function getTotalDuration(): string {
                     </div>
                 </div>
                 <div class="flex flex-col justify-end">
-                    <p class="text-sm text-gray-400 uppercase font-medium">Playlist</p>
+                    <p class="text-sm text-gray-400 uppercase font-medium">
+                        {{ isSmartPlaylist ? 'Smart Playlist' : 'Playlist' }}
+                    </p>
                     <h1 class="text-5xl font-bold text-white mt-2 mb-2">
                         {{ playlistsStore.currentPlaylist.name }}
                     </h1>
@@ -120,6 +177,15 @@ function getTotalDuration(): string {
                 >
                     <svg class="w-6 h-6 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z"/>
+                    </svg>
+                </button>
+                <button
+                    @click="openEditModal"
+                    class="p-3 text-gray-400 hover:text-white transition-colors"
+                    title="Edit playlist"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                     </svg>
                 </button>
                 <button
@@ -194,7 +260,8 @@ function getTotalDuration(): string {
 
             <div v-else class="text-center py-12 bg-gray-800/50 rounded-lg">
                 <p class="text-gray-400">This playlist is empty</p>
-                <p class="text-gray-500 text-sm mt-2">Add songs to get started</p>
+                <p v-if="isSmartPlaylist" class="text-gray-500 text-sm mt-2">No songs match the current rules</p>
+                <p v-else class="text-gray-500 text-sm mt-2">Add songs to get started</p>
             </div>
         </template>
 
@@ -225,6 +292,79 @@ function getTotalDuration(): string {
                             {{ isDeleting ? 'Deleting...' : 'Delete' }}
                         </button>
                     </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Edit Playlist Modal -->
+        <Teleport to="body">
+            <div
+                v-if="showEditModal"
+                class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto py-8"
+                @click.self="closeEditModal"
+            >
+                <div
+                    class="bg-gray-800 rounded-lg p-6 w-full mx-4 my-auto"
+                    :class="isSmartPlaylist ? 'max-w-2xl' : 'max-w-md'"
+                >
+                    <h2 class="text-xl font-bold text-white mb-4">
+                        Edit {{ isSmartPlaylist ? 'Smart Playlist' : 'Playlist' }}
+                    </h2>
+                    <form @submit.prevent="updatePlaylist">
+                        <div class="mb-4">
+                            <label for="edit-playlist-name" class="block text-sm font-medium text-gray-300 mb-2">
+                                Name
+                            </label>
+                            <input
+                                id="edit-playlist-name"
+                                v-model="editPlaylistName"
+                                type="text"
+                                required
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder="Playlist name"
+                            />
+                        </div>
+                        <div class="mb-6">
+                            <label for="edit-playlist-description" class="block text-sm font-medium text-gray-300 mb-2">
+                                Description (optional)
+                            </label>
+                            <textarea
+                                id="edit-playlist-description"
+                                v-model="editPlaylistDescription"
+                                rows="3"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                                placeholder="Add a description..."
+                            />
+                        </div>
+
+                        <!-- Smart Playlist Editor (for smart playlists only) -->
+                        <div v-if="isSmartPlaylist" class="mb-6">
+                            <SmartPlaylistEditor
+                                :initial-rules="editPlaylistRules"
+                                @update:rules="handleEditRulesUpdate"
+                                @save="handleEditSmartPlaylistSave"
+                                @cancel="closeEditModal"
+                            />
+                        </div>
+
+                        <!-- Regular playlist buttons (only show when not smart) -->
+                        <div v-if="!isSmartPlaylist" class="flex gap-3">
+                            <button
+                                type="button"
+                                @click="closeEditModal"
+                                class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                :disabled="!editPlaylistName.trim() || isUpdating"
+                                class="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-500/50 text-white font-semibold rounded-lg transition-colors"
+                            >
+                                {{ isUpdating ? 'Saving...' : 'Save' }}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </Teleport>

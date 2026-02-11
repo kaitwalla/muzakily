@@ -10,6 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
     const initialized = ref(false);
 
     const isAuthenticated = computed(() => !!user.value);
+    const isAdmin = computed(() => user.value?.role === 'admin');
 
     let initializePromise: Promise<void> | null = null;
 
@@ -85,6 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
         loading,
         initialized,
         isAuthenticated,
+        isAdmin,
         initialize,
         login,
         register,

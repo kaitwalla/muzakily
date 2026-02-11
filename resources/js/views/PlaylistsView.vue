@@ -2,16 +2,41 @@
 import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { usePlaylistsStore } from '@/stores/playlists';
+import SmartPlaylistEditor from '@/components/playlist/SmartPlaylistEditor.vue';
+import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
 
 const playlistsStore = usePlaylistsStore();
 const showCreateModal = ref(false);
 const newPlaylistName = ref('');
 const newPlaylistDescription = ref('');
+const isSmartPlaylist = ref(false);
+const smartPlaylistRules = ref<SmartPlaylistRuleGroup[]>([]);
 const isCreating = ref(false);
 
 onMounted(() => {
     playlistsStore.fetchPlaylists();
 });
+
+function resetCreateForm(): void {
+    newPlaylistName.value = '';
+    newPlaylistDescription.value = '';
+    isSmartPlaylist.value = false;
+    smartPlaylistRules.value = [];
+}
+
+function handleRulesUpdate(rules: SmartPlaylistRuleGroup[]): void {
+    smartPlaylistRules.value = rules;
+}
+
+function handleSmartPlaylistSave(rules: SmartPlaylistRuleGroup[]): void {
+    smartPlaylistRules.value = rules;
+    createPlaylist();
+}
+
+function handleSmartPlaylistCancel(): void {
+    showCreateModal.value = false;
+    resetCreateForm();
+}
 
 async function createPlaylist(): Promise<void> {
     if (!newPlaylistName.value.trim() || isCreating.value) return;
@@ -21,10 +46,11 @@ async function createPlaylist(): Promise<void> {
         await playlistsStore.createPlaylist({
             name: newPlaylistName.value.trim(),
             description: newPlaylistDescription.value.trim() || undefined,
+            is_smart: isSmartPlaylist.value,
+            rules: isSmartPlaylist.value ? smartPlaylistRules.value : undefined,
         });
         showCreateModal.value = false;
-        newPlaylistName.value = '';
-        newPlaylistDescription.value = '';
+        resetCreateForm();
     } catch {
         // Error is handled by store
     } finally {
@@ -104,10 +130,13 @@ async function createPlaylist(): Promise<void> {
         <Teleport to="body">
             <div
                 v-if="showCreateModal"
-                class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-                @click.self="showCreateModal = false"
+                class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto py-8"
+                @click.self="showCreateModal = false; resetCreateForm()"
             >
-                <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+                <div
+                    class="bg-gray-800 rounded-lg p-6 w-full mx-4 my-auto"
+                    :class="isSmartPlaylist ? 'max-w-2xl' : 'max-w-md'"
+                >
                     <h2 class="text-xl font-bold text-white mb-4">Create Playlist</h2>
                     <form @submit.prevent="createPlaylist">
                         <div class="mb-4">
@@ -123,7 +152,7 @@ async function createPlaylist(): Promise<void> {
                                 placeholder="My Playlist"
                             />
                         </div>
-                        <div class="mb-6">
+                        <div class="mb-4">
                             <label for="playlist-description" class="block text-sm font-medium text-gray-300 mb-2">
                                 Description (optional)
                             </label>
@@ -135,10 +164,37 @@ async function createPlaylist(): Promise<void> {
                                 placeholder="Add a description..."
                             />
                         </div>
-                        <div class="flex gap-3">
+
+                        <!-- Smart Playlist Toggle -->
+                        <div class="mb-6">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    v-model="isSmartPlaylist"
+                                    type="checkbox"
+                                    class="w-5 h-5 rounded bg-gray-700 border-gray-600 text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                                />
+                                <div>
+                                    <span class="text-white font-medium">Smart Playlist</span>
+                                    <p class="text-sm text-gray-400">Automatically populate based on rules</p>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Smart Playlist Editor -->
+                        <div v-if="isSmartPlaylist" class="mb-6">
+                            <SmartPlaylistEditor
+                                :initial-rules="smartPlaylistRules"
+                                @update:rules="handleRulesUpdate"
+                                @save="handleSmartPlaylistSave"
+                                @cancel="handleSmartPlaylistCancel"
+                            />
+                        </div>
+
+                        <!-- Regular playlist buttons (only show when not smart) -->
+                        <div v-if="!isSmartPlaylist" class="flex gap-3">
                             <button
                                 type="button"
-                                @click="showCreateModal = false"
+                                @click="showCreateModal = false; resetCreateForm()"
                                 class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
                             >
                                 Cancel

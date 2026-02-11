@@ -38,6 +38,9 @@ export interface Song {
     album?: Album;
 }
 
+import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
+export type { SmartPlaylistRuleGroup };
+
 export interface Playlist {
     id: number;
     name: string;
@@ -45,6 +48,8 @@ export interface Playlist {
     description: string | null;
     user_id: number;
     is_public: boolean;
+    is_smart: boolean;
+    rules?: SmartPlaylistRuleGroup[];
     cover_url: string | null;
     created_at: string;
     updated_at: string;
