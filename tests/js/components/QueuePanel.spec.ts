@@ -6,35 +6,24 @@ import { usePlayerStore } from '@/stores/player';
 import type { Song } from '@/types/models';
 
 const createMockSong = (overrides: Partial<Song> = {}): Song => ({
-    id: 1,
+    id: '1',
     title: 'Test Song',
-    slug: 'test-song',
-    artist_id: 1,
-    album_id: 1,
-    duration: 180,
-    track_number: 1,
-    audio_url: 'https://example.com/song.mp3',
+    artist_id: '1',
+    artist_name: 'Test Artist',
+    artist_slug: 'test-artist',
+    album_id: '1',
+    album_name: 'Test Album',
+    album_slug: 'test-album',
+    album_cover: null,
+    length: 180,
+    track: 1,
+    disc: 1,
+    year: 2024,
+    genre: 'Rock',
+    audio_format: 'mp3',
+    is_favorite: false,
+    play_count: 0,
     created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
-    artist: {
-        id: 1,
-        name: 'Test Artist',
-        slug: 'test-artist',
-        bio: null,
-        image_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-    },
-    album: {
-        id: 1,
-        title: 'Test Album',
-        slug: 'test-album',
-        artist_id: 1,
-        release_date: '2024-01-01',
-        cover_url: null,
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-    },
     ...overrides,
 });
 
@@ -62,8 +51,8 @@ describe('QueuePanel', () => {
     it('should display songs in the queue', async () => {
         const store = usePlayerStore();
         const songs = [
-            createMockSong({ id: 1, title: 'Song One' }),
-            createMockSong({ id: 2, title: 'Song Two' }),
+            createMockSong({ id: '1', title: 'Song One' }),
+            createMockSong({ id: '2', title: 'Song Two' }),
         ];
         store.play(songs, 0);
 
@@ -84,8 +73,8 @@ describe('QueuePanel', () => {
     it('should highlight the current playing song', () => {
         const store = usePlayerStore();
         const songs = [
-            createMockSong({ id: 1, title: 'Song One' }),
-            createMockSong({ id: 2, title: 'Song Two' }),
+            createMockSong({ id: '1', title: 'Song One' }),
+            createMockSong({ id: '2', title: 'Song Two' }),
         ];
         store.play(songs, 0);
 
@@ -122,7 +111,7 @@ describe('QueuePanel', () => {
 
     it('should display song duration', () => {
         const store = usePlayerStore();
-        store.play([createMockSong({ duration: 185 })], 0);
+        store.play([createMockSong({ length: 185 })], 0);
 
         const wrapper = mount(QueuePanel);
         expect(wrapper.text()).toContain('3:05');
@@ -138,8 +127,7 @@ describe('QueuePanel', () => {
 
     it('should display "Unknown Artist" when artist is missing', () => {
         const store = usePlayerStore();
-        const song = createMockSong();
-        song.artist = undefined;
+        const song = createMockSong({ artist_name: null });
         store.play([song], 0);
 
         const wrapper = mount(QueuePanel);
@@ -148,7 +136,7 @@ describe('QueuePanel', () => {
 
     it('should have draggable items for reordering', () => {
         const store = usePlayerStore();
-        store.play([createMockSong(), createMockSong({ id: 2 })], 0);
+        store.play([createMockSong(), createMockSong({ id: '2' })], 0);
 
         const wrapper = mount(QueuePanel);
         const draggableItems = wrapper.findAll('[draggable="true"]');
@@ -169,8 +157,8 @@ describe('QueuePanel', () => {
     it('should remove song from queue when remove button is clicked', async () => {
         const store = usePlayerStore();
         const songs = [
-            createMockSong({ id: 1, title: 'Song One' }),
-            createMockSong({ id: 2, title: 'Song Two' }),
+            createMockSong({ id: '1', title: 'Song One' }),
+            createMockSong({ id: '2', title: 'Song Two' }),
         ];
         store.play(songs, 0);
 
