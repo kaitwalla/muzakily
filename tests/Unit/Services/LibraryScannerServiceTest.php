@@ -35,7 +35,7 @@ class LibraryScannerServiceTest extends TestCase
     {
         parent::setUp();
 
-        // Set up required config
+        // Set up required config for R2 by default
         config([
             'filesystems.disks.r2.bucket' => 'test-bucket',
             'muzakily.storage.driver' => 'r2',
@@ -56,14 +56,17 @@ class LibraryScannerServiceTest extends TestCase
         );
     }
 
+    // ==========================================
+    // R2 (Remote Storage) Tests
+    // ==========================================
+
     #[Test]
-    public function scan_uses_partial_download_for_metadata_extraction(): void
+    public function r2_scan_uses_partial_download_for_metadata_extraction(): void
     {
         $objectKey = 'music/test.mp3';
         $fileSize = 10_000_000;
         $etag = 'abc123';
 
-        // Mock listObjects to return one file
         $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
@@ -76,7 +79,14 @@ class LibraryScannerServiceTest extends TestCase
                 ],
             ]));
 
-        // Mock partial download (the key optimization)
+        // R2 storage returns null for getLocalPath (remote storage)
+        $this->storageMock
+            ->shouldReceive('getLocalPath')
+            ->once()
+            ->with($objectKey)
+            ->andReturn(null);
+
+        // Mock partial download (the key optimization for R2)
         $this->storageMock
             ->shouldReceive('downloadPartial')
             ->once()
@@ -122,7 +132,6 @@ class LibraryScannerServiceTest extends TestCase
             ->with($objectKey)
             ->andReturn($smartFolder);
 
-        // Mock tag assignment - use Mockery::any() for the Song argument
         $this->tagServiceMock
             ->shouldReceive('assignFromPath')
             ->once()
@@ -130,18 +139,16 @@ class LibraryScannerServiceTest extends TestCase
 
         $this->service->scan();
 
-        // Verify song was created
         $this->assertDatabaseHas('songs', [
             'title' => 'Test Song',
             'storage_path' => $objectKey,
         ]);
 
-        // Clean up
         @unlink($tempPath);
     }
 
     #[Test]
-    public function scan_falls_back_to_full_download_when_partial_fails(): void
+    public function r2_scan_falls_back_to_full_download_when_partial_fails(): void
     {
         $objectKey = 'music/test.mp3';
         $fileSize = 10_000_000;
@@ -159,6 +166,13 @@ class LibraryScannerServiceTest extends TestCase
                 ],
             ]));
 
+        // R2 storage returns null for getLocalPath
+        $this->storageMock
+            ->shouldReceive('getLocalPath')
+            ->once()
+            ->with($objectKey)
+            ->andReturn(null);
+
         // Partial download fails
         $this->storageMock
             ->shouldReceive('downloadPartial')
@@ -174,7 +188,6 @@ class LibraryScannerServiceTest extends TestCase
                 return true;
             });
 
-        // Mock metadata extraction (regular extract, not with estimation)
         $this->metadataExtractorMock
             ->shouldReceive('extract')
             ->once()
@@ -210,7 +223,7 @@ class LibraryScannerServiceTest extends TestCase
     }
 
     #[Test]
-    public function scan_falls_back_to_full_download_when_duration_is_zero(): void
+    public function r2_scan_falls_back_to_full_download_when_duration_is_zero(): void
     {
         $objectKey = 'music/test.mp3';
         $fileSize = 10_000_000;
@@ -228,6 +241,13 @@ class LibraryScannerServiceTest extends TestCase
                 ],
             ]));
 
+        // R2 storage returns null for getLocalPath
+        $this->storageMock
+            ->shouldReceive('getLocalPath')
+            ->once()
+            ->with($objectKey)
+            ->andReturn(null);
+
         // Partial download succeeds
         $this->storageMock
             ->shouldReceive('downloadPartial')
@@ -244,7 +264,7 @@ class LibraryScannerServiceTest extends TestCase
             ->once()
             ->andReturn($tempPath);
 
-        // Metadata extraction returns zero duration (can't determine from partial)
+        // First extraction returns zero duration
         $this->metadataExtractorMock
             ->shouldReceive('extract')
             ->once()
@@ -256,7 +276,7 @@ class LibraryScannerServiceTest extends TestCase
                 'track' => null,
                 'disc' => null,
                 'genre' => null,
-                'duration' => 0.0, // Zero duration
+                'duration' => 0.0,
                 'bitrate' => null,
                 'lyrics' => null,
             ]);
@@ -270,7 +290,7 @@ class LibraryScannerServiceTest extends TestCase
                 return true;
             });
 
-        // Full extraction gets proper duration
+        // Second extraction gets proper duration
         $this->metadataExtractorMock
             ->shouldReceive('extract')
             ->once()
@@ -307,59 +327,24 @@ class LibraryScannerServiceTest extends TestCase
         @unlink($tempPath);
     }
 
-    #[Test]
-    public function scan_prunes_orphaned_songs(): void
-    {
-        // Create an existing song and cache entry that won't be seen during scan
-        $orphanSong = Song::factory()->create([
-            'storage_path' => 'music/orphan.mp3',
-        ]);
-
-        $orphanCache = \App\Models\ScanCache::create([
-            'bucket' => 'test-bucket',
-            'object_key' => 'music/orphan.mp3',
-            'key_hash' => \App\Models\ScanCache::hashKey('music/orphan.mp3'),
-            'etag' => 'old-etag',
-            'size' => 1000,
-            'last_scanned_at' => now()->subHours(1),
-        ]);
-
-        // Mock listObjects to return empty (no files in R2)
-        $this->storageMock
-            ->shouldReceive('listObjects')
-            ->once()
-            ->andReturn($this->createGenerator([]));
-
-        $this->service->scan();
-
-        // Verify orphan was removed
-        $this->assertDatabaseMissing('songs', [
-            'id' => $orphanSong->id,
-        ]);
-
-        $this->assertDatabaseMissing('scan_cache', [
-            'id' => $orphanCache->id,
-        ]);
-    }
+    // ==========================================
+    // Local Storage Tests
+    // ==========================================
 
     #[Test]
-    public function scan_keeps_songs_that_exist_in_r2(): void
+    public function local_scan_reads_file_directly_without_download(): void
     {
-        $objectKey = 'music/existing.mp3';
+        config(['muzakily.storage.driver' => 'local']);
+
+        $objectKey = 'music/test.mp3';
         $fileSize = 10_000_000;
-        $etag = 'current-etag';
+        $etag = 'abc123';
 
-        // Create existing cache entry
-        $existingCache = \App\Models\ScanCache::create([
-            'bucket' => 'test-bucket',
-            'object_key' => $objectKey,
-            'key_hash' => \App\Models\ScanCache::hashKey($objectKey),
-            'etag' => $etag,
-            'size' => $fileSize,
-            'last_scanned_at' => now()->subHours(1),
-        ]);
+        // Create a real temp file to simulate local storage
+        $localPath = tempnam(sys_get_temp_dir(), 'local_music_');
+        $this->assertNotFalse($localPath, 'Failed to create temp file');
+        file_put_contents($localPath, 'fake_audio_content');
 
-        // Mock listObjects to return the file (still exists in R2)
         $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
@@ -372,15 +357,279 @@ class LibraryScannerServiceTest extends TestCase
                 ],
             ]));
 
-        // File hasn't changed, so no download needed
-        // The cache entry will be marked as scanned
+        // Local storage returns the file path directly
+        $this->storageMock
+            ->shouldReceive('getLocalPath')
+            ->once()
+            ->with($objectKey)
+            ->andReturn($localPath);
+
+        // downloadPartial should NOT be called for local storage
+        $this->storageMock
+            ->shouldNotReceive('downloadPartial');
+
+        // download should NOT be called for local storage
+        $this->storageMock
+            ->shouldNotReceive('download');
+
+        // Metadata extraction uses the local path directly
+        $this->metadataExtractorMock
+            ->shouldReceive('extract')
+            ->once()
+            ->with($localPath)
+            ->andReturn([
+                'title' => 'Local Song',
+                'artist' => 'Local Artist',
+                'album' => 'Local Album',
+                'year' => 2024,
+                'track' => 1,
+                'disc' => 1,
+                'genre' => 'Pop',
+                'duration' => 200.0,
+                'bitrate' => 256000,
+                'lyrics' => null,
+            ]);
+
+        $smartFolder = SmartFolder::factory()->create();
+        $this->smartFolderServiceMock
+            ->shouldReceive('assignFromPath')
+            ->once()
+            ->with($objectKey)
+            ->andReturn($smartFolder);
+
+        $this->tagServiceMock
+            ->shouldReceive('assignFromPath')
+            ->once()
+            ->with(Mockery::type(Song::class));
 
         $this->service->scan();
 
-        // Verify cache entry still exists and was updated
+        $this->assertDatabaseHas('songs', [
+            'title' => 'Local Song',
+            'artist_name' => 'Local Artist',
+            'album_name' => 'Local Album',
+            'length' => 200.0,
+            'storage_path' => $objectKey,
+        ]);
+
+        @unlink($localPath);
+    }
+
+    #[Test]
+    public function local_scan_handles_multiple_files(): void
+    {
+        config(['muzakily.storage.driver' => 'local']);
+
+        // Create temp files
+        $file1Path = tempnam(sys_get_temp_dir(), 'local_music_1_');
+        $file2Path = tempnam(sys_get_temp_dir(), 'local_music_2_');
+        file_put_contents($file1Path, 'audio1');
+        file_put_contents($file2Path, 'audio2');
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([
+                [
+                    'key' => 'music/song1.mp3',
+                    'size' => 5_000_000,
+                    'last_modified' => new DateTimeImmutable(),
+                    'etag' => 'etag1',
+                ],
+                [
+                    'key' => 'music/song2.mp3',
+                    'size' => 6_000_000,
+                    'last_modified' => new DateTimeImmutable(),
+                    'etag' => 'etag2',
+                ],
+            ]));
+
+        $this->storageMock
+            ->shouldReceive('getLocalPath')
+            ->with('music/song1.mp3')
+            ->andReturn($file1Path);
+
+        $this->storageMock
+            ->shouldReceive('getLocalPath')
+            ->with('music/song2.mp3')
+            ->andReturn($file2Path);
+
+        $this->metadataExtractorMock
+            ->shouldReceive('extract')
+            ->with($file1Path)
+            ->andReturn([
+                'title' => 'Song One',
+                'artist' => 'Artist A',
+                'album' => null,
+                'year' => null,
+                'track' => null,
+                'disc' => null,
+                'genre' => null,
+                'duration' => 120.0,
+                'bitrate' => null,
+                'lyrics' => null,
+            ]);
+
+        $this->metadataExtractorMock
+            ->shouldReceive('extract')
+            ->with($file2Path)
+            ->andReturn([
+                'title' => 'Song Two',
+                'artist' => 'Artist B',
+                'album' => null,
+                'year' => null,
+                'track' => null,
+                'disc' => null,
+                'genre' => null,
+                'duration' => 150.0,
+                'bitrate' => null,
+                'lyrics' => null,
+            ]);
+
+        $smartFolder = SmartFolder::factory()->create();
+        $this->smartFolderServiceMock
+            ->shouldReceive('assignFromPath')
+            ->twice()
+            ->andReturn($smartFolder);
+
+        $this->tagServiceMock
+            ->shouldReceive('assignFromPath')
+            ->twice();
+
+        $this->service->scan();
+
+        $this->assertDatabaseHas('songs', ['title' => 'Song One']);
+        $this->assertDatabaseHas('songs', ['title' => 'Song Two']);
+        $this->assertDatabaseCount('songs', 2);
+
+        @unlink($file1Path);
+        @unlink($file2Path);
+    }
+
+    // ==========================================
+    // Common Tests (apply to both storage types)
+    // ==========================================
+
+    #[Test]
+    public function scan_prunes_orphaned_songs(): void
+    {
+        $orphanSong = Song::factory()->create([
+            'storage_path' => 'music/orphan.mp3',
+        ]);
+
+        $orphanCache = ScanCache::create([
+            'bucket' => 'test-bucket',
+            'object_key' => 'music/orphan.mp3',
+            'key_hash' => ScanCache::hashKey('music/orphan.mp3'),
+            'etag' => 'old-etag',
+            'size' => 1000,
+            'last_scanned_at' => now()->subHours(1),
+        ]);
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([]));
+
+        $this->service->scan();
+
+        $this->assertDatabaseMissing('songs', [
+            'id' => $orphanSong->id,
+        ]);
+
+        $this->assertDatabaseMissing('scan_cache', [
+            'id' => $orphanCache->id,
+        ]);
+    }
+
+    #[Test]
+    public function scan_keeps_songs_that_still_exist(): void
+    {
+        $objectKey = 'music/existing.mp3';
+        $fileSize = 10_000_000;
+        $etag = 'current-etag';
+
+        $existingCache = ScanCache::create([
+            'bucket' => 'test-bucket',
+            'object_key' => $objectKey,
+            'key_hash' => ScanCache::hashKey($objectKey),
+            'etag' => $etag,
+            'size' => $fileSize,
+            'last_scanned_at' => now()->subHours(1),
+        ]);
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([
+                [
+                    'key' => $objectKey,
+                    'size' => $fileSize,
+                    'last_modified' => new DateTimeImmutable(),
+                    'etag' => $etag,
+                ],
+            ]));
+
+        // File hasn't changed, so no extraction needed
+        $this->service->scan();
+
         $this->assertDatabaseHas('scan_cache', [
             'object_key' => $objectKey,
         ]);
+    }
+
+    #[Test]
+    public function scan_respects_limit_parameter(): void
+    {
+        config(['muzakily.storage.driver' => 'local']);
+
+        $file1Path = tempnam(sys_get_temp_dir(), 'limit_test_1_');
+        $file2Path = tempnam(sys_get_temp_dir(), 'limit_test_2_');
+        $file3Path = tempnam(sys_get_temp_dir(), 'limit_test_3_');
+        file_put_contents($file1Path, 'audio');
+        file_put_contents($file2Path, 'audio');
+        file_put_contents($file3Path, 'audio');
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([
+                ['key' => 'music/song1.mp3', 'size' => 1000, 'last_modified' => new DateTimeImmutable(), 'etag' => 'e1'],
+                ['key' => 'music/song2.mp3', 'size' => 1000, 'last_modified' => new DateTimeImmutable(), 'etag' => 'e2'],
+                ['key' => 'music/song3.mp3', 'size' => 1000, 'last_modified' => new DateTimeImmutable(), 'etag' => 'e3'],
+            ]));
+
+        $this->storageMock->shouldReceive('getLocalPath')->with('music/song1.mp3')->andReturn($file1Path);
+        $this->storageMock->shouldReceive('getLocalPath')->with('music/song2.mp3')->andReturn($file2Path);
+        // song3 should not be processed due to limit
+
+        $this->metadataExtractorMock
+            ->shouldReceive('extract')
+            ->twice() // Only 2 files should be processed
+            ->andReturn([
+                'title' => 'Test',
+                'artist' => null,
+                'album' => null,
+                'year' => null,
+                'track' => null,
+                'disc' => null,
+                'genre' => null,
+                'duration' => 100.0,
+                'bitrate' => null,
+                'lyrics' => null,
+            ]);
+
+        $smartFolder = SmartFolder::factory()->create();
+        $this->smartFolderServiceMock->shouldReceive('assignFromPath')->twice()->andReturn($smartFolder);
+        $this->tagServiceMock->shouldReceive('assignFromPath')->twice();
+
+        $this->service->scan(force: false, limit: 2);
+
+        $this->assertDatabaseCount('songs', 2);
+
+        @unlink($file1Path);
+        @unlink($file2Path);
+        @unlink($file3Path);
     }
 
     /**

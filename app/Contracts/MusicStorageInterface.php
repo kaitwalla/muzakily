@@ -39,6 +39,12 @@ interface MusicStorageInterface
     public function getMetadata(string $key): ?array;
 
     /**
+     * Get the local filesystem path for a file (if available).
+     * Returns null for remote storage like R2/S3.
+     */
+    public function getLocalPath(string $key): ?string;
+
+    /**
      * List all files in storage.
      *
      * @return \Generator<array{key: string, size: int, last_modified: \DateTimeInterface, etag: string}>

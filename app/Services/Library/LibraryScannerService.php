@@ -148,12 +148,20 @@ class LibraryScannerService
         // Check if song already exists
         $existingSong = Song::findByStoragePath($object['key']);
 
-        // Try partial download first for efficiency
-        $metadata = $this->extractMetadataWithPartialDownload($object);
+        // Extract metadata - use direct path for local storage, otherwise download
+        $localPath = $this->storage->getLocalPath($object['key']);
 
-        // Fall back to full download if partial extraction failed or has no duration
-        if ($metadata === null || ($metadata['duration'] <= 0)) {
-            $metadata = $this->extractMetadataWithFullDownload($object['key']);
+        if ($localPath !== null && file_exists($localPath)) {
+            // Local storage: read directly from filesystem
+            $metadata = $this->metadataExtractor->extract($localPath);
+        } else {
+            // Remote storage: try partial download first for efficiency
+            $metadata = $this->extractMetadataWithPartialDownload($object);
+
+            // Fall back to full download if partial extraction failed or has no duration
+            if ($metadata === null || ($metadata['duration'] <= 0)) {
+                $metadata = $this->extractMetadataWithFullDownload($object['key']);
+            }
         }
 
         if ($metadata === null) {

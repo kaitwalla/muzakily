@@ -111,6 +111,14 @@ class LocalStorageService implements MusicStorageInterface
     }
 
     /**
+     * Get the local filesystem path for a file.
+     */
+    public function getLocalPath(string $key): ?string
+    {
+        return $this->getPath($key);
+    }
+
+    /**
      * List all files in the music storage.
      *
      * @return \Generator<array{key: string, size: int, last_modified: \DateTimeInterface, etag: string}>

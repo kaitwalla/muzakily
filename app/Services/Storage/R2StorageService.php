@@ -115,6 +115,15 @@ class R2StorageService implements MusicStorageInterface
     }
 
     /**
+     * Get the local filesystem path for a file.
+     * R2 is remote storage, so this always returns null.
+     */
+    public function getLocalPath(string $key): ?string
+    {
+        return null;
+    }
+
+    /**
      * List objects in a bucket with optional prefix.
      *
      * @return \Generator<array{key: string, size: int, last_modified: \DateTimeInterface, etag: string}>
