@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Models\Artist;
 use App\Models\ScanCache;
@@ -13,7 +14,6 @@ use App\Services\Library\LibraryScannerService;
 use App\Services\Library\MetadataExtractorService;
 use App\Services\Library\SmartFolderService;
 use App\Services\Library\TagService;
-use App\Services\Storage\R2StorageService;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
@@ -25,7 +25,7 @@ class LibraryScannerServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private R2StorageService&MockInterface $r2StorageMock;
+    private MusicStorageInterface&MockInterface $storageMock;
     private MetadataExtractorService&MockInterface $metadataExtractorMock;
     private SmartFolderService&MockInterface $smartFolderServiceMock;
     private TagService&MockInterface $tagServiceMock;
@@ -38,17 +38,18 @@ class LibraryScannerServiceTest extends TestCase
         // Set up required config
         config([
             'filesystems.disks.r2.bucket' => 'test-bucket',
+            'muzakily.storage.driver' => 'r2',
             'muzakily.scanning.extensions' => ['mp3', 'aac', 'm4a', 'flac'],
             'muzakily.tags.auto_create_from_folders' => true,
         ]);
 
-        $this->r2StorageMock = Mockery::mock(R2StorageService::class);
+        $this->storageMock = Mockery::mock(MusicStorageInterface::class);
         $this->metadataExtractorMock = Mockery::mock(MetadataExtractorService::class);
         $this->smartFolderServiceMock = Mockery::mock(SmartFolderService::class);
         $this->tagServiceMock = Mockery::mock(TagService::class);
 
         $this->service = new LibraryScannerService(
-            $this->r2StorageMock,
+            $this->storageMock,
             $this->metadataExtractorMock,
             $this->smartFolderServiceMock,
             $this->tagServiceMock
@@ -63,7 +64,7 @@ class LibraryScannerServiceTest extends TestCase
         $etag = 'abc123';
 
         // Mock listObjects to return one file
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
             ->andReturn($this->createGenerator([
@@ -76,7 +77,7 @@ class LibraryScannerServiceTest extends TestCase
             ]));
 
         // Mock partial download (the key optimization)
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('downloadPartial')
             ->once()
             ->with($objectKey)
@@ -89,7 +90,7 @@ class LibraryScannerServiceTest extends TestCase
         // Mock createPartialTempFile
         $tempPath = tempnam(sys_get_temp_dir(), 'test_');
         $this->assertNotFalse($tempPath, 'Failed to create temp file');
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('createPartialTempFile')
             ->once()
             ->with('header_content', 'footer_content', $fileSize)
@@ -146,7 +147,7 @@ class LibraryScannerServiceTest extends TestCase
         $fileSize = 10_000_000;
         $etag = 'abc123';
 
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
             ->andReturn($this->createGenerator([
@@ -159,13 +160,13 @@ class LibraryScannerServiceTest extends TestCase
             ]));
 
         // Partial download fails
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('downloadPartial')
             ->once()
             ->andReturn(null);
 
         // Fall back to full download
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('download')
             ->once()
             ->andReturnUsing(function ($key, $path) {
@@ -215,7 +216,7 @@ class LibraryScannerServiceTest extends TestCase
         $fileSize = 10_000_000;
         $etag = 'abc123';
 
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
             ->andReturn($this->createGenerator([
@@ -228,7 +229,7 @@ class LibraryScannerServiceTest extends TestCase
             ]));
 
         // Partial download succeeds
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('downloadPartial')
             ->once()
             ->andReturn([
@@ -238,7 +239,7 @@ class LibraryScannerServiceTest extends TestCase
             ]);
 
         $tempPath = tempnam(sys_get_temp_dir(), 'test_');
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('createPartialTempFile')
             ->once()
             ->andReturn($tempPath);
@@ -261,7 +262,7 @@ class LibraryScannerServiceTest extends TestCase
             ]);
 
         // Fall back to full download
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('download')
             ->once()
             ->andReturnUsing(function ($key, $path) {
@@ -324,7 +325,7 @@ class LibraryScannerServiceTest extends TestCase
         ]);
 
         // Mock listObjects to return empty (no files in R2)
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
             ->andReturn($this->createGenerator([]));
@@ -359,7 +360,7 @@ class LibraryScannerServiceTest extends TestCase
         ]);
 
         // Mock listObjects to return the file (still exists in R2)
-        $this->r2StorageMock
+        $this->storageMock
             ->shouldReceive('listObjects')
             ->once()
             ->andReturn($this->createGenerator([

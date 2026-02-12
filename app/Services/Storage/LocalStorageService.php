@@ -109,4 +109,133 @@ class LocalStorageService implements MusicStorageInterface
     {
         return Storage::disk('music')->path($key);
     }
+
+    /**
+     * List all files in the music storage.
+     *
+     * @return \Generator<array{key: string, size: int, last_modified: \DateTimeInterface, etag: string}>
+     */
+    public function listObjects(?string $prefix = null): \Generator
+    {
+        $disk = Storage::disk('music');
+        $files = $disk->allFiles($prefix ?? '');
+
+        foreach ($files as $file) {
+            $metadata = $this->getMetadata($file);
+
+            if ($metadata === null) {
+                continue;
+            }
+
+            yield [
+                'key' => $file,
+                'size' => $metadata['size'],
+                'last_modified' => $metadata['last_modified'] ?? new \DateTimeImmutable(),
+                'etag' => $metadata['etag'] ?? md5($file),
+            ];
+        }
+    }
+
+    /**
+     * Download partial content of a file (for local files, just return full content).
+     *
+     * @return array{header: string, footer: string, file_size: int}|null
+     */
+    public function downloadPartial(
+        string $key,
+        int $headerSize = 524288,
+        int $footerSize = 131072
+    ): ?array {
+        $path = $this->getPath($key);
+
+        if (!file_exists($path)) {
+            return null;
+        }
+
+        $fileSize = filesize($path);
+
+        if ($fileSize === false) {
+            return null;
+        }
+
+        $handle = fopen($path, 'rb');
+
+        if ($handle === false) {
+            return null;
+        }
+
+        try {
+            // If file is smaller than header + footer, read entire file
+            if ($fileSize <= $headerSize + $footerSize) {
+                $content = fread($handle, $fileSize);
+
+                return [
+                    'header' => $content !== false ? $content : '',
+                    'footer' => '',
+                    'file_size' => $fileSize,
+                ];
+            }
+
+            // Read header
+            $header = fread($handle, $headerSize);
+
+            // Seek to footer position and read
+            fseek($handle, -$footerSize, SEEK_END);
+            $footer = fread($handle, $footerSize);
+
+            return [
+                'header' => $header !== false ? $header : '',
+                'footer' => $footer !== false ? $footer : '',
+                'file_size' => $fileSize,
+            ];
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Create a temporary file with header and footer content for metadata extraction.
+     *
+     * @return string|false Path to the temp file, or false on failure
+     */
+    public function createPartialTempFile(
+        string $headerContent,
+        string $footerContent,
+        int $fileSize
+    ): string|false {
+        $tempPath = tempnam(sys_get_temp_dir(), 'muzakily_partial_');
+
+        if ($tempPath === false) {
+            return false;
+        }
+
+        $handle = fopen($tempPath, 'wb');
+
+        if ($handle === false) {
+            @unlink($tempPath);
+            return false;
+        }
+
+        try {
+            fwrite($handle, $headerContent);
+
+            $gapSize = $fileSize - strlen($headerContent) - strlen($footerContent);
+
+            if ($gapSize < 0) {
+                ftruncate($handle, $fileSize);
+                return $tempPath;
+            }
+
+            if ($gapSize > 0) {
+                fseek($handle, strlen($headerContent) + $gapSize);
+            }
+
+            fwrite($handle, $footerContent);
+            ftruncate($handle, $fileSize);
+
+            return $tempPath;
+        } finally {
+            fclose($handle);
+        }
+    }
 }

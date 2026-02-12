@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Library;
 
+use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Models\Album;
 use App\Models\Artist;
@@ -11,27 +12,27 @@ use App\Models\ScanCache;
 use App\Models\SmartFolder;
 use App\Models\Song;
 use App\Services\Library\TagService;
-use App\Services\Storage\R2StorageService;
 use Closure;
 use Illuminate\Support\Facades\DB;
 
 class LibraryScannerService
 {
     public function __construct(
-        private R2StorageService $r2Storage,
+        private MusicStorageInterface $storage,
         private MetadataExtractorService $metadataExtractor,
         private SmartFolderService $smartFolderService,
         private TagService $tagService,
     ) {}
 
     /**
-     * Scan the R2 bucket for music files.
+     * Scan the storage for music files.
      *
      * @param Closure(array{total_files: int, scanned_files: int, new_songs: int, updated_songs: int, errors: int, removed_songs: int}): void|null $onProgress
      */
     public function scan(bool $force = false, ?int $limit = null, ?Closure $onProgress = null): void
     {
-        $bucket = config('filesystems.disks.r2.bucket');
+        $storageDriver = config('muzakily.storage.driver', 'r2');
+        $bucket = $storageDriver === 'local' ? 'local' : (string) config('filesystems.disks.r2.bucket');
         $extensions = config('muzakily.scanning.extensions', ['mp3', 'aac', 'm4a', 'flac']);
 
         // Record scan start time for orphan detection
@@ -46,7 +47,7 @@ class LibraryScannerService
             'removed_songs' => 0,
         ];
 
-        foreach ($this->r2Storage->listObjects() as $object) {
+        foreach ($this->storage->listObjects() as $object) {
             $stats['total_files']++;
 
             // Check file extension
@@ -250,13 +251,13 @@ class LibraryScannerService
      */
     private function extractMetadataWithPartialDownload(array $object): ?array
     {
-        $partial = $this->r2Storage->downloadPartial($object['key']);
+        $partial = $this->storage->downloadPartial($object['key']);
 
         if ($partial === null) {
             return null;
         }
 
-        $tempPath = $this->r2Storage->createPartialTempFile(
+        $tempPath = $this->storage->createPartialTempFile(
             $partial['header'],
             $partial['footer'],
             $partial['file_size']
@@ -305,7 +306,7 @@ class LibraryScannerService
         }
 
         try {
-            if (!$this->r2Storage->download($key, $tempPath)) {
+            if (!$this->storage->download($key, $tempPath)) {
                 return null;
             }
 

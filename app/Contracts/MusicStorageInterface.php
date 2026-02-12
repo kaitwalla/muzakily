@@ -37,4 +37,33 @@ interface MusicStorageInterface
      * @return array{size: int, last_modified: \DateTimeInterface|null, etag: string|null}|null
      */
     public function getMetadata(string $key): ?array;
+
+    /**
+     * List all files in storage.
+     *
+     * @return \Generator<array{key: string, size: int, last_modified: \DateTimeInterface, etag: string}>
+     */
+    public function listObjects(?string $prefix = null): \Generator;
+
+    /**
+     * Download partial content of a file (header + footer).
+     *
+     * @return array{header: string, footer: string, file_size: int}|null
+     */
+    public function downloadPartial(
+        string $key,
+        int $headerSize = 524288,
+        int $footerSize = 131072
+    ): ?array;
+
+    /**
+     * Create a temporary file with header and footer content for metadata extraction.
+     *
+     * @return string|false Path to the temp file, or false on failure
+     */
+    public function createPartialTempFile(
+        string $headerContent,
+        string $footerContent,
+        int $fileSize
+    ): string|false;
 }
