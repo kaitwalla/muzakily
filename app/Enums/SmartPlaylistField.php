@@ -16,6 +16,8 @@ enum SmartPlaylistField: string
     case LAST_PLAYED = 'last_played';
     case DATE_ADDED = 'date_added';
     case AUDIO_FORMAT = 'audio_format';
+    case IS_FAVORITE = 'is_favorite';
+    case TAG = 'tag';
 
     /**
      * Get the data type for this field.
@@ -35,6 +37,10 @@ enum SmartPlaylistField: string
 
             self::LAST_PLAYED,
             self::DATE_ADDED => 'date',
+
+            self::IS_FAVORITE => 'boolean',
+
+            self::TAG => 'text',
         };
     }
 
@@ -66,6 +72,10 @@ enum SmartPlaylistField: string
                 SmartPlaylistOperator::NOT_IN_LAST,
                 SmartPlaylistOperator::IS_BETWEEN,
             ],
+            'boolean' => [
+                SmartPlaylistOperator::IS,
+                SmartPlaylistOperator::IS_NOT,
+            ],
             default => [],
         };
     }
@@ -86,6 +96,8 @@ enum SmartPlaylistField: string
             self::LAST_PLAYED => 'last_played_at',
             self::DATE_ADDED => 'created_at',
             self::AUDIO_FORMAT => 'audio_format',
+            self::IS_FAVORITE => 'is_favorite', // Virtual column, handled specially
+            self::TAG => 'tag', // Virtual column, handled specially via relationship
         };
     }
 
@@ -105,6 +117,8 @@ enum SmartPlaylistField: string
             self::LAST_PLAYED => 'Last Played',
             self::DATE_ADDED => 'Date Added',
             self::AUDIO_FORMAT => 'Format',
+            self::IS_FAVORITE => 'Favorite',
+            self::TAG => 'Tag',
         };
     }
 }

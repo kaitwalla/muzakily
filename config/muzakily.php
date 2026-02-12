@@ -152,6 +152,23 @@ return [
             'enabled' => env('LASTFM_ENABLED', false),
             'api_key' => env('LASTFM_API_KEY'),
         ],
+
+        // Deezer settings (for artist images, no API key required)
+        'deezer' => [
+            'enabled' => env('DEEZER_ENABLED', true),
+        ],
+
+        // TheAudioDB settings (for artist images and bios)
+        'theaudiodb' => [
+            'enabled' => env('THEAUDIODB_ENABLED', true),
+            'api_key' => env('THEAUDIODB_API_KEY', '2'), // '2' is the free dev key
+        ],
+
+        // Fanart.tv settings (for high-quality artist images, requires API key)
+        'fanarttv' => [
+            'enabled' => env('FANARTTV_ENABLED', true),
+            'api_key' => env('FANARTTV_API_KEY'),
+        ],
     ],
 
     /*

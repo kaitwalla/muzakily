@@ -31,6 +31,7 @@ class MetadataExtractorService
      *     duration: float,
      *     bitrate: int|null,
      *     lyrics: string|null,
+     *     cover_art: array{data: string, mime_type: string}|null,
      * }
      */
     public function extract(string $filePath): array
@@ -51,7 +52,54 @@ class MetadataExtractorService
             'duration' => (float) ($info['playtime_seconds'] ?? 0),
             'bitrate' => isset($info['audio']['bitrate']) ? (int) $info['audio']['bitrate'] : null,
             'lyrics' => $tags['unsynchronised_lyric'] ?? $tags['lyrics'] ?? null,
+            'cover_art' => $this->extractCoverArt($info),
         ];
+    }
+
+    /**
+     * Extract embedded cover art from the file.
+     *
+     * @param array<string, mixed> $info
+     * @return array{data: string, mime_type: string}|null
+     */
+    private function extractCoverArt(array $info): ?array
+    {
+        // Try comments.picture first (most common location)
+        if (!empty($info['comments']['picture'])) {
+            $picture = $info['comments']['picture'][0];
+            if (!empty($picture['data']) && !empty($picture['image_mime'])) {
+                return [
+                    'data' => $picture['data'],
+                    'mime_type' => $picture['image_mime'],
+                ];
+            }
+        }
+
+        // Try ID3v2 APIC frames
+        if (!empty($info['id3v2']['APIC'])) {
+            foreach ($info['id3v2']['APIC'] as $apic) {
+                if (!empty($apic['data']) && !empty($apic['mime'])) {
+                    return [
+                        'data' => $apic['data'],
+                        'mime_type' => $apic['mime'],
+                    ];
+                }
+            }
+        }
+
+        // Try Vorbis/FLAC picture
+        if (!empty($info['flac']['PICTURE'])) {
+            foreach ($info['flac']['PICTURE'] as $picture) {
+                if (!empty($picture['data']) && !empty($picture['image_mime'])) {
+                    return [
+                        'data' => $picture['data'],
+                        'mime_type' => $picture['image_mime'],
+                    ];
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -181,6 +229,7 @@ class MetadataExtractorService
      *     duration: float,
      *     bitrate: int|null,
      *     lyrics: string|null,
+     *     cover_art: array{data: string, mime_type: string}|null,
      *     duration_estimated: bool,
      * }
      */
@@ -210,6 +259,7 @@ class MetadataExtractorService
             'duration' => $duration,
             'bitrate' => $bitrate,
             'lyrics' => $tags['unsynchronised_lyric'] ?? $tags['lyrics'] ?? null,
+            'cover_art' => $this->extractCoverArt($info),
             'duration_estimated' => $durationEstimated,
         ];
     }

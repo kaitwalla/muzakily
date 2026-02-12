@@ -95,6 +95,12 @@ export const useAlbumsStore = defineStore('albums', () => {
         currentAlbumSongs.value = [];
     }
 
+    function updateSongInAlbum(updatedSong: Song, index: number): void {
+        if (index >= 0 && index < currentAlbumSongs.value.length) {
+            currentAlbumSongs.value[index] = updatedSong;
+        }
+    }
+
     return {
         albums,
         currentAlbum,
@@ -110,5 +116,6 @@ export const useAlbumsStore = defineStore('albums', () => {
         fetchAlbumSongs,
         clearAlbums,
         clearCurrentAlbum,
+        updateSongInAlbum,
     };
 });

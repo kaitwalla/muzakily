@@ -199,6 +199,12 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         currentPlaylistSongs.value = [];
     }
 
+    function updateSongInPlaylist(updatedSong: Song, index: number): void {
+        if (index >= 0 && index < currentPlaylistSongs.value.length) {
+            currentPlaylistSongs.value[index] = updatedSong;
+        }
+    }
+
     return {
         playlists,
         currentPlaylist,
@@ -220,5 +226,6 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         reorderPlaylistSongs,
         clearPlaylists,
         clearCurrentPlaylist,
+        updateSongInPlaylist,
     };
 });

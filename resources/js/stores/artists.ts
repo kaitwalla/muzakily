@@ -112,6 +112,12 @@ export const useArtistsStore = defineStore('artists', () => {
         currentArtistSongs.value = [];
     }
 
+    function updateSongInArtist(updatedSong: Song, index: number): void {
+        if (index >= 0 && index < currentArtistSongs.value.length) {
+            currentArtistSongs.value[index] = updatedSong;
+        }
+    }
+
     return {
         artists,
         currentArtist,
@@ -129,5 +135,6 @@ export const useArtistsStore = defineStore('artists', () => {
         fetchArtistSongs,
         clearArtists,
         clearCurrentArtist,
+        updateSongInArtist,
     };
 });

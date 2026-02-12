@@ -3,7 +3,7 @@
  * These types mirror the backend PHP enums and structures for smart playlist functionality.
  */
 
-export type FieldType = 'text' | 'number' | 'date';
+export type FieldType = 'text' | 'number' | 'date' | 'boolean';
 
 export type SmartPlaylistFieldValue =
     | 'title'
@@ -15,7 +15,9 @@ export type SmartPlaylistFieldValue =
     | 'play_count'
     | 'last_played'
     | 'date_added'
-    | 'audio_format';
+    | 'audio_format'
+    | 'is_favorite'
+    | 'tag';
 
 export type SmartPlaylistOperatorValue =
     // Text operators

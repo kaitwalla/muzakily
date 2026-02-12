@@ -3,6 +3,7 @@ import { onMounted, watch } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import { useAlbumsStore } from '@/stores/albums';
 import { usePlayerStore } from '@/stores/player';
+import SongRow from '@/components/song/SongRow.vue';
 import type { Song } from '@/types/models';
 
 const route = useRoute();
@@ -29,14 +30,12 @@ function playAlbum(): void {
     }
 }
 
-function playSong(_song: Song, index: number): void {
+function playSong(index: number): void {
     playerStore.play(albumsStore.currentAlbumSongs, index);
 }
 
-function formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+function handleSongUpdated(updatedSong: Song, index: number): void {
+    albumsStore.updateSongInAlbum(updatedSong, index);
 }
 
 function getTotalDuration(): string {
@@ -123,30 +122,17 @@ function getTotalDuration(): string {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr
+                        <SongRow
                             v-for="(song, index) in albumsStore.currentAlbumSongs"
                             :key="song.id"
-                            @click="playSong(song, index)"
-                            class="hover:bg-gray-700/50 cursor-pointer transition-colors group"
-                            :class="{ 'bg-gray-700/50': playerStore.currentSong?.id === song.id }"
-                        >
-                            <td class="px-4 py-3 text-gray-400">
-                                <span v-if="playerStore.currentSong?.id === song.id && playerStore.isPlaying" class="text-green-500">
-                                    <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M8 5v14l11-7z"/>
-                                    </svg>
-                                </span>
-                                <span v-else>{{ song.track ?? index + 1 }}</span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <p class="text-white font-medium" :class="{ 'text-green-500': playerStore.currentSong?.id === song.id }">
-                                    {{ song.title }}
-                                </p>
-                            </td>
-                            <td class="px-4 py-3 text-gray-400 text-right">
-                                {{ formatDuration(song.length) }}
-                            </td>
-                        </tr>
+                            :song="song"
+                            :index="index"
+                            :show-track-number="true"
+                            :show-artist="false"
+                            :show-album="false"
+                            @play="playSong(index)"
+                            @updated="(updated) => handleSongUpdated(updated, index)"
+                        />
                     </tbody>
                 </table>
             </div>

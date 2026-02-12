@@ -25,12 +25,15 @@ export async function getSongBySlug(slug: string): Promise<Song> {
     return response.data.data;
 }
 
-export function getStreamUrl(songId: string): string {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-    return `/api/v1/songs/${songId}/stream?token=${encodeURIComponent(token)}`;
+export interface StreamResponse {
+    url: string;
+    audio_format: string;
+    audio_length: number;
+}
+
+export async function getStreamUrl(songId: string): Promise<string> {
+    const response = await apiClient.get<{ data: StreamResponse }>(`/songs/${songId}/stream`);
+    return response.data.data.url;
 }
 
 export function getDownloadUrl(songId: string): string {
@@ -55,5 +58,20 @@ export async function getRecentlyPlayed(limit = 10): Promise<Song[]> {
     const response = await apiClient.get<{ data: Song[] }>('/songs/recently-played', {
         params: { limit },
     });
+    return response.data.data;
+}
+
+export interface UpdateSongData {
+    title?: string;
+    artist_name?: string | null;
+    album_name?: string | null;
+    year?: number | null;
+    track?: number | null;
+    disc?: number | null;
+    genre?: string | null;
+}
+
+export async function updateSong(songId: string, data: UpdateSongData): Promise<Song> {
+    const response = await apiClient.put<ApiResponse<Song>>(`/songs/${songId}`, data);
     return response.data.data;
 }

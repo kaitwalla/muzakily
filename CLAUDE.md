@@ -4,14 +4,20 @@ Essential guidelines for working on this project.
 
 ## Commands
 
-**All PHP/Composer/Artisan commands MUST run through Docker Compose:**
+**All PHP/Composer/Artisan commands MUST run through Docker Compose. NPM commands run locally:**
 
 ```bash
 # PHPStan
 docker compose exec app ./vendor/bin/phpstan analyse --level=6
 
-# Tests
+# Tests (PHP)
 docker compose exec app php artisan test
+
+# TypeScript type check
+npm run type-check
+
+# Full test suite (TypeScript + PHP)
+npm run type-check && docker compose exec app php artisan test
 
 # Artisan commands
 docker compose exec app php artisan <command>
@@ -19,6 +25,8 @@ docker compose exec app php artisan <command>
 # Composer
 docker compose exec app composer <command>
 ```
+
+**Always run both TypeScript and PHP checks before committing frontend changes.**
 
 ## Git Workflow
 
@@ -35,7 +43,8 @@ docker compose exec app composer <command>
 ## Development Practices
 
 - **Always create tests** - Follow TDD: write tests before implementation
-- **PHPStan level 6** - All code must pass static analysis
+- **PHPStan level 6** - All PHP code must pass static analysis
+- **TypeScript strict mode** - Run `npm run type-check` for frontend changes
 - Use `ilike` for case-insensitive PostgreSQL queries (not `like`)
 - Use null-safe operator (`?->`) when accessing properties that could be null
 - Handle `tempnam()` failures (can return `false`)

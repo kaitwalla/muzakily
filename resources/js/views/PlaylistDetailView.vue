@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, watch, ref, computed } from 'vue';
-import { useRoute, useRouter, RouterLink } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { usePlaylistsStore } from '@/stores/playlists';
 import { usePlayerStore } from '@/stores/player';
 import SmartPlaylistEditor from '@/components/playlist/SmartPlaylistEditor.vue';
+import SongRow from '@/components/song/SongRow.vue';
 import type { Song } from '@/types/models';
 import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
 
@@ -42,8 +43,12 @@ function playPlaylist(): void {
     }
 }
 
-function playSong(_song: Song, index: number): void {
+function playSong(index: number): void {
     playerStore.play(playlistsStore.currentPlaylistSongs, index);
+}
+
+function handleSongUpdated(updatedSong: Song, index: number): void {
+    playlistsStore.updateSongInPlaylist(updatedSong, index);
 }
 
 async function deletePlaylist(): Promise<void> {
@@ -105,12 +110,6 @@ async function updatePlaylist(): Promise<void> {
     } finally {
         isUpdating.value = false;
     }
-}
-
-function formatDuration(seconds: number): string {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function getTotalDuration(): string {
@@ -204,59 +203,24 @@ function getTotalDuration(): string {
                 <table class="w-full">
                     <thead class="border-b border-gray-700">
                         <tr class="text-left text-sm text-gray-400">
-                            <th class="px-4 py-3 w-12">#</th>
+                            <th class="px-4 py-3 w-12"></th>
                             <th class="px-4 py-3">Title</th>
                             <th class="px-4 py-3">Album</th>
                             <th class="px-4 py-3 text-right">Duration</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr
+                        <SongRow
                             v-for="(song, index) in playlistsStore.currentPlaylistSongs"
                             :key="song.id"
-                            @click="playSong(song, index)"
-                            class="hover:bg-gray-700/50 cursor-pointer transition-colors group"
-                            :class="{ 'bg-gray-700/50': playerStore.currentSong?.id === song.id }"
-                        >
-                            <td class="px-4 py-3 text-gray-400">
-                                <span v-if="playerStore.currentSong?.id === song.id && playerStore.isPlaying" class="text-green-500">
-                                    <svg class="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M8 5v14l11-7z"/>
-                                    </svg>
-                                </span>
-                                <span v-else>{{ index + 1 }}</span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <p class="text-white font-medium" :class="{ 'text-green-500': playerStore.currentSong?.id === song.id }">
-                                    {{ song.title }}
-                                </p>
-                                <RouterLink
-                                    v-if="song.artist_slug"
-                                    :to="{ name: 'artist-detail', params: { slug: song.artist_slug } }"
-                                    class="text-gray-400 text-sm hover:text-white hover:underline"
-                                    @click.stop
-                                >
-                                    {{ song.artist_name }}
-                                </RouterLink>
-                                <span v-else class="text-gray-400 text-sm">
-                                    {{ song.artist_name ?? 'Unknown' }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <RouterLink
-                                    v-if="song.album_slug"
-                                    :to="{ name: 'album-detail', params: { slug: song.album_slug } }"
-                                    class="text-gray-400 hover:text-white hover:underline"
-                                    @click.stop
-                                >
-                                    {{ song.album_name }}
-                                </RouterLink>
-                                <span v-else class="text-gray-400">{{ song.album_name ?? '-' }}</span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-400 text-right">
-                                {{ formatDuration(song.length) }}
-                            </td>
-                        </tr>
+                            :song="song"
+                            :index="index"
+                            :show-track-number="false"
+                            :show-artist="false"
+                            :show-album="true"
+                            @play="playSong(index)"
+                            @updated="(updated) => handleSongUpdated(updated, index)"
+                        />
                     </tbody>
                 </table>
             </div>

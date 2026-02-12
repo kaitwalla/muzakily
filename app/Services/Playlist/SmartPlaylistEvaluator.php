@@ -81,6 +81,18 @@ class SmartPlaylistEvaluator
             return;
         }
 
+        // Special handling for is_favorite (needs user context)
+        if ($field === SmartPlaylistField::IS_FAVORITE && $user) {
+            $this->applyIsFavoriteRule($query, $operator, $method, $user);
+            return;
+        }
+
+        // Special handling for tags (relationship-based)
+        if ($field === SmartPlaylistField::TAG) {
+            $this->applyTagRule($query, $operator, $value, $method);
+            return;
+        }
+
         $column = $field->column();
 
         match ($operator) {
@@ -180,5 +192,50 @@ class SmartPlaylistEvaluator
             $q->whereNull($column)
                 ->orWhere($column, '<', now()->subDays($days));
         });
+    }
+
+    /**
+     * Apply is_favorite rule.
+     *
+     * @param Builder<Song> $query
+     */
+    private function applyIsFavoriteRule(Builder $query, SmartPlaylistOperator $operator, string $method, User $user): void
+    {
+        // Only handle IS and IS_NOT operators explicitly, ignore unsupported operators
+        match ($operator) {
+            SmartPlaylistOperator::IS => $query->$method(function (Builder $q) use ($user) {
+                $q->whereHas('favorites', fn (Builder $fq) => $fq->where('user_id', $user->id));
+            }),
+            SmartPlaylistOperator::IS_NOT => $query->$method(function (Builder $q) use ($user) {
+                $q->whereDoesntHave('favorites', fn (Builder $fq) => $fq->where('user_id', $user->id));
+            }),
+            default => null, // Ignore unsupported operators
+        };
+    }
+
+    /**
+     * Apply tag rule.
+     *
+     * @param Builder<Song> $query
+     */
+    private function applyTagRule(Builder $query, SmartPlaylistOperator $operator, mixed $value, string $method): void
+    {
+        $tagName = (string) $value;
+
+        match ($operator) {
+            SmartPlaylistOperator::IS => $query->$method(function (Builder $q) use ($tagName) {
+                $q->whereHas('tags', fn (Builder $tq) => $tq->where('name', $tagName));
+            }),
+            SmartPlaylistOperator::IS_NOT => $query->$method(function (Builder $q) use ($tagName) {
+                $q->whereDoesntHave('tags', fn (Builder $tq) => $tq->where('name', $tagName));
+            }),
+            SmartPlaylistOperator::CONTAINS => $query->$method(function (Builder $q) use ($tagName) {
+                $q->whereHas('tags', fn (Builder $tq) => $tq->where('name', 'ilike', "%{$tagName}%"));
+            }),
+            SmartPlaylistOperator::NOT_CONTAINS => $query->$method(function (Builder $q) use ($tagName) {
+                $q->whereDoesntHave('tags', fn (Builder $tq) => $tq->where('name', 'ilike', "%{$tagName}%"));
+            }),
+            default => null,
+        };
     }
 }

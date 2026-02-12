@@ -41,6 +41,10 @@ const isDateRangeOperator = computed(() => {
     return operatorIsDateRange(props.rule.operator);
 });
 
+const isBooleanField = computed(() => {
+    return fieldType.value === 'boolean';
+});
+
 const rangeValue = computed(() => {
     if (Array.isArray(props.rule.value)) {
         return props.rule.value;
@@ -156,6 +160,13 @@ function getPlaceholder(): string {
                 :placeholder="getPlaceholder()"
                 class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-green-500 w-24"
             />
+        </template>
+
+        <template v-else-if="isBooleanField">
+            <!-- Boolean value - no input needed, operator determines the value -->
+            <span class="text-gray-400 text-sm italic">
+                ({{ rule.operator === 'is' ? 'favorited' : 'not favorited' }})
+            </span>
         </template>
 
         <template v-else>

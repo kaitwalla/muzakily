@@ -10,12 +10,14 @@ use App\Models\Artist;
 use App\Models\ScanCache;
 use App\Models\SmartFolder;
 use App\Models\Song;
+use App\Services\Library\CoverArtService;
 use App\Services\Library\LibraryScannerService;
 use App\Services\Library\MetadataExtractorService;
 use App\Services\Library\SmartFolderService;
 use App\Services\Library\TagService;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Mockery;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\Test;
@@ -29,11 +31,15 @@ class LibraryScannerServiceTest extends TestCase
     private MetadataExtractorService&MockInterface $metadataExtractorMock;
     private SmartFolderService&MockInterface $smartFolderServiceMock;
     private TagService&MockInterface $tagServiceMock;
+    private CoverArtService&MockInterface $coverArtServiceMock;
     private LibraryScannerService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        // Fake the queue to prevent actual job dispatch during tests
+        Queue::fake();
 
         // Set up required config for R2 by default
         config([
@@ -47,12 +53,14 @@ class LibraryScannerServiceTest extends TestCase
         $this->metadataExtractorMock = Mockery::mock(MetadataExtractorService::class);
         $this->smartFolderServiceMock = Mockery::mock(SmartFolderService::class);
         $this->tagServiceMock = Mockery::mock(TagService::class);
+        $this->coverArtServiceMock = Mockery::mock(CoverArtService::class);
 
         $this->service = new LibraryScannerService(
             $this->storageMock,
             $this->metadataExtractorMock,
             $this->smartFolderServiceMock,
-            $this->tagServiceMock
+            $this->tagServiceMock,
+            $this->coverArtServiceMock
         );
     }
 

@@ -70,13 +70,19 @@ export const useSongsStore = defineStore('songs', () => {
         }
     }
 
-    function getSongStreamUrl(songId: string): string {
+    async function getSongStreamUrl(songId: string): Promise<string> {
         return getStreamUrl(songId);
     }
 
     function clearSongs(): void {
         songs.value = [];
         meta.value = null;
+    }
+
+    function updateSongInList(updatedSong: Song, index: number): void {
+        if (index >= 0 && index < songs.value.length) {
+            songs.value[index] = updatedSong;
+        }
     }
 
     return {
@@ -92,5 +98,6 @@ export const useSongsStore = defineStore('songs', () => {
         fetchSong,
         getSongStreamUrl,
         clearSongs,
+        updateSongInList,
     };
 });

@@ -6,6 +6,7 @@ namespace App\Services\Library;
 
 use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
+use App\Jobs\FetchArtistImageJob;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\ScanCache;
@@ -22,6 +23,7 @@ class LibraryScannerService
         private MetadataExtractorService $metadataExtractor,
         private SmartFolderService $smartFolderService,
         private TagService $tagService,
+        private CoverArtService $coverArtService,
     ) {}
 
     /**
@@ -181,6 +183,11 @@ class LibraryScannerService
             $artist = null;
             if ($metadata['artist'] ?? null) {
                 $artist = Artist::findOrCreateByName($metadata['artist']);
+
+                // Queue job to fetch artist image after transaction commits
+                // This prevents the job from being queued if the transaction rolls back
+                $artistForJob = $artist;
+                DB::afterCommit(fn () => FetchArtistImageJob::dispatchIfNeeded($artistForJob));
             }
 
             // Find or create album
@@ -189,6 +196,14 @@ class LibraryScannerService
                 $album = Album::findOrCreateByNameAndArtist($metadata['album'], $artist);
                 if ($metadata['year'] ?? null) {
                     $album->update(['year' => $metadata['year']]);
+                }
+
+                // Extract and store cover art if album doesn't have one yet
+                if (!$album->cover && !empty($metadata['cover_art'])) {
+                    $coverUrl = $this->coverArtService->storeForAlbum($album, $metadata['cover_art']);
+                    if ($coverUrl) {
+                        $album->update(['cover' => $coverUrl]);
+                    }
                 }
             }
 

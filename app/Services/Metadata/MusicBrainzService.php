@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Services\Metadata;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\RateLimiter;
 
 class MusicBrainzService
 {
     private const BASE_URL = 'https://musicbrainz.org/ws/2';
     private const USER_AGENT = 'Muzakily/1.0 (https://github.com/muzakily)';
+    private const RATE_LIMIT_KEY = 'musicbrainz_last_request';
 
     /**
      * Search for a recording by title, artist, and album.
@@ -34,6 +35,13 @@ class MusicBrainzService
         try {
             $response = Http::withUserAgent(self::USER_AGENT)
                 ->accept('application/json')
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_FRESH_CONNECT => true,
+                    ],
+                ])
+                ->timeout(15)
                 ->get(self::BASE_URL . '/recording', [
                     'query' => $query,
                     'limit' => 1,
@@ -85,14 +93,20 @@ class MusicBrainzService
     }
 
     /**
-     * Get cover art for an album.
+     * Get cover art for an album from Cover Art Archive.
+     * Note: Cover Art Archive has separate (more generous) rate limits than MusicBrainz.
      */
     private function getCoverArt(string $releaseId): ?string
     {
-        $this->rateLimit();
-
         try {
             $response = Http::withUserAgent(self::USER_AGENT)
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_FRESH_CONNECT => true,
+                    ],
+                ])
+                ->timeout(15)
                 ->get("https://coverartarchive.org/release/{$releaseId}/front");
 
             if ($response->successful()) {
@@ -124,17 +138,19 @@ class MusicBrainzService
     }
 
     /**
-     * Apply rate limiting.
+     * Apply rate limiting (MusicBrainz allows 1 request per second).
      */
     private function rateLimit(): void
     {
-        $rateLimit = config('muzakily.metadata.musicbrainz.rate_limit', 1);
+        $minInterval = 1000000 / config('muzakily.metadata.musicbrainz.rate_limit', 1); // microseconds
+        $lastRequest = (float) Cache::get(self::RATE_LIMIT_KEY, 0);
+        $now = microtime(true);
+        $elapsed = ($now - $lastRequest) * 1000000; // convert to microseconds
 
-        // Wait until we can make a request
-        while (RateLimiter::remaining('musicbrainz', $rateLimit) === 0) {
-            usleep((int) (1000000 / max(1, $rateLimit))); // Wait for rate limit window
+        if ($elapsed < $minInterval) {
+            usleep((int) ($minInterval - $elapsed));
         }
 
-        RateLimiter::hit('musicbrainz', 60);
+        Cache::put(self::RATE_LIMIT_KEY, microtime(true), 60);
     }
 }

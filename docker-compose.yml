@@ -16,9 +16,7 @@ services:
       - postgres
       - redis
       - meilisearch
-    command: >
-      bash -c "php artisan serve --host=0.0.0.0 --port=8000 &
-               npm run dev -- --host 0.0.0.0 --port 5173"
+    command: /var/www/html/docker/start.sh
     environment:
       - APP_ENV=local
       - DB_CONNECTION=pgsql

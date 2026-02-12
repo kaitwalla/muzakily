@@ -46,6 +46,10 @@ export function getOperatorsForFieldType(type: FieldType): SmartPlaylistOperator
             return smartPlaylistOperators.filter((o) =>
                 ['in_last', 'not_in_last', 'is_between'].includes(o.value)
             );
+        case 'boolean':
+            return smartPlaylistOperators.filter((o) =>
+                ['is', 'is_not'].includes(o.value)
+            );
         default:
             return [];
     }

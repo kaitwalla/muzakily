@@ -14,6 +14,8 @@ export const smartPlaylistFields: SmartPlaylistField[] = [
     { value: 'last_played', label: 'Last Played', type: 'date' },
     { value: 'date_added', label: 'Date Added', type: 'date' },
     { value: 'audio_format', label: 'Format', type: 'text' },
+    { value: 'is_favorite', label: 'Favorite', type: 'boolean' },
+    { value: 'tag', label: 'Tag', type: 'text' },
 ];
 
 /**

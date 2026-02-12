@@ -127,7 +127,7 @@ export const usePlayerStore = defineStore('player', () => {
             shuffleQueue();
         }
 
-        loadCurrentSong();
+        void loadCurrentSong();
     }
 
     function playSong(song: Song): void {
@@ -183,7 +183,7 @@ export const usePlayerStore = defineStore('player', () => {
                 if (currentIndex.value >= queue.value.length) {
                     currentIndex.value = queue.value.length - 1;
                 }
-                loadCurrentSong();
+                void loadCurrentSong();
             }
         }
     }
@@ -199,14 +199,17 @@ export const usePlayerStore = defineStore('player', () => {
         isPlaying.value = false;
     }
 
-    function loadCurrentSong(): void {
+    async function loadCurrentSong(): Promise<void> {
         if (!audioElement || !currentSong.value) return;
 
-        audioElement.src = songsApi.getStreamUrl(currentSong.value.id);
-        audioElement.load();
-        audioElement.play().catch(() => {
+        try {
+            const streamUrl = await songsApi.getStreamUrl(currentSong.value.id);
+            audioElement.src = streamUrl;
+            audioElement.load();
+            await audioElement.play();
+        } catch {
             isPlaying.value = false;
-        });
+        }
 
         // Record the play interaction
         interactionsApi.recordPlay(currentSong.value.id).catch(() => {
@@ -249,7 +252,7 @@ export const usePlayerStore = defineStore('player', () => {
             return;
         }
 
-        loadCurrentSong();
+        void loadCurrentSong();
     }
 
     function previous(): void {
@@ -269,7 +272,7 @@ export const usePlayerStore = defineStore('player', () => {
             return;
         }
 
-        loadCurrentSong();
+        void loadCurrentSong();
     }
 
     function seek(time: number): void {
