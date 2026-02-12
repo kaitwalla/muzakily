@@ -15,7 +15,7 @@ export async function getSongs(filters: SongFilters = {}): Promise<PaginatedResp
     return response.data;
 }
 
-export async function getSong(id: number): Promise<Song> {
+export async function getSong(id: string): Promise<Song> {
     const response = await apiClient.get<ApiResponse<Song>>(`/songs/${id}`);
     return response.data.data;
 }
@@ -25,7 +25,7 @@ export async function getSongBySlug(slug: string): Promise<Song> {
     return response.data.data;
 }
 
-export function getStreamUrl(songId: number): string {
+export function getStreamUrl(songId: string): string {
     const token = localStorage.getItem('auth_token');
     if (!token) {
         throw new Error('Authentication token not found');
@@ -33,7 +33,7 @@ export function getStreamUrl(songId: number): string {
     return `/api/v1/songs/${songId}/stream?token=${encodeURIComponent(token)}`;
 }
 
-export function getDownloadUrl(songId: number): string {
+export function getDownloadUrl(songId: string): string {
     const token = localStorage.getItem('auth_token');
     if (!token) {
         throw new Error('Authentication token not found');
@@ -41,12 +41,12 @@ export function getDownloadUrl(songId: number): string {
     return `/api/v1/songs/${songId}/download?token=${encodeURIComponent(token)}`;
 }
 
-export async function addTagsToSong(songId: number, tagIds: number[]): Promise<Song> {
+export async function addTagsToSong(songId: string, tagIds: number[]): Promise<Song> {
     const response = await apiClient.post<ApiResponse<Song>>(`/songs/${songId}/tags`, { tag_ids: tagIds });
     return response.data.data;
 }
 
-export async function removeTagsFromSong(songId: number, tagIds: number[]): Promise<Song> {
+export async function removeTagsFromSong(songId: string, tagIds: number[]): Promise<Song> {
     const response = await apiClient.delete<ApiResponse<Song>>(`/songs/${songId}/tags`, { data: { tag_ids: tagIds } });
     return response.data.data;
 }

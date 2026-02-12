@@ -84,10 +84,18 @@ function formatDuration(seconds: number): string {
                             >
                                 <td class="px-4 py-3">
                                     <p class="text-white font-medium">{{ song.title }}</p>
-                                    <p class="text-gray-400 text-sm">{{ song.artist?.name ?? 'Unknown' }}</p>
+                                    <RouterLink
+                                        v-if="song.artist_slug"
+                                        :to="{ name: 'artist-detail', params: { slug: song.artist_slug } }"
+                                        class="text-gray-400 text-sm hover:text-white hover:underline"
+                                        @click.stop
+                                    >
+                                        {{ song.artist_name }}
+                                    </RouterLink>
+                                    <p v-else class="text-gray-400 text-sm">{{ song.artist_name ?? 'Unknown' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-400 text-right">
-                                    {{ formatDuration(song.duration) }}
+                                    {{ formatDuration(song.length) }}
                                 </td>
                             </tr>
                         </tbody>
@@ -102,19 +110,19 @@ function formatDuration(seconds: number): string {
                     <RouterLink
                         v-for="album in searchStore.albums.slice(0, 5)"
                         :key="album.id"
-                        :to="{ name: 'album-detail', params: { slug: album.slug } }"
+                        :to="{ name: 'album-detail', params: { slug: album.id } }"
                         class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors"
                     >
                         <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
                             <img
-                                v-if="album.cover_url"
-                                :src="album.cover_url"
-                                :alt="album.title"
+                                v-if="album.cover"
+                                :src="album.cover"
+                                :alt="album.name"
                                 class="w-full h-full object-cover"
                             />
                         </div>
-                        <p class="text-white font-medium truncate">{{ album.title }}</p>
-                        <p class="text-gray-400 text-sm truncate">{{ album.artist?.name ?? 'Unknown' }}</p>
+                        <p class="text-white font-medium truncate">{{ album.name }}</p>
+                        <p class="text-gray-400 text-sm truncate">{{ album.artist_name ?? 'Unknown' }}</p>
                     </RouterLink>
                 </div>
             </section>
@@ -126,13 +134,13 @@ function formatDuration(seconds: number): string {
                     <RouterLink
                         v-for="artist in searchStore.artists.slice(0, 5)"
                         :key="artist.id"
-                        :to="{ name: 'artist-detail', params: { slug: artist.slug } }"
+                        :to="{ name: 'artist-detail', params: { slug: artist.id } }"
                         class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors text-center"
                     >
                         <div class="aspect-square bg-gray-700 rounded-full mb-3 mx-auto overflow-hidden w-24 h-24">
                             <img
-                                v-if="artist.image_url"
-                                :src="artist.image_url"
+                                v-if="artist.image"
+                                :src="artist.image"
                                 :alt="artist.name"
                                 class="w-full h-full object-cover"
                             />

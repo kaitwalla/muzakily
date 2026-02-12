@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { RouterLink } from 'vue-router';
 import { usePlayer } from '@/composables';
 
 interface Props {
@@ -30,9 +29,9 @@ const coverSizeClasses: Record<string, string> = {
                 :class="[coverSizeClasses[coverSize], 'bg-gray-700 rounded flex-shrink-0 overflow-hidden']"
             >
                 <img
-                    v-if="currentSong.album?.cover_url"
-                    :src="currentSong.album.cover_url"
-                    :alt="currentSong.album.title"
+                    v-if="currentSong.album_cover"
+                    :src="currentSong.album_cover"
+                    :alt="currentSong.album_name ?? 'Album'"
                     class="w-full h-full object-cover"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center">
@@ -48,14 +47,7 @@ const coverSizeClasses: Record<string, string> = {
                     {{ currentSong.title }}
                 </p>
                 <p class="text-xs text-gray-400 truncate">
-                    <RouterLink
-                        v-if="currentSong.artist"
-                        :to="{ name: 'artist-detail', params: { slug: currentSong.artist.slug } }"
-                        class="hover:underline hover:text-white transition-colors"
-                    >
-                        {{ currentSong.artist.name }}
-                    </RouterLink>
-                    <span v-else>Unknown Artist</span>
+                    {{ currentSong.artist_name ?? 'Unknown Artist' }}
                 </p>
             </div>
         </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
+import { RouterLink } from 'vue-router';
 import { useSongsStore } from '@/stores/songs';
 import { usePlayerStore } from '@/stores/player';
 import type { Song } from '@/types/models';
@@ -85,9 +86,29 @@ function formatDuration(seconds: number): string {
                                 {{ song.title }}
                             </p>
                         </td>
-                        <td class="px-4 py-3 text-gray-400">{{ song.artist?.name ?? 'Unknown' }}</td>
-                        <td class="px-4 py-3 text-gray-400">{{ song.album?.title ?? '-' }}</td>
-                        <td class="px-4 py-3 text-gray-400 text-right">{{ formatDuration(song.duration) }}</td>
+                        <td class="px-4 py-3 text-gray-400">
+                            <RouterLink
+                                v-if="song.artist_slug"
+                                :to="{ name: 'artist-detail', params: { slug: song.artist_slug } }"
+                                class="hover:text-white hover:underline"
+                                @click.stop
+                            >
+                                {{ song.artist_name }}
+                            </RouterLink>
+                            <span v-else>{{ song.artist_name ?? 'Unknown' }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-400">
+                            <RouterLink
+                                v-if="song.album_slug"
+                                :to="{ name: 'album-detail', params: { slug: song.album_slug } }"
+                                class="hover:text-white hover:underline"
+                                @click.stop
+                            >
+                                {{ song.album_name }}
+                            </RouterLink>
+                            <span v-else>{{ song.album_name ?? '-' }}</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-400 text-right">{{ formatDuration(song.length) }}</td>
                     </tr>
                 </tbody>
             </table>

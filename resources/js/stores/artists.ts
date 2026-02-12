@@ -56,13 +56,11 @@ export const useArtistsStore = defineStore('artists', () => {
         }
     }
 
-    async function fetchArtist(idOrSlug: number | string): Promise<Artist> {
+    async function fetchArtist(id: string): Promise<Artist> {
         loading.value = true;
         error.value = null;
         try {
-            const artist = typeof idOrSlug === 'number'
-                ? await artistsApi.getArtist(idOrSlug)
-                : await artistsApi.getArtistBySlug(idOrSlug);
+            const artist = await artistsApi.getArtist(id);
             currentArtist.value = artist;
             return artist;
         } catch (e) {
@@ -73,7 +71,7 @@ export const useArtistsStore = defineStore('artists', () => {
         }
     }
 
-    async function fetchArtistAlbums(artistId: number): Promise<Album[]> {
+    async function fetchArtistAlbums(artistId: string): Promise<Album[]> {
         loading.value = true;
         error.value = null;
         try {
@@ -88,7 +86,7 @@ export const useArtistsStore = defineStore('artists', () => {
         }
     }
 
-    async function fetchArtistSongs(artistId: number): Promise<Song[]> {
+    async function fetchArtistSongs(artistId: string): Promise<Song[]> {
         loading.value = true;
         error.value = null;
         try {

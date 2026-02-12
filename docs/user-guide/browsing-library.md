@@ -4,7 +4,16 @@ Muzakily provides multiple ways to browse and discover music in your library.
 
 ## Songs View
 
-The Songs view displays all songs in your library.
+The Songs view displays all songs in your library in a table format.
+
+### Quick Navigation
+
+In the song list, artist and album names are clickable links:
+
+- **Click an artist name** to go directly to that artist's page
+- **Click an album name** to go directly to that album's page
+
+This works throughout the app - in the Songs view, search results, playlists, and anywhere songs are displayed in a list.
 
 ### Sorting
 

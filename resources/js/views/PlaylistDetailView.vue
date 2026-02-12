@@ -114,7 +114,7 @@ function formatDuration(seconds: number): string {
 }
 
 function getTotalDuration(): string {
-    const total = playlistsStore.currentPlaylistSongs.reduce((sum, song) => sum + song.duration, 0);
+    const total = playlistsStore.currentPlaylistSongs.reduce((sum, song) => sum + song.length, 0);
     const hours = Math.floor(total / 3600);
     const mins = Math.floor((total % 3600) / 60);
     if (hours > 0) {
@@ -231,27 +231,30 @@ function getTotalDuration(): string {
                                     {{ song.title }}
                                 </p>
                                 <RouterLink
-                                    v-if="song.artist"
-                                    :to="{ name: 'artist-detail', params: { slug: song.artist.slug } }"
-                                    class="text-gray-400 text-sm hover:underline"
+                                    v-if="song.artist_slug"
+                                    :to="{ name: 'artist-detail', params: { slug: song.artist_slug } }"
+                                    class="text-gray-400 text-sm hover:text-white hover:underline"
                                     @click.stop
                                 >
-                                    {{ song.artist.name }}
+                                    {{ song.artist_name }}
                                 </RouterLink>
+                                <span v-else class="text-gray-400 text-sm">
+                                    {{ song.artist_name ?? 'Unknown' }}
+                                </span>
                             </td>
                             <td class="px-4 py-3">
                                 <RouterLink
-                                    v-if="song.album"
-                                    :to="{ name: 'album-detail', params: { slug: song.album.slug } }"
-                                    class="text-gray-400 hover:underline"
+                                    v-if="song.album_slug"
+                                    :to="{ name: 'album-detail', params: { slug: song.album_slug } }"
+                                    class="text-gray-400 hover:text-white hover:underline"
                                     @click.stop
                                 >
-                                    {{ song.album.title }}
+                                    {{ song.album_name }}
                                 </RouterLink>
-                                <span v-else class="text-gray-500">-</span>
+                                <span v-else class="text-gray-400">{{ song.album_name ?? '-' }}</span>
                             </td>
                             <td class="px-4 py-3 text-gray-400 text-right">
-                                {{ formatDuration(song.duration) }}
+                                {{ formatDuration(song.length) }}
                             </td>
                         </tr>
                     </tbody>

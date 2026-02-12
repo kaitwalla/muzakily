@@ -61,19 +61,19 @@ onMounted(async () => {
                     v-else
                     v-for="song in recentlyPlayed"
                     :key="song.id"
-                    :to="{ name: 'album', params: { id: song.album?.slug ?? song.album_id } }"
+                    :to="{ name: 'album', params: { id: song.album_id } }"
                     class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer"
                 >
                     <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
                         <img
-                            v-if="song.album?.cover_url"
-                            :src="song.album.cover_url"
+                            v-if="song.album_cover"
+                            :src="song.album_cover"
                             :alt="song.title"
                             class="w-full h-full object-cover"
                         />
                     </div>
                     <p class="text-white font-medium truncate">{{ song.title }}</p>
-                    <p class="text-gray-400 text-sm truncate">{{ song.artist?.name ?? 'Unknown Artist' }}</p>
+                    <p class="text-gray-400 text-sm truncate">{{ song.artist_name ?? 'Unknown Artist' }}</p>
                 </RouterLink>
             </div>
         </section>

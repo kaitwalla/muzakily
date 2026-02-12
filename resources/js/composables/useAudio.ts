@@ -78,9 +78,9 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
         const song = playerStore.currentSong;
         const artwork: MediaImage[] = [];
 
-        if (song.album?.cover_url) {
+        if (song.album_cover) {
             artwork.push({
-                src: song.album.cover_url,
+                src: song.album_cover,
                 sizes: '512x512',
                 type: 'image/jpeg',
             });
@@ -88,8 +88,8 @@ export function useAudio(options: UseAudioOptions = {}): UseAudioReturn {
 
         navigator.mediaSession.metadata = new MediaMetadata({
             title: song.title,
-            artist: song.artist?.name ?? 'Unknown Artist',
-            album: song.album?.title ?? 'Unknown Album',
+            artist: song.artist_name ?? 'Unknown Artist',
+            album: song.album_name ?? 'Unknown Album',
             artwork,
         });
     }

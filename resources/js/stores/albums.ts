@@ -55,13 +55,11 @@ export const useAlbumsStore = defineStore('albums', () => {
         }
     }
 
-    async function fetchAlbum(idOrSlug: number | string): Promise<Album> {
+    async function fetchAlbum(id: string): Promise<Album> {
         loading.value = true;
         error.value = null;
         try {
-            const album = typeof idOrSlug === 'number'
-                ? await albumsApi.getAlbum(idOrSlug)
-                : await albumsApi.getAlbumBySlug(idOrSlug);
+            const album = await albumsApi.getAlbum(id);
             currentAlbum.value = album;
             return album;
         } catch (e) {
@@ -72,7 +70,7 @@ export const useAlbumsStore = defineStore('albums', () => {
         }
     }
 
-    async function fetchAlbumSongs(albumId: number): Promise<Song[]> {
+    async function fetchAlbumSongs(albumId: string): Promise<Song[]> {
         loading.value = true;
         error.value = null;
         try {

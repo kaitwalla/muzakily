@@ -137,13 +137,13 @@ function formatDuration(seconds: number): string {
                         {{ item.song.title }}
                     </p>
                     <p class="text-xs text-gray-400 truncate">
-                        {{ item.song.artist?.name ?? 'Unknown Artist' }}
+                        {{ item.song.artist_name ?? 'Unknown Artist' }}
                     </p>
                 </div>
 
                 <!-- Duration -->
                 <span class="text-xs text-gray-400 tabular-nums">
-                    {{ formatDuration(item.song.duration) }}
+                    {{ formatDuration(item.song.length) }}
                 </span>
 
                 <!-- Remove button -->

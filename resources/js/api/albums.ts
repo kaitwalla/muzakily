@@ -14,17 +14,12 @@ export async function getAlbums(filters: AlbumFilters = {}): Promise<PaginatedRe
     return response.data;
 }
 
-export async function getAlbum(id: number): Promise<Album> {
+export async function getAlbum(id: string): Promise<Album> {
     const response = await apiClient.get<ApiResponse<Album>>(`/albums/${id}`);
     return response.data.data;
 }
 
-export async function getAlbumBySlug(slug: string): Promise<Album> {
-    const response = await apiClient.get<ApiResponse<Album>>(`/albums/${slug}`);
-    return response.data.data;
-}
-
-export async function getAlbumSongs(albumId: number): Promise<Song[]> {
+export async function getAlbumSongs(albumId: string): Promise<Song[]> {
     const response = await apiClient.get<ApiResponse<Song[]>>(`/albums/${albumId}/songs`);
     return response.data.data;
 }

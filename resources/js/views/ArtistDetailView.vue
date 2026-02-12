@@ -58,8 +58,8 @@ function formatDuration(seconds: number): string {
             <div class="flex gap-6 mb-8">
                 <div class="w-48 h-48 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 shadow-xl">
                     <img
-                        v-if="artistsStore.currentArtist.image_url"
-                        :src="artistsStore.currentArtist.image_url"
+                        v-if="artistsStore.currentArtist.image"
+                        :src="artistsStore.currentArtist.image"
                         :alt="artistsStore.currentArtist.name"
                         class="w-full h-full object-cover"
                     />
@@ -118,10 +118,18 @@ function formatDuration(seconds: number): string {
                                     <p class="text-white font-medium" :class="{ 'text-green-500': playerStore.currentSong?.id === song.id }">
                                         {{ song.title }}
                                     </p>
-                                    <p class="text-gray-400 text-sm">{{ song.album?.title ?? '-' }}</p>
+                                    <RouterLink
+                                        v-if="song.album_slug"
+                                        :to="{ name: 'album-detail', params: { slug: song.album_slug } }"
+                                        class="text-gray-400 text-sm hover:text-white hover:underline"
+                                        @click.stop
+                                    >
+                                        {{ song.album_name }}
+                                    </RouterLink>
+                                    <p v-else class="text-gray-400 text-sm">{{ song.album_name ?? '-' }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-gray-400 text-right">
-                                    {{ formatDuration(song.duration) }}
+                                    {{ formatDuration(song.length) }}
                                 </td>
                             </tr>
                         </tbody>
@@ -136,20 +144,20 @@ function formatDuration(seconds: number): string {
                     <RouterLink
                         v-for="album in artistsStore.currentArtistAlbums"
                         :key="album.id"
-                        :to="{ name: 'album-detail', params: { slug: album.slug } }"
+                        :to="{ name: 'album-detail', params: { slug: album.id } }"
                         class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors group"
                     >
                         <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
                             <img
-                                v-if="album.cover_url"
-                                :src="album.cover_url"
-                                :alt="album.title"
+                                v-if="album.cover"
+                                :src="album.cover"
+                                :alt="album.name"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform"
                             />
                         </div>
-                        <p class="text-white font-medium truncate">{{ album.title }}</p>
-                        <p v-if="album.release_date" class="text-gray-500 text-sm">
-                            {{ new Date(album.release_date).getFullYear() }}
+                        <p class="text-white font-medium truncate">{{ album.name }}</p>
+                        <p v-if="album.year" class="text-gray-500 text-sm">
+                            {{ album.year }}
                         </p>
                     </RouterLink>
                 </div>

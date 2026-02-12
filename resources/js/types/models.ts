@@ -1,41 +1,55 @@
 export interface Artist {
-    id: number;
+    id: string;
     name: string;
-    slug: string;
-    bio: string | null;
-    image_url: string | null;
+    image: string | null;
+    bio?: string | null;
+    album_count: number;
+    song_count: number;
     created_at: string;
-    updated_at: string;
-    albums?: Album[];
-    songs?: Song[];
 }
 
 export interface Album {
-    id: number;
-    title: string;
-    slug: string;
-    artist_id: number;
-    release_date: string | null;
-    cover_url: string | null;
+    id: string;
+    name: string;
+    artist_id: string | null;
+    artist_name: string | null;
+    cover: string | null;
+    year: number | null;
+    song_count: number;
+    total_length: number;
     created_at: string;
-    updated_at: string;
-    artist?: Artist;
-    songs?: Song[];
 }
 
 export interface Song {
-    id: number;
+    id: string;
     title: string;
-    slug: string;
-    artist_id: number;
-    album_id: number | null;
-    duration: number;
-    track_number: number | null;
-    audio_url: string;
+    artist_id: string | null;
+    artist_name: string | null;
+    artist_slug: string | null;
+    album_id: string | null;
+    album_name: string | null;
+    album_slug: string | null;
+    album_cover: string | null;
+    length: number;
+    track: number | null;
+    disc: number | null;
+    year: number | null;
+    genre: string | null;
+    audio_format: string;
+    is_favorite: boolean;
+    play_count: number;
+    smart_folder?: {
+        id: number;
+        name: string;
+        path: string;
+    };
+    tags?: Array<{
+        id: number;
+        name: string;
+        slug: string;
+        color: string | null;
+    }>;
     created_at: string;
-    updated_at: string;
-    artist?: Artist;
-    album?: Album;
 }
 
 import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';

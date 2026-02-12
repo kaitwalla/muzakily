@@ -141,7 +141,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function addSongsToPlaylist(playlistId: number, songIds: number[]): Promise<void> {
+    async function addSongsToPlaylist(playlistId: number, songIds: string[]): Promise<void> {
         loading.value = true;
         error.value = null;
         try {
@@ -158,7 +158,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function removeSongsFromPlaylist(playlistId: number, songIds: number[]): Promise<void> {
+    async function removeSongsFromPlaylist(playlistId: number, songIds: string[]): Promise<void> {
         loading.value = true;
         error.value = null;
         try {
@@ -176,7 +176,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function reorderPlaylistSongs(playlistId: number, songIds: number[]): Promise<void> {
+    async function reorderPlaylistSongs(playlistId: number, songIds: string[]): Promise<void> {
         loading.value = true;
         error.value = null;
         try {

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { Song } from '@/types/models';
 import type { PlaybackState, QueueItem, RepeatMode } from '@/types/player';
 import * as interactionsApi from '@/api/interactions';
+import * as songsApi from '@/api/songs';
 
 export const usePlayerStore = defineStore('player', () => {
     // Queue state
@@ -201,7 +202,7 @@ export const usePlayerStore = defineStore('player', () => {
     function loadCurrentSong(): void {
         if (!audioElement || !currentSong.value) return;
 
-        audioElement.src = currentSong.value.audio_url;
+        audioElement.src = songsApi.getStreamUrl(currentSong.value.id);
         audioElement.load();
         audioElement.play().catch(() => {
             isPlaying.value = false;

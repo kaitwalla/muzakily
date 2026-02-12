@@ -40,7 +40,7 @@ function formatDuration(seconds: number): string {
 }
 
 function getTotalDuration(): string {
-    const total = albumsStore.currentAlbumSongs.reduce((sum, song) => sum + song.duration, 0);
+    const total = albumsStore.currentAlbumSongs.reduce((sum, song) => sum + song.length, 0);
     const hours = Math.floor(total / 3600);
     const mins = Math.floor((total % 3600) / 60);
     if (hours > 0) {
@@ -65,9 +65,9 @@ function getTotalDuration(): string {
             <div class="flex gap-6 mb-8">
                 <div class="w-56 h-56 bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl">
                     <img
-                        v-if="albumsStore.currentAlbum.cover_url"
-                        :src="albumsStore.currentAlbum.cover_url"
-                        :alt="albumsStore.currentAlbum.title"
+                        v-if="albumsStore.currentAlbum.cover"
+                        :src="albumsStore.currentAlbum.cover"
+                        :alt="albumsStore.currentAlbum.name"
                         class="w-full h-full object-cover"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center">
@@ -79,18 +79,18 @@ function getTotalDuration(): string {
                 <div class="flex flex-col justify-end">
                     <p class="text-sm text-gray-400 uppercase font-medium">Album</p>
                     <h1 class="text-5xl font-bold text-white mt-2 mb-4">
-                        {{ albumsStore.currentAlbum.title }}
+                        {{ albumsStore.currentAlbum.name }}
                     </h1>
                     <div class="flex items-center gap-2 text-gray-300">
                         <RouterLink
-                            v-if="albumsStore.currentAlbum.artist"
-                            :to="{ name: 'artist-detail', params: { slug: albumsStore.currentAlbum.artist.slug } }"
+                            v-if="albumsStore.currentAlbum.artist_id"
+                            :to="{ name: 'artist-detail', params: { slug: albumsStore.currentAlbum.artist_id } }"
                             class="font-medium hover:underline"
                         >
-                            {{ albumsStore.currentAlbum.artist.name }}
+                            {{ albumsStore.currentAlbum.artist_name }}
                         </RouterLink>
-                        <span v-if="albumsStore.currentAlbum.release_date" class="text-gray-400">
-                            &bull; {{ new Date(albumsStore.currentAlbum.release_date).getFullYear() }}
+                        <span v-if="albumsStore.currentAlbum.year" class="text-gray-400">
+                            &bull; {{ albumsStore.currentAlbum.year }}
                         </span>
                         <span class="text-gray-400">
                             &bull; {{ albumsStore.currentAlbumSongs.length }} songs, {{ getTotalDuration() }}
@@ -136,7 +136,7 @@ function getTotalDuration(): string {
                                         <path d="M8 5v14l11-7z"/>
                                     </svg>
                                 </span>
-                                <span v-else>{{ song.track_number ?? index + 1 }}</span>
+                                <span v-else>{{ song.track ?? index + 1 }}</span>
                             </td>
                             <td class="px-4 py-3">
                                 <p class="text-white font-medium" :class="{ 'text-green-500': playerStore.currentSong?.id === song.id }">
@@ -144,7 +144,7 @@ function getTotalDuration(): string {
                                 </p>
                             </td>
                             <td class="px-4 py-3 text-gray-400 text-right">
-                                {{ formatDuration(song.duration) }}
+                                {{ formatDuration(song.length) }}
                             </td>
                         </tr>
                     </tbody>

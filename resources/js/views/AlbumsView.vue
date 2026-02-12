@@ -30,14 +30,14 @@ onMounted(() => {
             <RouterLink
                 v-for="album in albumsStore.albums"
                 :key="album.id"
-                :to="{ name: 'album-detail', params: { slug: album.slug } }"
+                :to="{ name: 'album-detail', params: { slug: album.id } }"
                 class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors group"
             >
                 <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
                     <img
-                        v-if="album.cover_url"
-                        :src="album.cover_url"
-                        :alt="album.title"
+                        v-if="album.cover"
+                        :src="album.cover"
+                        :alt="album.name"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center">
@@ -46,10 +46,10 @@ onMounted(() => {
                         </svg>
                     </div>
                 </div>
-                <p class="text-white font-medium truncate">{{ album.title }}</p>
-                <p class="text-gray-400 text-sm truncate">{{ album.artist?.name ?? 'Unknown Artist' }}</p>
-                <p v-if="album.release_date" class="text-gray-500 text-xs mt-1">
-                    {{ new Date(album.release_date).getFullYear() }}
+                <p class="text-white font-medium truncate">{{ album.name }}</p>
+                <p class="text-gray-400 text-sm truncate">{{ album.artist_name ?? 'Unknown Artist' }}</p>
+                <p v-if="album.year" class="text-gray-500 text-xs mt-1">
+                    {{ album.year }}
                 </p>
             </RouterLink>
         </div>

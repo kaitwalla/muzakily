@@ -55,13 +55,11 @@ export const useSongsStore = defineStore('songs', () => {
         }
     }
 
-    async function fetchSong(idOrSlug: number | string): Promise<Song> {
+    async function fetchSong(idOrSlug: string): Promise<Song> {
         loading.value = true;
         error.value = null;
         try {
-            const song = typeof idOrSlug === 'number'
-                ? await songsApi.getSong(idOrSlug)
-                : await songsApi.getSongBySlug(idOrSlug);
+            const song = await songsApi.getSong(idOrSlug);
             currentSong.value = song;
             return song;
         } catch (e) {
@@ -72,7 +70,7 @@ export const useSongsStore = defineStore('songs', () => {
         }
     }
 
-    function getSongStreamUrl(songId: number): string {
+    function getSongStreamUrl(songId: string): string {
         return getStreamUrl(songId);
     }
 

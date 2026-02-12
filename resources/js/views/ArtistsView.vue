@@ -30,13 +30,13 @@ onMounted(() => {
             <RouterLink
                 v-for="artist in artistsStore.artists"
                 :key="artist.id"
-                :to="{ name: 'artist-detail', params: { slug: artist.slug } }"
+                :to="{ name: 'artist-detail', params: { slug: artist.id } }"
                 class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors group text-center"
             >
                 <div class="aspect-square bg-gray-700 rounded-full mb-3 mx-auto overflow-hidden w-32 h-32">
                     <img
-                        v-if="artist.image_url"
-                        :src="artist.image_url"
+                        v-if="artist.image"
+                        :src="artist.image"
                         :alt="artist.name"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />

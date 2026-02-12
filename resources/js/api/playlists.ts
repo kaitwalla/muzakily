@@ -57,14 +57,14 @@ export async function getPlaylistSongs(playlistId: number): Promise<Song[]> {
     return response.data.data;
 }
 
-export async function addSongsToPlaylist(playlistId: number, songIds: number[]): Promise<void> {
+export async function addSongsToPlaylist(playlistId: number, songIds: string[]): Promise<void> {
     await apiClient.post(`/playlists/${playlistId}/songs`, { song_ids: songIds });
 }
 
-export async function removeSongsFromPlaylist(playlistId: number, songIds: number[]): Promise<void> {
+export async function removeSongsFromPlaylist(playlistId: number, songIds: string[]): Promise<void> {
     await apiClient.delete(`/playlists/${playlistId}/songs`, { data: { song_ids: songIds } });
 }
 
-export async function reorderPlaylistSongs(playlistId: number, songIds: number[]): Promise<void> {
+export async function reorderPlaylistSongs(playlistId: number, songIds: string[]): Promise<void> {
     await apiClient.put(`/playlists/${playlistId}/songs/reorder`, { song_ids: songIds });
 }

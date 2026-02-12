@@ -45,11 +45,11 @@ function handleVolumeChange(event: Event): void {
                 <template v-if="playerStore.currentSong">
                     <div
                         class="w-12 h-12 bg-gray-700 rounded flex-shrink-0"
-                        :style="playerStore.currentSong.album?.cover_url ? { backgroundImage: `url(${playerStore.currentSong.album.cover_url})`, backgroundSize: 'cover' } : {}"
+                        :style="playerStore.currentSong.album_cover ? { backgroundImage: `url(${playerStore.currentSong.album_cover})`, backgroundSize: 'cover' } : {}"
                     />
                     <div class="min-w-0">
                         <p class="text-sm text-white truncate">{{ playerStore.currentSong.title }}</p>
-                        <p class="text-xs text-gray-400 truncate">{{ playerStore.currentSong.artist?.name }}</p>
+                        <p class="text-xs text-gray-400 truncate">{{ playerStore.currentSong.artist_name ?? 'Unknown Artist' }}</p>
                     </div>
                 </template>
                 <template v-else>
