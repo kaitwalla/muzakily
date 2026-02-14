@@ -12,17 +12,22 @@ interface Props {
     showTrackNumber?: boolean;
     showArtist?: boolean;
     showAlbum?: boolean;
+    selectable?: boolean;
+    selected?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     showTrackNumber: false,
     showArtist: true,
     showAlbum: true,
+    selectable: false,
+    selected: false,
 });
 
 const emit = defineEmits<{
     play: [];
     updated: [song: Song];
+    'toggle-select': [];
 }>();
 
 const playerStore = usePlayerStore();
@@ -101,14 +106,29 @@ function formatDuration(seconds: number): string {
 function closeMenu(): void {
     showMenu.value = false;
 }
+
+function handleCheckboxClick(event: Event): void {
+    event.stopPropagation();
+    emit('toggle-select');
+}
 </script>
 
 <template>
     <tr
         @click="emit('play')"
         class="hover:bg-gray-700 cursor-pointer transition-colors group"
-        :class="{ 'bg-gray-700': isCurrentSong }"
+        :class="{ 'bg-gray-700': isCurrentSong, 'bg-green-900/20': selected }"
     >
+        <!-- Selection checkbox -->
+        <td v-if="selectable" class="px-4 py-3 w-10">
+            <input
+                type="checkbox"
+                :checked="selected"
+                @click="handleCheckboxClick"
+                class="w-4 h-4 rounded border-surface-500 bg-surface-700 text-green-500 focus:ring-green-500 focus:ring-offset-surface-800 cursor-pointer"
+            />
+        </td>
+
         <!-- Favorite + Track Number (in album view) or just Favorite -->
         <td class="px-4 py-3" :class="showTrackNumber ? 'w-20' : 'w-12'">
             <div class="flex items-center gap-3">

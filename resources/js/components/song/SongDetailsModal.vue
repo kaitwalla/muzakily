@@ -157,6 +157,12 @@ function formatDuration(seconds: number): string {
                     </div>
                 </div>
 
+                <!-- File path -->
+                <div class="px-6 py-3 border-b border-surface-700 bg-surface-900/50">
+                    <p class="text-xs text-surface-500 mb-1">File Path</p>
+                    <p class="text-sm text-surface-400 font-mono break-all">{{ song.storage_path }}</p>
+                </div>
+
                 <!-- Form -->
                 <form @submit.prevent="handleSubmit" class="flex-1 overflow-y-auto px-6 py-4">
                     <div class="space-y-4">

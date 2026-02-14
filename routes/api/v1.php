@@ -49,6 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Songs
     Route::get('songs/recently-played', [SongController::class, 'recentlyPlayed'])->name('songs.recently-played');
+    Route::put('songs/bulk', [SongController::class, 'bulkUpdate'])->name('songs.bulk-update');
     Route::apiResource('songs', SongController::class)->only(['index', 'show', 'update']);
     Route::get('songs/{song}/stream', [StreamController::class, 'stream'])->name('songs.stream');
     Route::get('songs/{song}/download', [StreamController::class, 'download'])->name('songs.download');

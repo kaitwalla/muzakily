@@ -39,6 +39,7 @@ class SongResource extends JsonResource
         'play_count',
         'smart_folder',
         'tags',
+        'storage_path',
         'created_at',
     ];
 
@@ -87,6 +88,7 @@ class SongResource extends JsonResource
                     'color' => $tag->color,
                 ])->all()
             ),
+            'storage_path' => $this->storage_path,
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

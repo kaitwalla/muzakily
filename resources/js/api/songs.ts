@@ -75,3 +75,19 @@ export async function updateSong(songId: string, data: UpdateSongData): Promise<
     const response = await apiClient.put<ApiResponse<Song>>(`/songs/${songId}`, data);
     return response.data.data;
 }
+
+export interface BulkUpdateSongsData extends Partial<UpdateSongData> {
+    add_tag_ids?: number[];
+    remove_tag_ids?: number[];
+}
+
+export async function bulkUpdateSongs(
+    songIds: string[],
+    data: BulkUpdateSongsData
+): Promise<Song[]> {
+    const response = await apiClient.put<{ data: Song[] }>('/songs/bulk', {
+        song_ids: songIds,
+        ...data,
+    });
+    return response.data.data;
+}

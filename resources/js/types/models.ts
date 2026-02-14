@@ -49,6 +49,7 @@ export interface Song {
         slug: string;
         color: string | null;
     }>;
+    storage_path: string;
     created_at: string;
 }
 
