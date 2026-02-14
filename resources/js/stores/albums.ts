@@ -101,6 +101,40 @@ export const useAlbumsStore = defineStore('albums', () => {
         }
     }
 
+    async function uploadCover(albumId: string, file: File): Promise<Album> {
+        loading.value = true;
+        error.value = null;
+        try {
+            const album = await albumsApi.uploadAlbumCover(albumId, file);
+            if (currentAlbum.value?.id === albumId) {
+                currentAlbum.value = album;
+            }
+            return album;
+        } catch (e) {
+            error.value = 'Failed to upload cover';
+            throw e;
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    async function refreshCover(albumId: string): Promise<Album> {
+        loading.value = true;
+        error.value = null;
+        try {
+            const album = await albumsApi.refreshAlbumCover(albumId);
+            if (currentAlbum.value?.id === albumId) {
+                currentAlbum.value = album;
+            }
+            return album;
+        } catch (e) {
+            error.value = 'Failed to refresh cover';
+            throw e;
+        } finally {
+            loading.value = false;
+        }
+    }
+
     return {
         albums,
         currentAlbum,
@@ -117,5 +151,7 @@ export const useAlbumsStore = defineStore('albums', () => {
         clearAlbums,
         clearCurrentAlbum,
         updateSongInAlbum,
+        uploadCover,
+        refreshCover,
     };
 });

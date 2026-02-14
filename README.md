@@ -1,6 +1,12 @@
-# Muzakily
+<p align="center">
+  <img src="muzakily-logo.png" alt="Muzakily" width="200">
+</p>
 
-A self-hosted music streaming application with smart playlists, multi-device sync, and a modern Vue.js interface.
+<h1 align="center">Muzakily</h1>
+
+<p align="center">
+  A self-hosted music streaming application with smart playlists, multi-device sync, and a modern Vue.js interface.
+</p>
 
 ## Features
 

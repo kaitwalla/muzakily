@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { RouterLink } from 'vue-router';
 import type { Song } from '@/types/models';
 import { usePlayerStore } from '@/stores/player';
@@ -39,6 +39,8 @@ const isFavorite = ref(props.song.is_favorite);
 const favoriteLoading = ref(false);
 const showMenu = ref(false);
 const showDetailsModal = ref(false);
+const menuButtonRef = ref<HTMLButtonElement | null>(null);
+const menuPosition = ref({ top: 0, left: 0 });
 
 // Sync favorite status when song prop changes
 watch(() => props.song.is_favorite, (newValue) => {
@@ -61,9 +63,23 @@ async function handleFavoriteClick(event: Event): Promise<void> {
     }
 }
 
-function handleMenuClick(event: Event): void {
+async function handleMenuClick(event: Event): Promise<void> {
     event.stopPropagation();
-    showMenu.value = !showMenu.value;
+    if (showMenu.value) {
+        showMenu.value = false;
+        return;
+    }
+
+    // Calculate position before showing menu
+    await nextTick();
+    if (menuButtonRef.value) {
+        const rect = menuButtonRef.value.getBoundingClientRect();
+        menuPosition.value = {
+            top: rect.bottom + 4,
+            left: rect.right - 192, // 192px = w-48 menu width
+        };
+    }
+    showMenu.value = true;
 }
 
 function openDetailsModal(): void {
@@ -191,6 +207,7 @@ function closeMenu(): void {
                 <span>{{ formatDuration(song.length) }}</span>
                 <div class="relative">
                     <button
+                        ref="menuButtonRef"
                         @click="handleMenuClick"
                         class="p-1 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-white transition-all"
                         aria-label="More options"
@@ -200,29 +217,30 @@ function closeMenu(): void {
                         </svg>
                     </button>
 
-                    <!-- Dropdown Menu -->
+                    <!-- Dropdown Menu (Teleported to body to escape overflow:hidden) -->
                     <Teleport to="body">
                         <div
                             v-if="showMenu"
                             class="fixed inset-0 z-40"
                             @click="closeMenu"
                         />
-                    </Teleport>
-                    <div
-                        v-if="showMenu"
-                        class="absolute right-0 top-full mt-1 w-48 bg-gray-700 rounded-lg shadow-lg py-1 z-50"
-                        @click.stop
-                    >
-                        <button
-                            @click.stop="openDetailsModal"
-                            class="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors flex items-center gap-3"
+                        <div
+                            v-if="showMenu"
+                            class="fixed w-48 bg-gray-700 rounded-lg shadow-lg py-1 z-50"
+                            :style="{ top: menuPosition.top + 'px', left: menuPosition.left + 'px' }"
+                            @click.stop
                         >
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
-                            </svg>
-                            Edit details
-                        </button>
-                    </div>
+                            <button
+                                @click.stop="openDetailsModal"
+                                class="w-full px-4 py-2 text-left text-gray-200 hover:bg-gray-600 transition-colors flex items-center gap-3"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                </svg>
+                                Edit details
+                            </button>
+                        </div>
+                    </Teleport>
                 </div>
             </div>
         </td>
