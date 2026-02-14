@@ -1,0 +1,181 @@
+# =============================================================================
+# Production Dockerfile for Muzakily
+# Multi-stage build for optimized image size and security
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: Build frontend assets
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app
+
+# Install dependencies first (better caching)
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts
+
+# Copy source and build
+COPY resources ./resources
+COPY vite.config.ts tsconfig.json tailwind.config.js postcss.config.js ./
+RUN npm run build
+
+
+# -----------------------------------------------------------------------------
+# Stage 2: Install PHP dependencies
+# -----------------------------------------------------------------------------
+FROM composer:2 AS composer-builder
+
+WORKDIR /app
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install dependencies without dev packages
+RUN composer install \
+    --no-dev \
+    --no-scripts \
+    --no-autoloader \
+    --prefer-dist \
+    --ignore-platform-reqs
+
+# Copy application code and generate optimized autoloader
+COPY . .
+RUN composer dump-autoload --optimize --no-dev
+
+
+# -----------------------------------------------------------------------------
+# Stage 3: Production image
+# -----------------------------------------------------------------------------
+FROM php:8.3-fpm-alpine AS production
+
+# Build arguments
+ARG APP_ENV=production
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Labels
+LABEL maintainer="Muzakily" \
+      version="1.0" \
+      description="Muzakily Music Streaming Application"
+
+# Install system dependencies
+RUN apk add --no-cache \
+    # Required for PostgreSQL
+    postgresql-dev \
+    # Required for GD
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    # Required for ZIP
+    libzip-dev \
+    # Required for XML
+    libxml2-dev \
+    oniguruma-dev \
+    # FFmpeg for audio processing
+    ffmpeg \
+    # Nginx for serving static files
+    nginx \
+    # Supervisor for process management
+    supervisor \
+    # Utilities
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Configure and install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_pgsql \
+        pgsql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        opcache
+
+# Install Redis extension
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps \
+    && rm -rf /tmp/pear
+
+# Create application user
+RUN addgroup -g ${GROUP_ID} muzakily \
+    && adduser -u ${USER_ID} -G muzakily -s /bin/sh -D muzakily
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy PHP configuration
+COPY docker/production/php.ini /usr/local/etc/php/php.ini
+COPY docker/production/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+COPY docker/production/opcache.ini /usr/local/etc/php/conf.d/opcache.ini
+
+# Copy Nginx configuration
+COPY docker/production/nginx.conf /etc/nginx/nginx.conf
+
+# Copy Supervisor configuration
+COPY docker/production/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copy application code first
+COPY --chown=muzakily:muzakily . .
+
+# Copy application from builder stages (after app code to avoid being overwritten)
+COPY --from=composer-builder --chown=muzakily:muzakily /app/vendor ./vendor
+COPY --from=frontend-builder --chown=muzakily:muzakily /app/public/build ./public/build
+
+# Create required directories with proper permissions
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && chown -R muzakily:muzakily storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+# Copy entrypoint script
+COPY docker/production/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Create healthcheck script
+RUN echo '#!/bin/sh' > /usr/local/bin/healthcheck \
+    && echo 'curl -f http://localhost/health || exit 1' >> /usr/local/bin/healthcheck \
+    && chmod +x /usr/local/bin/healthcheck
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD /usr/local/bin/healthcheck
+
+# Entrypoint for runtime cache generation
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+
+# Default command
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+
+# -----------------------------------------------------------------------------
+# Stage 4: Queue worker variant
+# -----------------------------------------------------------------------------
+FROM production AS queue-worker
+
+# Override healthcheck for queue worker
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD pgrep -f "queue:work" > /dev/null || exit 1
+
+# Run queue worker
+CMD ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600", "--memory=256"]
+
+
+# -----------------------------------------------------------------------------
+# Stage 5: Scheduler variant
+# -----------------------------------------------------------------------------
+FROM production AS scheduler
+
+# Override healthcheck for scheduler
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD ps aux | grep -v grep | grep -q "artisan schedule:work" || exit 1
+
+# Run scheduler
+CMD ["php", "artisan", "schedule:work"]
