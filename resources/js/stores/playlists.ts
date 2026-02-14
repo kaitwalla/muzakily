@@ -188,6 +188,48 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
+    async function refreshPlaylistCover(playlistId: string): Promise<Playlist> {
+        loading.value = true;
+        error.value = null;
+        try {
+            const playlist = await playlistsApi.refreshPlaylistCover(playlistId);
+            const index = playlists.value.findIndex(p => p.id === playlistId);
+            if (index !== -1) {
+                playlists.value[index] = playlist;
+            }
+            if (currentPlaylist.value?.id === playlistId) {
+                currentPlaylist.value = playlist;
+            }
+            return playlist;
+        } catch (e) {
+            error.value = 'Failed to refresh playlist cover';
+            throw e;
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    async function uploadPlaylistCover(playlistId: string, file: File): Promise<Playlist> {
+        loading.value = true;
+        error.value = null;
+        try {
+            const playlist = await playlistsApi.uploadPlaylistCover(playlistId, file);
+            const index = playlists.value.findIndex(p => p.id === playlistId);
+            if (index !== -1) {
+                playlists.value[index] = playlist;
+            }
+            if (currentPlaylist.value?.id === playlistId) {
+                currentPlaylist.value = playlist;
+            }
+            return playlist;
+        } catch (e) {
+            error.value = 'Failed to upload playlist cover';
+            throw e;
+        } finally {
+            loading.value = false;
+        }
+    }
+
     function clearPlaylists(): void {
         playlists.value = [];
         meta.value = null;
@@ -223,6 +265,8 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         addSongsToPlaylist,
         removeSongsFromPlaylist,
         reorderPlaylistSongs,
+        refreshPlaylistCover,
+        uploadPlaylistCover,
         clearPlaylists,
         clearCurrentPlaylist,
         updateSongInPlaylist,

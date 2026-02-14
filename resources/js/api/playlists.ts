@@ -68,3 +68,15 @@ export async function removeSongsFromPlaylist(playlistId: string, songIds: strin
 export async function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
     await apiClient.put(`/playlists/${playlistId}/songs/reorder`, { song_ids: songIds });
 }
+
+export async function refreshPlaylistCover(playlistId: string): Promise<Playlist> {
+    const response = await apiClient.post<ApiResponse<Playlist>>(`/playlists/${playlistId}/refresh-cover`);
+    return response.data.data;
+}
+
+export async function uploadPlaylistCover(playlistId: string, file: File): Promise<Playlist> {
+    const formData = new FormData();
+    formData.append('cover', file);
+    const response = await apiClient.post<ApiResponse<Playlist>>(`/playlists/${playlistId}/cover`, formData);
+    return response.data.data;
+}

@@ -169,6 +169,31 @@ return [
             'enabled' => env('FANARTTV_ENABLED', true),
             'api_key' => env('FANARTTV_API_KEY'),
         ],
+
+        // Unsplash settings (for smart playlist cover images)
+        'unsplash' => [
+            'enabled' => env('UNSPLASH_ENABLED', false),
+            'access_key' => env('UNSPLASH_ACCESS_KEY'),
+            // Default collection IDs (curated for music playlists)
+            // Neon/Abstract, Acid Wash, Light, Sunsets/Skies, Vintage,
+            // Astrophotography, Loud & Proud by Amy Shamblen, etc.
+            'collections' => array_values(array_unique(array_merge(
+                [
+                    'ubXwi-IxynI',
+                    '1187071',
+                    'Hay0CdG7ilA',
+                    '2470411',
+                    'BXxf1Q7k4hs',
+                    '18168827',
+                    '_UYE3W-Rj7s',
+                    '1886495',
+                    'cL2CEdP-n2E',
+                    'CbStP2qZFfY',
+                ],
+                array_filter(explode(',', env('UNSPLASH_COLLECTIONS', '')))
+            ))),
+            'timeout' => 10,
+        ],
     ],
 
     /*

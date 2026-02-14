@@ -7,9 +7,14 @@ namespace App\Actions\Playlists;
 use App\Models\Playlist;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\Playlist\PlaylistCoverService;
 
 final readonly class CreatePlaylist
 {
+    public function __construct(
+        private PlaylistCoverService $coverService,
+    ) {}
+
     /**
      * Create a new playlist.
      *
@@ -30,6 +35,16 @@ final readonly class CreatePlaylist
                 if ($song) {
                     $playlist->addSong($song, $position, $user);
                 }
+            }
+        }
+
+        // For smart playlists, fetch a cover image from Unsplash
+        if ($playlist->is_smart) {
+            try {
+                $this->coverService->fetchAndStore($playlist);
+            } catch (\Throwable $e) {
+                // Log the error but don't fail playlist creation
+                report($e);
             }
         }
 

@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Actions\Playlists\AddSongsToPlaylist;
 use App\Actions\Playlists\CreatePlaylist;
+use App\Actions\Playlists\RefreshPlaylistCover;
 use App\Actions\Playlists\RemoveSongsFromPlaylist;
 use App\Actions\Playlists\ReorderPlaylistSongs;
+use App\Actions\Playlists\UploadPlaylistCover;
 use App\Exceptions\SmartPlaylistModificationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreatePlaylistRequest;
@@ -15,6 +17,7 @@ use App\Http\Requests\Api\V1\UpdatePlaylistRequest;
 use App\Http\Requests\Api\V1\AddPlaylistSongsRequest;
 use App\Http\Requests\Api\V1\RemovePlaylistSongsRequest;
 use App\Http\Requests\Api\V1\ReorderPlaylistSongsRequest;
+use App\Http\Requests\Api\V1\UploadPlaylistCoverRequest;
 use App\Http\Resources\Api\V1\PlaylistResource;
 use App\Http\Resources\Api\V1\SongResource;
 use App\Models\Playlist;
@@ -30,6 +33,8 @@ class PlaylistController extends Controller
         private readonly AddSongsToPlaylist $addSongsToPlaylist,
         private readonly RemoveSongsFromPlaylist $removeSongsFromPlaylist,
         private readonly ReorderPlaylistSongs $reorderPlaylistSongs,
+        private readonly RefreshPlaylistCover $refreshPlaylistCoverAction,
+        private readonly UploadPlaylistCover $uploadPlaylistCoverAction,
         private readonly SmartPlaylistEvaluator $smartPlaylistEvaluator,
     ) {}
 
@@ -204,6 +209,64 @@ class PlaylistController extends Controller
 
         return response()->json([
             'data' => new PlaylistResource($playlist),
+        ]);
+    }
+
+    /**
+     * Refresh the cover image for a smart playlist.
+     */
+    public function refreshCover(Playlist $playlist): JsonResponse
+    {
+        $this->authorize('update', $playlist);
+
+        if (!$playlist->is_smart) {
+            return response()->json([
+                'error' => [
+                    'code' => 'INVALID_OPERATION',
+                    'message' => 'Cover refresh is only available for smart playlists',
+                ],
+            ], 422);
+        }
+
+        $success = $this->refreshPlaylistCoverAction->execute($playlist);
+
+        if (!$success) {
+            return response()->json([
+                'error' => [
+                    'code' => 'COVER_FETCH_FAILED',
+                    'message' => 'Failed to fetch a new cover image',
+                ],
+            ], 500);
+        }
+
+        return response()->json([
+            'data' => new PlaylistResource($playlist->fresh()),
+        ]);
+    }
+
+    /**
+     * Upload a custom cover image for a playlist.
+     */
+    public function uploadCover(UploadPlaylistCoverRequest $request, Playlist $playlist): JsonResponse
+    {
+        $this->authorize('update', $playlist);
+
+        /** @var \Illuminate\Http\UploadedFile $file */
+        $file = $request->file('cover');
+
+        $success = $this->uploadPlaylistCoverAction->execute($playlist, $file);
+
+        if (!$success) {
+            return response()->json([
+                'error' => [
+                    'code' => 'COVER_UPLOAD_FAILED',
+                    'message' => 'Failed to upload cover image',
+                ],
+            ], 500);
+        }
+
+        return response()->json([
+            'data' => new PlaylistResource($playlist->fresh()),
         ]);
     }
 }

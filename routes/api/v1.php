@@ -70,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('playlists/{playlist}/songs', [PlaylistController::class, 'addSongs'])->name('playlists.songs.add');
     Route::delete('playlists/{playlist}/songs', [PlaylistController::class, 'removeSongs'])->name('playlists.songs.remove');
     Route::put('playlists/{playlist}/songs/reorder', [PlaylistController::class, 'reorderSongs'])->name('playlists.songs.reorder');
+    Route::post('playlists/{playlist}/refresh-cover', [PlaylistController::class, 'refreshCover'])->name('playlists.refresh-cover');
+    Route::post('playlists/{playlist}/cover', [PlaylistController::class, 'uploadCover'])->name('playlists.upload-cover');
 
     // Smart Folders
     Route::get('smart-folders', [SmartFolderController::class, 'index'])->name('smart-folders.index');

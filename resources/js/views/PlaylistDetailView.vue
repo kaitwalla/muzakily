@@ -20,6 +20,9 @@ const editPlaylistName = ref('');
 const editPlaylistDescription = ref('');
 const editPlaylistRules = ref<SmartPlaylistRuleGroup[]>([]);
 const isUpdating = ref(false);
+const isRefreshingCover = ref(false);
+const isUploadingCover = ref(false);
+const coverFileInput = ref<HTMLInputElement | null>(null);
 
 const isSmartPlaylist = computed(() => playlistsStore.currentPlaylist?.is_smart ?? false);
 
@@ -121,6 +124,40 @@ function getTotalDuration(): string {
     }
     return `${mins} min`;
 }
+
+async function refreshCover(): Promise<void> {
+    if (!playlistsStore.currentPlaylist || isRefreshingCover.value) return;
+
+    isRefreshingCover.value = true;
+    try {
+        await playlistsStore.refreshPlaylistCover(playlistsStore.currentPlaylist.id);
+    } catch {
+        // Error handled by store
+    } finally {
+        isRefreshingCover.value = false;
+    }
+}
+
+function triggerCoverUpload(): void {
+    coverFileInput.value?.click();
+}
+
+async function handleCoverUpload(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !playlistsStore.currentPlaylist || isUploadingCover.value) return;
+
+    isUploadingCover.value = true;
+    try {
+        await playlistsStore.uploadPlaylistCover(playlistsStore.currentPlaylist.id, file);
+    } catch {
+        // Error handled by store
+    } finally {
+        isUploadingCover.value = false;
+        // Reset file input
+        input.value = '';
+    }
+}
 </script>
 
 <template>
@@ -134,9 +171,18 @@ function getTotalDuration(): string {
         </div>
 
         <template v-else-if="playlistsStore.currentPlaylist">
+            <!-- Hidden file input for cover upload -->
+            <input
+                ref="coverFileInput"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+                class="hidden"
+                @change="handleCoverUpload"
+            />
+
             <!-- Playlist Header -->
             <div class="flex gap-6 mb-8">
-                <div class="w-56 h-56 bg-surface-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl">
+                <div class="w-56 h-56 bg-surface-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl relative group">
                     <img
                         v-if="playlistsStore.currentPlaylist.cover_url"
                         :src="playlistsStore.currentPlaylist.cover_url"
@@ -147,6 +193,53 @@ function getTotalDuration(): string {
                         <svg class="w-24 h-24 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
                         </svg>
+                    </div>
+                    <!-- Cover action buttons overlay -->
+                    <div class="absolute bottom-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <!-- Upload custom cover button -->
+                        <button
+                            @click="triggerCoverUpload"
+                            :disabled="isUploadingCover"
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full text-white disabled:opacity-50"
+                            title="Upload custom cover"
+                        >
+                            <svg
+                                v-if="isUploadingCover"
+                                class="w-5 h-5 animate-spin"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <svg
+                                v-else
+                                class="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </button>
+                        <!-- Refresh cover button for smart playlists -->
+                        <button
+                            v-if="isSmartPlaylist"
+                            @click="refreshCover"
+                            :disabled="isRefreshingCover"
+                            class="p-2 bg-black/60 hover:bg-black/80 rounded-full text-white disabled:opacity-50"
+                            title="Get new random cover"
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                :class="{ 'animate-spin': isRefreshingCover }"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
                 <div class="flex flex-col justify-end">

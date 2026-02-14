@@ -8,7 +8,10 @@ use App\Actions\Playlists\CreatePlaylist;
 use App\Models\Playlist;
 use App\Models\Song;
 use App\Models\User;
+use App\Services\Playlist\PlaylistCoverService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class CreatePlaylistTest extends TestCase
@@ -17,11 +20,16 @@ class CreatePlaylistTest extends TestCase
 
     private CreatePlaylist $action;
     private User $user;
+    private PlaylistCoverService&MockInterface $coverServiceMock;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->action = new CreatePlaylist();
+
+        $this->coverServiceMock = Mockery::mock(PlaylistCoverService::class);
+        $this->coverServiceMock->shouldReceive('fetchAndStore')->andReturn(false)->byDefault();
+
+        $this->action = new CreatePlaylist($this->coverServiceMock);
         $this->user = User::factory()->create();
     }
 
@@ -102,5 +110,35 @@ class CreatePlaylistTest extends TestCase
         $playlist = $this->action->execute($this->user, ['name' => 'Empty']);
 
         $this->assertEquals(0, $playlist->songs()->count());
+    }
+
+    public function test_fetches_cover_for_smart_playlist(): void
+    {
+        $this->coverServiceMock
+            ->shouldReceive('fetchAndStore')
+            ->once()
+            ->with(Mockery::type(Playlist::class))
+            ->andReturn(true);
+
+        $playlist = $this->action->execute($this->user, [
+            'name' => 'Smart Playlist',
+            'is_smart' => true,
+            'rules' => [['id' => 1, 'logic' => 'and', 'rules' => []]],
+        ]);
+
+        $this->assertTrue($playlist->is_smart);
+    }
+
+    public function test_does_not_fetch_cover_for_regular_playlist(): void
+    {
+        $this->coverServiceMock
+            ->shouldNotReceive('fetchAndStore');
+
+        $playlist = $this->action->execute($this->user, [
+            'name' => 'Regular Playlist',
+            'is_smart' => false,
+        ]);
+
+        $this->assertFalse($playlist->is_smart);
     }
 }
