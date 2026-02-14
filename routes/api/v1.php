@@ -58,6 +58,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Albums
     Route::apiResource('albums', AlbumController::class)->only(['index', 'show']);
     Route::get('albums/{album}/songs', [AlbumController::class, 'songs'])->name('albums.songs');
+    Route::post('albums/{album}/cover', [AlbumController::class, 'uploadCover'])->name('albums.upload-cover');
+    Route::post('albums/{album}/refresh-cover', [AlbumController::class, 'refreshCover'])->name('albums.refresh-cover');
 
     // Artists
     Route::apiResource('artists', ArtistController::class)->only(['index', 'show']);

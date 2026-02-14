@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Albums\RefreshAlbumCover;
+use App\Actions\Albums\UploadAlbumCover;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\UploadAlbumCoverRequest;
 use App\Http\Resources\Api\V1\AlbumResource;
 use App\Http\Resources\Api\V1\SongResource;
 use App\Models\Album;
@@ -14,6 +17,10 @@ use Illuminate\Http\JsonResponse;
 
 class AlbumController extends Controller
 {
+    public function __construct(
+        private readonly UploadAlbumCover $uploadAlbumCoverAction,
+        private readonly RefreshAlbumCover $refreshAlbumCoverAction,
+    ) {}
     /**
      * Display a listing of albums.
      */
@@ -73,5 +80,50 @@ class AlbumController extends Controller
             ->get();
 
         return SongResource::collection($songs);
+    }
+
+    /**
+     * Upload a custom cover image for an album.
+     */
+    public function uploadCover(UploadAlbumCoverRequest $request, Album $album): JsonResponse
+    {
+        /** @var \Illuminate\Http\UploadedFile $file */
+        $file = $request->file('cover');
+
+        $success = $this->uploadAlbumCoverAction->execute($album, $file);
+
+        if (!$success) {
+            return response()->json([
+                'error' => [
+                    'code' => 'COVER_UPLOAD_FAILED',
+                    'message' => 'Failed to upload cover image',
+                ],
+            ], 500);
+        }
+
+        return response()->json([
+            'data' => new AlbumResource($album->fresh()),
+        ]);
+    }
+
+    /**
+     * Refresh the cover image for an album from external sources.
+     */
+    public function refreshCover(Album $album): JsonResponse
+    {
+        $success = $this->refreshAlbumCoverAction->execute($album);
+
+        if (!$success) {
+            return response()->json([
+                'error' => [
+                    'code' => 'COVER_FETCH_FAILED',
+                    'message' => 'Could not find or download cover art for this album',
+                ],
+            ], 404);
+        }
+
+        return response()->json([
+            'data' => new AlbumResource($album->fresh()),
+        ]);
     }
 }
