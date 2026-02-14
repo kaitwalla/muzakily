@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Library;
 
+use App\Jobs\UpdateSmartPlaylistsForSongJob;
 use App\Models\Song;
 use App\Models\Tag;
 use Illuminate\Database\Eloquent\Collection;
@@ -120,6 +121,9 @@ class TagService
         }
 
         $song->tags()->sync($syncData);
+
+        // Dispatch job to update smart playlists with tag rules
+        UpdateSmartPlaylistsForSongJob::dispatch($song);
     }
 
     /**
@@ -177,10 +181,17 @@ class TagService
      */
     public function addTagsToSong(Song $song, array $tagIds): void
     {
+        $changed = false;
         foreach ($tagIds as $tagId) {
             if (!$song->tags()->where('tag_id', $tagId)->exists()) {
                 $song->tags()->attach($tagId, ['auto_assigned' => false]);
+                $changed = true;
             }
+        }
+
+        // Dispatch job to update smart playlists with tag rules
+        if ($changed) {
+            UpdateSmartPlaylistsForSongJob::dispatch($song);
         }
     }
 
@@ -192,6 +203,11 @@ class TagService
     public function removeTagsFromSong(Song $song, array $tagIds): void
     {
         $song->tags()->detach($tagIds);
+
+        // Dispatch job to update smart playlists with tag rules
+        if (count($tagIds) > 0) {
+            UpdateSmartPlaylistsForSongJob::dispatch($song);
+        }
     }
 
     /**

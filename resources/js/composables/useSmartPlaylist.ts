@@ -61,6 +61,13 @@ export function useSmartPlaylist(): UseSmartPlaylistReturn {
 
             return group.rules.every((rule) => {
                 if (!rule.field || !rule.operator) return false;
+
+                // Boolean fields don't require a value
+                const fieldType = getFieldType(rule.field);
+                if (fieldType === 'boolean') {
+                    return true;
+                }
+
                 if (Array.isArray(rule.value)) {
                     return (
                         rule.value.length === 2 &&

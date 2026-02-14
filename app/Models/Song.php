@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 
@@ -40,6 +42,7 @@ use Laravel\Scout\Searchable;
  * @property int|null $mtime
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property-read Album|null $album
  * @property-read Artist|null $artist
  * @property-read SmartFolder|null $smartFolder
@@ -55,6 +58,7 @@ class Song extends Model
     use HasFactory;
     use HasUuids;
     use Searchable;
+    use SoftDeletes;
 
     /**
      * The primary key for the model.
@@ -141,6 +145,19 @@ class Song extends Model
         static::updating(function (Song $song): void {
             if ($song->isDirty('title')) {
                 $song->title_normalized = self::normalizeName($song->title);
+            }
+        });
+    }
+
+    /**
+     * Perform model bootstrapping for event listeners.
+     */
+    protected static function booted(): void
+    {
+        // Delete the backing file from R2 storage when song is force deleted
+        static::forceDeleting(function (Song $song): void {
+            if ($song->storage_path) {
+                Storage::disk('r2')->delete($song->storage_path);
             }
         });
     }

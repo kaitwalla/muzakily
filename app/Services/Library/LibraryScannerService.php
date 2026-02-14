@@ -119,8 +119,8 @@ class LibraryScannerService
                 if ($song) {
                     // Detach from tags
                     $song->tags()->detach();
-                    // Delete the song
-                    $song->delete();
+                    // Force delete the song (no soft delete for orphaned files)
+                    $song->forceDelete();
                     $removedCount++;
                 }
 

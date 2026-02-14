@@ -165,6 +165,7 @@ class TranscodingServiceTest extends TestCase
 
         $this->service->getStreamUrl($mp3Song, 'mp3', 256);
 
-        Queue::assertNothingPushed();
+        // No transcoding job should be pushed for MP3->MP3
+        Queue::assertNotPushed(TranscodeSongJob::class);
     }
 }

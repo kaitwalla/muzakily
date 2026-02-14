@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Playlists\AddSongsToPlaylist;
+use App\Actions\Playlists\CreatePlaylist;
+use App\Actions\Playlists\RemoveSongsFromPlaylist;
+use App\Actions\Playlists\ReorderPlaylistSongs;
+use App\Exceptions\SmartPlaylistModificationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreatePlaylistRequest;
 use App\Http\Requests\Api\V1\UpdatePlaylistRequest;
@@ -13,7 +18,6 @@ use App\Http\Requests\Api\V1\ReorderPlaylistSongsRequest;
 use App\Http\Resources\Api\V1\PlaylistResource;
 use App\Http\Resources\Api\V1\SongResource;
 use App\Models\Playlist;
-use App\Models\Song;
 use App\Services\Playlist\SmartPlaylistEvaluator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,7 +26,11 @@ use Illuminate\Http\JsonResponse;
 class PlaylistController extends Controller
 {
     public function __construct(
-        private SmartPlaylistEvaluator $smartPlaylistEvaluator,
+        private readonly CreatePlaylist $createPlaylist,
+        private readonly AddSongsToPlaylist $addSongsToPlaylist,
+        private readonly RemoveSongsFromPlaylist $removeSongsFromPlaylist,
+        private readonly ReorderPlaylistSongs $reorderPlaylistSongs,
+        private readonly SmartPlaylistEvaluator $smartPlaylistEvaluator,
     ) {}
 
     /**
@@ -32,8 +40,21 @@ class PlaylistController extends Controller
     {
         $playlists = $request->user()
             ->playlists()
+            ->withCount('songs')
             ->orderBy('name')
             ->get();
+
+        // Calculate song counts for smart playlists
+        foreach ($playlists as $playlist) {
+            if ($playlist->is_smart) {
+                // Use materialized count (from withCount) if available
+                if ($playlist->materialized_at !== null) {
+                    $playlist->setAttribute('smart_song_count', $playlist->songs_count);
+                } else {
+                    $playlist->setAttribute('smart_song_count', $this->smartPlaylistEvaluator->count($playlist, $request->user()));
+                }
+            }
+        }
 
         return PlaylistResource::collection($playlists);
     }
@@ -43,17 +64,7 @@ class PlaylistController extends Controller
      */
     public function store(CreatePlaylistRequest $request): JsonResponse
     {
-        $playlist = $request->user()->playlists()->create($request->validated());
-
-        // If songs were provided, add them
-        if ($songIds = $request->validated('song_ids')) {
-            foreach ($songIds as $position => $songId) {
-                $song = Song::find($songId);
-                if ($song) {
-                    $playlist->addSong($song, $position, $request->user());
-                }
-            }
-        }
+        $playlist = $this->createPlaylist->execute($request->user(), $request->validated());
 
         return response()->json([
             'data' => new PlaylistResource($playlist),
@@ -123,29 +134,24 @@ class PlaylistController extends Controller
     {
         $this->authorize('update', $playlist);
 
-        if ($playlist->is_smart) {
+        try {
+            $playlist = $this->addSongsToPlaylist->execute(
+                $playlist,
+                $request->validated('song_ids'),
+                $request->validated('position'),
+                $request->user()
+            );
+        } catch (SmartPlaylistModificationException $e) {
             return response()->json([
                 'error' => [
-                    'code' => 'INVALID_OPERATION',
-                    'message' => 'Cannot add songs to a smart playlist',
+                    'code' => $e->getErrorCode(),
+                    'message' => $e->getMessage(),
                 ],
-            ], 400);
-        }
-
-        $position = $request->validated('position');
-
-        foreach ($request->validated('song_ids') as $songId) {
-            $song = Song::find($songId);
-            if ($song) {
-                $playlist->addSong($song, $position, $request->user());
-                if ($position !== null) {
-                    $position++;
-                }
-            }
+            ], $e->getStatusCode());
         }
 
         return response()->json([
-            'data' => new PlaylistResource($playlist->fresh()),
+            'data' => new PlaylistResource($playlist),
         ]);
     }
 
@@ -156,24 +162,22 @@ class PlaylistController extends Controller
     {
         $this->authorize('update', $playlist);
 
-        if ($playlist->is_smart) {
+        try {
+            $playlist = $this->removeSongsFromPlaylist->execute(
+                $playlist,
+                $request->validated('song_ids')
+            );
+        } catch (SmartPlaylistModificationException $e) {
             return response()->json([
                 'error' => [
-                    'code' => 'INVALID_OPERATION',
-                    'message' => 'Cannot remove songs from a smart playlist',
+                    'code' => $e->getErrorCode(),
+                    'message' => $e->getMessage(),
                 ],
-            ], 400);
-        }
-
-        foreach ($request->validated('song_ids') as $songId) {
-            $song = Song::find($songId);
-            if ($song) {
-                $playlist->removeSong($song);
-            }
+            ], $e->getStatusCode());
         }
 
         return response()->json([
-            'data' => new PlaylistResource($playlist->fresh()),
+            'data' => new PlaylistResource($playlist),
         ]);
     }
 
@@ -184,19 +188,22 @@ class PlaylistController extends Controller
     {
         $this->authorize('update', $playlist);
 
-        if ($playlist->is_smart) {
+        try {
+            $playlist = $this->reorderPlaylistSongs->execute(
+                $playlist,
+                $request->validated('song_ids')
+            );
+        } catch (SmartPlaylistModificationException $e) {
             return response()->json([
                 'error' => [
-                    'code' => 'INVALID_OPERATION',
-                    'message' => 'Cannot reorder songs in a smart playlist',
+                    'code' => $e->getErrorCode(),
+                    'message' => $e->getMessage(),
                 ],
-            ], 400);
+            ], $e->getStatusCode());
         }
 
-        $playlist->reorderSongs($request->validated('song_ids'));
-
         return response()->json([
-            'data' => new PlaylistResource($playlist->fresh()),
+            'data' => new PlaylistResource($playlist),
         ]);
     }
 }

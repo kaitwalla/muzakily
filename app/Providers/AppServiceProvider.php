@@ -5,13 +5,19 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Contracts\MusicStorageInterface;
+use App\Models\Favorite;
+use App\Models\Interaction;
 use App\Models\Playlist;
 use App\Models\Song;
 use App\Models\Tag;
+use App\Models\User;
+use App\Observers\FavoriteObserver;
+use App\Observers\InteractionObserver;
+use App\Observers\PlaylistObserver;
+use App\Observers\SongObserver;
 use App\Policies\PlaylistPolicy;
 use App\Policies\SongPolicy;
 use App\Policies\TagPolicy;
-use App\Models\User;
 use App\Services\Storage\LocalStorageService;
 use App\Services\Storage\R2StorageService;
 use Illuminate\Support\Facades\Gate;
@@ -49,6 +55,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register observers for smart playlist materialization
+        Song::observe(SongObserver::class);
+        Playlist::observe(PlaylistObserver::class);
+        Favorite::observe(FavoriteObserver::class);
+        Interaction::observe(InteractionObserver::class);
+
         // Define admin gate for admin middleware
         Gate::define('admin', function (User $user): bool {
             return $user->isAdmin();

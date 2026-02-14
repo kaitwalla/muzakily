@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property string|null $cover
  * @property bool $is_smart
  * @property array<array{id: int, logic: string, rules: array<array{field: string, operator: string, value: mixed}>}>|null $rules
+ * @property \Illuminate\Support\Carbon|null $rules_updated_at
+ * @property \Illuminate\Support\Carbon|null $materialized_at
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  * @property-read User $user
@@ -65,6 +67,8 @@ class Playlist extends Model
         'cover',
         'is_smart',
         'rules',
+        'rules_updated_at',
+        'materialized_at',
     ];
 
     /**
@@ -77,7 +81,24 @@ class Playlist extends Model
         return [
             'is_smart' => 'boolean',
             'rules' => 'array',
+            'rules_updated_at' => 'datetime',
+            'materialized_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Bootstrap the model.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Automatically set rules_updated_at when rules change
+        static::saving(function (Playlist $playlist): void {
+            if ($playlist->isDirty('rules')) {
+                $playlist->rules_updated_at = now();
+            }
+        });
     }
 
     /**
@@ -118,11 +139,37 @@ class Playlist extends Model
     public function getSongCountAttribute(): int
     {
         if ($this->is_smart) {
-            // For smart playlists, this should be calculated by the evaluator
+            // For smart playlists, use materialized count if available
+            if ($this->materialized_at !== null) {
+                return $this->songs()->count();
+            }
+            // Otherwise will be calculated by the evaluator in controller
             return 0;
         }
 
         return $this->songs()->count();
+    }
+
+    /**
+     * Check if the smart playlist needs rematerialization.
+     */
+    public function needsRematerialization(): bool
+    {
+        if (!$this->is_smart) {
+            return false;
+        }
+
+        // Never materialized
+        if ($this->materialized_at === null) {
+            return true;
+        }
+
+        // Rules were updated after last materialization
+        if ($this->rules_updated_at !== null && $this->rules_updated_at > $this->materialized_at) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -131,10 +178,14 @@ class Playlist extends Model
     public function getTotalLengthAttribute(): float
     {
         if ($this->is_smart) {
+            // For smart playlists, use materialized sum if available
+            if ($this->materialized_at !== null) {
+                return (float) $this->songs()->sum('songs.length');
+            }
             return 0;
         }
 
-        return (float) $this->songs()->sum('length');
+        return (float) $this->songs()->sum('songs.length');
     }
 
     /**

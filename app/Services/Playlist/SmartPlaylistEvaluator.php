@@ -17,6 +17,9 @@ class SmartPlaylistEvaluator
     /**
      * Evaluate a smart playlist and return matching songs.
      *
+     * If the playlist is materialized and up-to-date, returns songs from the pivot table.
+     * Otherwise, evaluates rules dynamically.
+     *
      * @return Collection<int, Song>
      */
     public function evaluate(Playlist $playlist, ?User $user = null): Collection
@@ -25,13 +28,81 @@ class SmartPlaylistEvaluator
             return new Collection();
         }
 
-        $query = Song::query()->with(['artist', 'album', 'genres']);
+        // Use materialized results if available and up-to-date
+        if ($playlist->materialized_at !== null && !$playlist->needsRematerialization()) {
+            return $playlist->songs()
+                ->with(['artist', 'album', 'genres', 'smartFolder'])
+                ->get();
+        }
+
+        // Fall back to dynamic evaluation
+        $query = Song::query()->with(['artist', 'album', 'genres', 'smartFolder']);
 
         foreach ($playlist->rules as $ruleGroup) {
             $this->applyRuleGroup($query, $ruleGroup, $user);
         }
 
         return $query->get();
+    }
+
+    /**
+     * Evaluate a smart playlist dynamically without using materialized results.
+     *
+     * This is used by RefreshSmartPlaylistJob to get fresh results.
+     *
+     * @return Collection<int, Song>
+     */
+    public function evaluateDynamic(Playlist $playlist, ?User $user = null): Collection
+    {
+        if (!$playlist->is_smart || empty($playlist->rules)) {
+            return new Collection();
+        }
+
+        $query = Song::query()->with(['artist', 'album', 'genres', 'smartFolder']);
+
+        foreach ($playlist->rules as $ruleGroup) {
+            $this->applyRuleGroup($query, $ruleGroup, $user);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Check if a single song matches the playlist rules.
+     *
+     * This is used for incremental updates when a song changes.
+     */
+    public function matches(Playlist $playlist, Song $song, ?User $user = null): bool
+    {
+        if (!$playlist->is_smart || empty($playlist->rules)) {
+            return false;
+        }
+
+        $query = Song::query()->where('id', $song->id);
+
+        foreach ($playlist->rules as $ruleGroup) {
+            $this->applyRuleGroup($query, $ruleGroup, $user);
+        }
+
+        return $query->exists();
+    }
+
+    /**
+     * Count matching songs for a smart playlist without loading them.
+     */
+    public function count(Playlist $playlist, ?User $user = null): int
+    {
+        if (!$playlist->is_smart || empty($playlist->rules)) {
+            return 0;
+        }
+
+        $query = Song::query();
+
+        foreach ($playlist->rules as $ruleGroup) {
+            $this->applyRuleGroup($query, $ruleGroup, $user);
+        }
+
+        return $query->count();
     }
 
     /**
