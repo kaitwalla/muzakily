@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Services\Metadata;
 
 use App\Models\Song;
+use App\Services\Library\CoverArtService;
 
 class MetadataAggregatorService
 {
     public function __construct(
         private ?MusicBrainzService $musicBrainz = null,
+        private ?CoverArtService $coverArtService = null,
     ) {
         if ($this->musicBrainz === null && config('muzakily.metadata.musicbrainz.enabled', true)) {
             $this->musicBrainz = new MusicBrainzService();
+        }
+        if ($this->coverArtService === null) {
+            $this->coverArtService = new CoverArtService();
         }
     }
 
@@ -68,10 +73,17 @@ class MetadataAggregatorService
 
         // Update album if we have MusicBrainz info
         if ($song->album && ($result['album_mbid'] ?? null)) {
-            $song->album->update([
-                'musicbrainz_id' => $result['album_mbid'],
-                'cover' => $result['album_cover'] ?? $song->album->cover,
-            ]);
+            $albumUpdates = ['musicbrainz_id' => $result['album_mbid']];
+
+            // Download and store cover art to R2 if we found one and album doesn't have one
+            if (($result['album_cover'] ?? null) && !$song->album->cover) {
+                $storedCoverUrl = $this->coverArtService?->storeFromUrl($song->album, $result['album_cover']);
+                if ($storedCoverUrl !== null) {
+                    $albumUpdates['cover'] = $storedCoverUrl;
+                }
+            }
+
+            $song->album->update($albumUpdates);
         }
     }
 }

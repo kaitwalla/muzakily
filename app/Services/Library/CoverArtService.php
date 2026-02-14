@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Library;
 
 use App\Models\Album;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 class CoverArtService
@@ -42,6 +43,48 @@ class CoverArtService
             report($e);
             return null;
         }
+    }
+
+    /**
+     * Download an image from a URL and store it for an album.
+     */
+    public function storeFromUrl(Album $album, string $url): ?string
+    {
+        if (!$this->isAllowedUrl($url)) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(30)->get($url);
+
+            if (!$response->successful()) {
+                return null;
+            }
+
+            $contentType = $response->header('Content-Type') ?: 'image/jpeg';
+            // Handle content types like "image/jpeg; charset=utf-8"
+            $mimeType = explode(';', $contentType)[0];
+
+            return $this->storeForAlbum($album, [
+                'data' => $response->body(),
+                'mime_type' => trim($mimeType),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
+    }
+
+    /**
+     * Check if a cover URL is external (not stored in our storage).
+     */
+    public function isExternalUrl(?string $url): bool
+    {
+        if ($url === null || $url === '') {
+            return false;
+        }
+
+        return str_starts_with($url, 'http://') || str_starts_with($url, 'https://');
     }
 
     /**
@@ -104,5 +147,37 @@ class CoverArtService
             'image/webp' => 'webp',
             default => null,
         };
+    }
+
+    /**
+     * Validate that a URL is allowed for fetching (prevents SSRF).
+     */
+    private function isAllowedUrl(string $url): bool
+    {
+        $parsed = parse_url($url);
+
+        if (!isset($parsed['host']) || !isset($parsed['scheme'])) {
+            return false;
+        }
+
+        // Only allow HTTPS (and HTTP for local dev)
+        if (!in_array($parsed['scheme'], ['http', 'https'], true)) {
+            return false;
+        }
+
+        $host = $parsed['host'];
+
+        // Block localhost and loopback addresses
+        if (in_array($host, ['localhost', '127.0.0.1', '::1'], true)) {
+            return false;
+        }
+
+        // Resolve hostname to IP and block private/reserved ranges
+        $ip = gethostbyname($host);
+        if ($ip !== $host && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return false;
+        }
+
+        return true;
     }
 }
