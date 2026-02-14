@@ -112,8 +112,11 @@ npm run build
 - [Browsing Library](docs/user-guide/browsing-library.md)
 - [Playlists](docs/user-guide/playlists.md)
 - [Smart Playlists](docs/user-guide/smart-playlists.md)
+- [Smart Folders](docs/user-guide/smart-folders.md)
+- [Tags](docs/user-guide/tags.md)
 - [Search](docs/user-guide/search.md)
 - [Remote Control](docs/user-guide/remote-control.md)
+- [Mobile Access](docs/user-guide/mobile-apps.md)
 
 ### API Documentation
 

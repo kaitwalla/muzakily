@@ -448,6 +448,41 @@ paths:
                   data:
                     $ref: '#/components/schemas/User'
 
+  /songs/recently-played:
+    get:
+      tags: [Songs]
+      summary: Get recently played songs
+      description: Returns songs the current user has recently played, ordered by most recent first
+      parameters:
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Recently played songs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Song'
+                        - type: object
+                          properties:
+                            last_played_at:
+                              type: string
+                              format: date-time
+                  links:
+                    $ref: '#/components/schemas/PaginationLinks'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
   /songs:
     get:
       tags: [Songs]

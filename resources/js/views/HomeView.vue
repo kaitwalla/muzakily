@@ -61,7 +61,7 @@ onMounted(async () => {
                     v-else
                     v-for="song in recentlyPlayed"
                     :key="song.id"
-                    :to="{ name: 'album', params: { id: song.album_id } }"
+                    :to="{ name: 'album-detail', params: { slug: song.album_id } }"
                     class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors cursor-pointer"
                 >
                     <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
@@ -98,7 +98,7 @@ onMounted(async () => {
                     v-else
                     v-for="playlist in displayPlaylists"
                     :key="playlist.id"
-                    :to="{ name: 'playlist', params: { id: playlist.slug } }"
+                    :to="{ name: 'playlist-detail', params: { slug: playlist.slug } }"
                     class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors cursor-pointer"
                 >
                     <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">

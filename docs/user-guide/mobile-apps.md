@@ -180,3 +180,15 @@ Current mobile limitations:
 - **No lock screen controls** - Depends on browser support
 
 These may be addressed in future updates or native apps.
+
+## Native iOS App
+
+A native iOS app is planned to provide a better mobile experience with:
+
+- **Background Audio** - Continuous playback when app is backgrounded
+- **Lock Screen Controls** - Play/pause, skip from lock screen and Control Center
+- **CarPlay Support** - Control music while driving
+- **Offline Mode** - Download songs for offline playback
+- **AirPlay Support** - Stream to Apple TV and AirPlay speakers
+
+See the [iOS Development Guide](../developer/ios-app.md) for technical details on building the iOS client.

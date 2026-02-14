@@ -10,6 +10,49 @@ GET /api/v1/songs
 
 Returns a paginated list of songs with optional filtering and sorting.
 
+## Recently Played
+
+```
+GET /api/v1/songs/recently-played
+```
+
+Returns songs the current user has recently played, ordered by last played time (most recent first).
+
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `per_page` | integer | 20 | Results per page (max 100) |
+
+### Example Request
+
+```bash
+curl "https://api.example.com/api/v1/songs/recently-played?per_page=10" \
+  -H "Authorization: Bearer {token}"
+```
+
+### Example Response
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Love Song",
+      "artist_name": "The Artist",
+      "album_name": "Greatest Hits",
+      "album_cover": "https://cdn.example.com/covers/album.jpg",
+      "length": 245,
+      "is_favorite": true,
+      "play_count": 42,
+      "last_played_at": "2024-01-20T15:30:00.000000Z"
+    }
+  ],
+  "links": { ... },
+  "meta": { ... }
+}
+```
+
 ### Query Parameters
 
 | Parameter | Type | Default | Description |
