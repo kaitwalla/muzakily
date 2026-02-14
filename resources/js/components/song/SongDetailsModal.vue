@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import type { Song } from '@/types/models';
-import { updateSong, type UpdateSongData } from '@/api/songs';
+import { updateSong, addTagsToSong, removeTagsFromSong, type UpdateSongData } from '@/api/songs';
+import TagPicker from './TagPicker.vue';
 
 interface Props {
     song: Song;
@@ -27,6 +28,9 @@ const formData = ref<UpdateSongData>({
     genre: null,
 });
 
+const selectedTagIds = ref<number[]>([]);
+const initialTagIds = ref<number[]>([]);
+
 watch(
     () => props.song,
     (song) => {
@@ -39,6 +43,9 @@ watch(
             disc: song.disc,
             genre: song.genre,
         };
+        const tagIds = song.tags?.map((t) => t.id) ?? [];
+        selectedTagIds.value = [...tagIds];
+        initialTagIds.value = [...tagIds];
     },
     { immediate: true }
 );
@@ -73,7 +80,19 @@ async function handleSubmit(): Promise<void> {
     error.value = null;
 
     try {
-        const updated = await updateSong(props.song.id, formData.value);
+        let updated = await updateSong(props.song.id, formData.value);
+
+        // Handle tag changes
+        const tagsToAdd = selectedTagIds.value.filter((id) => !initialTagIds.value.includes(id));
+        const tagsToRemove = initialTagIds.value.filter((id) => !selectedTagIds.value.includes(id));
+
+        if (tagsToAdd.length > 0) {
+            updated = await addTagsToSong(props.song.id, tagsToAdd);
+        }
+        if (tagsToRemove.length > 0) {
+            updated = await removeTagsFromSong(props.song.id, tagsToRemove);
+        }
+
         emit('updated', updated);
         emit('close');
     } catch (e) {
@@ -234,6 +253,12 @@ function formatDuration(seconds: number): string {
                                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                             />
                         </div>
+
+                        <!-- Tags -->
+                        <TagPicker
+                            :selected-tag-ids="selectedTagIds"
+                            @update:selected-tag-ids="selectedTagIds = $event"
+                        />
                     </div>
                 </form>
 

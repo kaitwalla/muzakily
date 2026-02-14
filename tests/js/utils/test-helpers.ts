@@ -1,4 +1,4 @@
-import type { Song, Artist, Album, Playlist } from '@/types/models';
+import type { Song, Artist, Album, Playlist, Tag } from '@/types/models';
 
 export const createMockSong = (overrides: Partial<Song> = {}): Song => ({
     id: '1',
@@ -47,7 +47,7 @@ export const createMockAlbum = (overrides: Partial<Album> = {}): Album => ({
 });
 
 export const createMockPlaylist = (overrides: Partial<Playlist> = {}): Playlist => ({
-    id: 1,
+    id: '1',
     name: 'Test Playlist',
     slug: 'test-playlist',
     description: 'A test playlist',
@@ -59,5 +59,16 @@ export const createMockPlaylist = (overrides: Partial<Playlist> = {}): Playlist 
     updated_at: '2024-01-01T00:00:00Z',
     songs: [],
     songs_count: 0,
+    ...overrides,
+});
+
+export const createMockTag = (overrides: Partial<Tag> = {}): Tag => ({
+    id: 1,
+    name: 'Test Tag',
+    slug: 'test-tag',
+    color: '#e74c3c',
+    song_count: 10,
+    parent_id: null,
+    created_at: '2024-01-01T00:00:00Z',
     ...overrides,
 });

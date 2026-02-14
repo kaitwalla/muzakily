@@ -55,18 +55,30 @@ export interface Song {
 import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
 export type { SmartPlaylistRuleGroup };
 
-export interface Playlist {
+export interface Tag {
     id: number;
     name: string;
     slug: string;
+    color: string | null;
+    song_count: number;
+    parent_id: number | null;
+    children?: Tag[];
+    created_at: string;
+}
+
+export interface Playlist {
+    id: string;
+    slug: string;
+    name: string;
     description: string | null;
+    cover_url: string | null;
     user_id: number;
     is_public: boolean;
     is_smart: boolean;
     rules?: SmartPlaylistRuleGroup[];
-    cover_url: string | null;
+    songs_count?: number;
+    total_length?: number;
     created_at: string;
     updated_at: string;
     songs?: Song[];
-    songs_count?: number;
 }

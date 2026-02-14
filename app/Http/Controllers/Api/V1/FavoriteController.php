@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Favorites\AddFavorite;
+use App\Actions\Favorites\RemoveFavorite;
+use App\Actions\Favorites\ResolveFavoritableModel;
+use App\Exceptions\ResourceNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\AlbumResource;
 use App\Http\Resources\Api\V1\ArtistResource;
@@ -19,6 +23,11 @@ use Illuminate\Http\Request;
 
 class FavoriteController extends Controller
 {
+    public function __construct(
+        private readonly ResolveFavoritableModel $resolveFavoritableModel,
+        private readonly AddFavorite $addFavorite,
+        private readonly RemoveFavorite $removeFavorite,
+    ) {}
     /**
      * Display the user's favorites.
      */
@@ -83,18 +92,21 @@ class FavoriteController extends Controller
             'id' => ['required', 'string'],
         ]);
 
-        $model = $this->resolveModel($request->input('type'), $request->input('id'));
-
-        if (!$model) {
+        try {
+            $model = $this->resolveFavoritableModel->execute(
+                $request->input('type'),
+                $request->input('id')
+            );
+        } catch (ResourceNotFoundException $e) {
             return response()->json([
                 'error' => [
-                    'code' => 'NOT_FOUND',
-                    'message' => 'Resource not found',
+                    'code' => $e->getErrorCode(),
+                    'message' => $e->getMessage(),
                 ],
-            ], 404);
+            ], $e->getStatusCode());
         }
 
-        Favorite::add($request->user(), $model);
+        $this->addFavorite->execute($request->user(), $model);
 
         return response()->json(['data' => ['favorited' => true]], 201);
     }
@@ -109,33 +121,22 @@ class FavoriteController extends Controller
             'id' => ['required', 'string'],
         ]);
 
-        $model = $this->resolveModel($request->input('type'), $request->input('id'));
-
-        if (!$model) {
+        try {
+            $model = $this->resolveFavoritableModel->execute(
+                $request->input('type'),
+                $request->input('id')
+            );
+        } catch (ResourceNotFoundException $e) {
             return response()->json([
                 'error' => [
-                    'code' => 'NOT_FOUND',
-                    'message' => 'Resource not found',
+                    'code' => $e->getErrorCode(),
+                    'message' => $e->getMessage(),
                 ],
-            ], 404);
+            ], $e->getStatusCode());
         }
 
-        Favorite::remove($request->user(), $model);
+        $this->removeFavorite->execute($request->user(), $model);
 
         return response()->json(null, 204);
-    }
-
-    /**
-     * Resolve the model from type and ID.
-     */
-    private function resolveModel(string $type, string $id): Song|Album|Artist|Playlist|null
-    {
-        return match ($type) {
-            'song' => Song::find($id),
-            'album' => Album::where('uuid', $id)->first(),
-            'artist' => Artist::where('uuid', $id)->first(),
-            'playlist' => Playlist::find($id),
-            default => null,
-        };
     }
 }

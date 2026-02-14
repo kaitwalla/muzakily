@@ -55,13 +55,12 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function fetchPlaylist(idOrSlug: number | string): Promise<Playlist> {
+    async function fetchPlaylist(idOrSlug: string): Promise<Playlist> {
         loading.value = true;
         error.value = null;
         try {
-            const playlist = typeof idOrSlug === 'number'
-                ? await playlistsApi.getPlaylist(idOrSlug)
-                : await playlistsApi.getPlaylistBySlug(idOrSlug);
+            // Both ID (UUID) and slug work the same way since UUID is used as slug
+            const playlist = await playlistsApi.getPlaylist(idOrSlug);
             currentPlaylist.value = playlist;
             return playlist;
         } catch (e) {
@@ -72,7 +71,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function fetchPlaylistSongs(playlistId: number): Promise<Song[]> {
+    async function fetchPlaylistSongs(playlistId: string): Promise<Song[]> {
         loading.value = true;
         error.value = null;
         try {
@@ -102,7 +101,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function updatePlaylist(id: number, data: playlistsApi.UpdatePlaylistData): Promise<Playlist> {
+    async function updatePlaylist(id: string, data: playlistsApi.UpdatePlaylistData): Promise<Playlist> {
         loading.value = true;
         error.value = null;
         try {
@@ -123,7 +122,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function deletePlaylist(id: number): Promise<void> {
+    async function deletePlaylist(id: string): Promise<void> {
         loading.value = true;
         error.value = null;
         try {
@@ -141,7 +140,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function addSongsToPlaylist(playlistId: number, songIds: string[]): Promise<void> {
+    async function addSongsToPlaylist(playlistId: string, songIds: string[]): Promise<void> {
         loading.value = true;
         error.value = null;
         try {
@@ -158,7 +157,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function removeSongsFromPlaylist(playlistId: number, songIds: string[]): Promise<void> {
+    async function removeSongsFromPlaylist(playlistId: string, songIds: string[]): Promise<void> {
         loading.value = true;
         error.value = null;
         try {
@@ -176,7 +175,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
-    async function reorderPlaylistSongs(playlistId: number, songIds: string[]): Promise<void> {
+    async function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
         loading.value = true;
         error.value = null;
         try {

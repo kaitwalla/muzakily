@@ -126,7 +126,7 @@ function getTotalDuration(): string {
 <template>
     <div>
         <div v-if="playlistsStore.loading && !playlistsStore.currentPlaylist" class="text-center py-12">
-            <p class="text-gray-400">Loading playlist...</p>
+            <p class="text-surface-400">Loading playlist...</p>
         </div>
 
         <div v-else-if="playlistsStore.error" class="text-center py-12">
@@ -136,7 +136,7 @@ function getTotalDuration(): string {
         <template v-else-if="playlistsStore.currentPlaylist">
             <!-- Playlist Header -->
             <div class="flex gap-6 mb-8">
-                <div class="w-56 h-56 bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl">
+                <div class="w-56 h-56 bg-surface-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl">
                     <img
                         v-if="playlistsStore.currentPlaylist.cover_url"
                         :src="playlistsStore.currentPlaylist.cover_url"
@@ -144,22 +144,22 @@ function getTotalDuration(): string {
                         class="w-full h-full object-cover"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center">
-                        <svg class="w-24 h-24 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-24 h-24 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
                         </svg>
                     </div>
                 </div>
                 <div class="flex flex-col justify-end">
-                    <p class="text-sm text-gray-400 uppercase font-medium">
+                    <p class="text-sm text-surface-400 uppercase font-medium">
                         {{ isSmartPlaylist ? 'Smart Playlist' : 'Playlist' }}
                     </p>
                     <h1 class="text-5xl font-bold text-white mt-2 mb-2">
                         {{ playlistsStore.currentPlaylist.name }}
                     </h1>
-                    <p v-if="playlistsStore.currentPlaylist.description" class="text-gray-300 mb-4 max-w-2xl">
+                    <p v-if="playlistsStore.currentPlaylist.description" class="text-surface-300 mb-4 max-w-2xl">
                         {{ playlistsStore.currentPlaylist.description }}
                     </p>
-                    <div class="flex items-center gap-2 text-gray-400">
+                    <div class="flex items-center gap-2 text-surface-400">
                         <span>{{ playlistsStore.currentPlaylistSongs.length }} songs</span>
                         <span>&bull;</span>
                         <span>{{ getTotalDuration() }}</span>
@@ -180,7 +180,7 @@ function getTotalDuration(): string {
                 </button>
                 <button
                     @click="openEditModal"
-                    class="p-3 text-gray-400 hover:text-white transition-colors"
+                    class="p-3 text-surface-400 hover:text-white transition-colors"
                     title="Edit playlist"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -189,7 +189,7 @@ function getTotalDuration(): string {
                 </button>
                 <button
                     @click="showDeleteConfirm = true"
-                    class="p-3 text-gray-400 hover:text-white transition-colors"
+                    class="p-3 text-surface-400 hover:text-white transition-colors"
                     title="Delete playlist"
                 >
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,10 +199,10 @@ function getTotalDuration(): string {
             </div>
 
             <!-- Songs List -->
-            <div v-if="playlistsStore.currentPlaylistSongs.length > 0" class="bg-gray-800/50 rounded-lg overflow-hidden">
+            <div v-if="playlistsStore.currentPlaylistSongs.length > 0" class="bg-surface-800/50 rounded-lg overflow-hidden">
                 <table class="w-full">
-                    <thead class="border-b border-gray-700">
-                        <tr class="text-left text-sm text-gray-400">
+                    <thead class="border-b border-surface-700">
+                        <tr class="text-left text-sm text-surface-400">
                             <th class="px-4 py-3 w-12"></th>
                             <th class="px-4 py-3">Title</th>
                             <th class="px-4 py-3">Album</th>
@@ -225,10 +225,10 @@ function getTotalDuration(): string {
                 </table>
             </div>
 
-            <div v-else class="text-center py-12 bg-gray-800/50 rounded-lg">
-                <p class="text-gray-400">This playlist is empty</p>
-                <p v-if="isSmartPlaylist" class="text-gray-500 text-sm mt-2">No songs match the current rules</p>
-                <p v-else class="text-gray-500 text-sm mt-2">Add songs to get started</p>
+            <div v-else class="text-center py-12 bg-surface-800/50 rounded-lg">
+                <p class="text-surface-400">This playlist is empty</p>
+                <p v-if="isSmartPlaylist" class="text-surface-500 text-sm mt-2">No songs match the current rules</p>
+                <p v-else class="text-surface-500 text-sm mt-2">Add songs to get started</p>
             </div>
         </template>
 
@@ -239,15 +239,15 @@ function getTotalDuration(): string {
                 class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
                 @click.self="showDeleteConfirm = false"
             >
-                <div class="bg-gray-800 rounded-lg p-6 w-full max-w-sm">
+                <div class="bg-surface-800 rounded-lg p-6 w-full max-w-sm">
                     <h2 class="text-xl font-bold text-white mb-2">Delete Playlist?</h2>
-                    <p class="text-gray-400 mb-6">
+                    <p class="text-surface-400 mb-6">
                         This will permanently delete "{{ playlistsStore.currentPlaylist?.name }}".
                     </p>
                     <div class="flex gap-3">
                         <button
                             @click="showDeleteConfirm = false"
-                            class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                            class="flex-1 px-4 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-lg transition-colors"
                         >
                             Cancel
                         </button>
@@ -271,7 +271,7 @@ function getTotalDuration(): string {
                 @click.self="closeEditModal"
             >
                 <div
-                    class="bg-gray-800 rounded-lg p-6 w-full mx-4 my-auto"
+                    class="bg-surface-800 rounded-lg p-6 w-full mx-4 my-auto"
                     :class="isSmartPlaylist ? 'max-w-2xl' : 'max-w-md'"
                 >
                     <h2 class="text-xl font-bold text-white mb-4">
@@ -279,7 +279,7 @@ function getTotalDuration(): string {
                     </h2>
                     <form @submit.prevent="updatePlaylist">
                         <div class="mb-4">
-                            <label for="edit-playlist-name" class="block text-sm font-medium text-gray-300 mb-2">
+                            <label for="edit-playlist-name" class="block text-sm font-medium text-surface-300 mb-2">
                                 Name
                             </label>
                             <input
@@ -287,19 +287,19 @@ function getTotalDuration(): string {
                                 v-model="editPlaylistName"
                                 type="text"
                                 required
-                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                class="w-full px-4 py-2 bg-surface-700 border border-surface-600 rounded-lg text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                                 placeholder="Playlist name"
                             />
                         </div>
                         <div class="mb-6">
-                            <label for="edit-playlist-description" class="block text-sm font-medium text-gray-300 mb-2">
+                            <label for="edit-playlist-description" class="block text-sm font-medium text-surface-300 mb-2">
                                 Description (optional)
                             </label>
                             <textarea
                                 id="edit-playlist-description"
                                 v-model="editPlaylistDescription"
                                 rows="3"
-                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                                class="w-full px-4 py-2 bg-surface-700 border border-surface-600 rounded-lg text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                                 placeholder="Add a description..."
                             />
                         </div>
@@ -319,7 +319,7 @@ function getTotalDuration(): string {
                             <button
                                 type="button"
                                 @click="closeEditModal"
-                                class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                class="flex-1 px-4 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-lg transition-colors"
                             >
                                 Cancel
                             </button>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Api\V1\SongResource;
 use App\Models\Song;
 use App\Services\Library\TagService;
 use Illuminate\Http\JsonResponse;
@@ -33,17 +34,10 @@ class SongTagController extends Controller
 
         $this->tagService->addTagsToSong($song, $tagIds);
 
-        $song->load('tags');
+        $song->load(['artist', 'album', 'smartFolder', 'genres', 'tags']);
 
         return response()->json([
-            'data' => [
-                'song_id' => $song->id,
-                'tags' => $song->tags->map(fn ($tag) => [
-                    'id' => $tag->id,
-                    'name' => $tag->name,
-                    'slug' => $tag->slug,
-                ])->values(),
-            ],
+            'data' => new SongResource($song),
         ]);
     }
 
@@ -64,17 +58,10 @@ class SongTagController extends Controller
 
         $this->tagService->removeTagsFromSong($song, $tagIds);
 
-        $song->load('tags');
+        $song->load(['artist', 'album', 'smartFolder', 'genres', 'tags']);
 
         return response()->json([
-            'data' => [
-                'song_id' => $song->id,
-                'tags' => $song->tags->map(fn ($tag) => [
-                    'id' => $tag->id,
-                    'name' => $tag->name,
-                    'slug' => $tag->slug,
-                ])->values(),
-            ],
+            'data' => new SongResource($song),
         ]);
     }
 }

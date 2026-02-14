@@ -41,7 +41,7 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
         </div>
 
         <div v-if="songsStore.loading && !songsStore.hasSongs" class="text-center py-12">
-            <p class="text-gray-400">Loading songs...</p>
+            <p class="text-surface-400">Loading songs...</p>
         </div>
 
         <div v-else-if="songsStore.error" class="text-center py-12">
@@ -49,13 +49,13 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
         </div>
 
         <div v-else-if="!songsStore.hasSongs" class="text-center py-12">
-            <p class="text-gray-400">No songs found</p>
+            <p class="text-surface-400">No songs found</p>
         </div>
 
-        <div v-else class="bg-gray-800 rounded-lg overflow-hidden">
+        <div v-else class="bg-surface-800 rounded-lg overflow-hidden">
             <table class="w-full">
-                <thead class="border-b border-gray-700">
-                    <tr class="text-left text-sm text-gray-400">
+                <thead class="border-b border-surface-700">
+                    <tr class="text-left text-sm text-surface-400">
                         <th class="px-4 py-3 w-12"></th>
                         <th class="px-4 py-3">Title</th>
                         <th class="px-4 py-3">Artist</th>
@@ -83,7 +83,7 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
             <button
                 @click="songsStore.loadMore"
                 :disabled="songsStore.loading"
-                class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full transition-colors disabled:opacity-50"
+                class="px-6 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-full transition-colors disabled:opacity-50"
             >
                 {{ songsStore.loading ? 'Loading...' : 'Load More' }}
             </button>

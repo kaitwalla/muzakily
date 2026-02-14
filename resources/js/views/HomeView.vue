@@ -49,11 +49,11 @@ onMounted(async () => {
                     <div
                         v-for="i in 5"
                         :key="i"
-                        class="bg-gray-800 rounded-lg p-4 animate-pulse"
+                        class="bg-surface-800 rounded-lg p-4 animate-pulse"
                     >
-                        <div class="aspect-square bg-gray-700 rounded-lg mb-3" />
-                        <div class="h-4 bg-gray-700 rounded w-3/4 mb-2" />
-                        <div class="h-3 bg-gray-700 rounded w-1/2" />
+                        <div class="aspect-square bg-surface-700 rounded-lg mb-3" />
+                        <div class="h-4 bg-surface-700 rounded w-3/4 mb-2" />
+                        <div class="h-3 bg-surface-700 rounded w-1/2" />
                     </div>
                 </template>
                 <!-- Actual content -->
@@ -62,9 +62,9 @@ onMounted(async () => {
                     v-for="song in recentlyPlayed"
                     :key="song.id"
                     :to="{ name: 'album', params: { id: song.album_id } }"
-                    class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer"
+                    class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors cursor-pointer"
                 >
-                    <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                    <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                         <img
                             v-if="song.album_cover"
                             :src="song.album_cover"
@@ -73,7 +73,7 @@ onMounted(async () => {
                         />
                     </div>
                     <p class="text-white font-medium truncate">{{ song.title }}</p>
-                    <p class="text-gray-400 text-sm truncate">{{ song.artist_name ?? 'Unknown Artist' }}</p>
+                    <p class="text-surface-400 text-sm truncate">{{ song.artist_name ?? 'Unknown Artist' }}</p>
                 </RouterLink>
             </div>
         </section>
@@ -86,11 +86,11 @@ onMounted(async () => {
                     <div
                         v-for="i in 5"
                         :key="i"
-                        class="bg-gray-800 rounded-lg p-4 animate-pulse"
+                        class="bg-surface-800 rounded-lg p-4 animate-pulse"
                     >
-                        <div class="aspect-square bg-gray-700 rounded-lg mb-3" />
-                        <div class="h-4 bg-gray-700 rounded w-3/4 mb-2" />
-                        <div class="h-3 bg-gray-700 rounded w-1/2" />
+                        <div class="aspect-square bg-surface-700 rounded-lg mb-3" />
+                        <div class="h-4 bg-surface-700 rounded w-3/4 mb-2" />
+                        <div class="h-3 bg-surface-700 rounded w-1/2" />
                     </div>
                 </template>
                 <!-- Actual content -->
@@ -99,9 +99,9 @@ onMounted(async () => {
                     v-for="playlist in displayPlaylists"
                     :key="playlist.id"
                     :to="{ name: 'playlist', params: { id: playlist.slug } }"
-                    class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer"
+                    class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors cursor-pointer"
                 >
-                    <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                    <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                         <img
                             v-if="playlist.cover_url"
                             :src="playlist.cover_url"
@@ -110,14 +110,14 @@ onMounted(async () => {
                         />
                     </div>
                     <p class="text-white font-medium truncate">{{ playlist.name }}</p>
-                    <p class="text-gray-400 text-sm truncate">{{ playlist.songs_count ?? 0 }} songs</p>
+                    <p class="text-surface-400 text-sm truncate">{{ playlist.songs_count ?? 0 }} songs</p>
                 </RouterLink>
             </div>
         </section>
 
         <!-- Empty state when no content -->
         <div v-if="!recentlyPlayedLoading && recentlyPlayed.length === 0 && !playlistsStore.loading && displayPlaylists.length === 0" class="text-center py-12">
-            <p class="text-gray-400">Start playing some music to see your activity here.</p>
+            <p class="text-surface-400">Start playing some music to see your activity here.</p>
         </div>
     </div>
 </template>

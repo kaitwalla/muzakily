@@ -52,7 +52,7 @@ function getTotalDuration(): string {
 <template>
     <div>
         <div v-if="albumsStore.loading && !albumsStore.currentAlbum" class="text-center py-12">
-            <p class="text-gray-400">Loading album...</p>
+            <p class="text-surface-400">Loading album...</p>
         </div>
 
         <div v-else-if="albumsStore.error" class="text-center py-12">
@@ -62,7 +62,7 @@ function getTotalDuration(): string {
         <template v-else-if="albumsStore.currentAlbum">
             <!-- Album Header -->
             <div class="flex gap-6 mb-8">
-                <div class="w-56 h-56 bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl">
+                <div class="w-56 h-56 bg-surface-700 rounded-lg overflow-hidden flex-shrink-0 shadow-xl">
                     <img
                         v-if="albumsStore.currentAlbum.cover"
                         :src="albumsStore.currentAlbum.cover"
@@ -70,17 +70,17 @@ function getTotalDuration(): string {
                         class="w-full h-full object-cover"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center">
-                        <svg class="w-24 h-24 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-24 h-24 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/>
                         </svg>
                     </div>
                 </div>
                 <div class="flex flex-col justify-end">
-                    <p class="text-sm text-gray-400 uppercase font-medium">Album</p>
+                    <p class="text-sm text-surface-400 uppercase font-medium">Album</p>
                     <h1 class="text-5xl font-bold text-white mt-2 mb-4">
                         {{ albumsStore.currentAlbum.name }}
                     </h1>
-                    <div class="flex items-center gap-2 text-gray-300">
+                    <div class="flex items-center gap-2 text-surface-300">
                         <RouterLink
                             v-if="albumsStore.currentAlbum.artist_id"
                             :to="{ name: 'artist-detail', params: { slug: albumsStore.currentAlbum.artist_id } }"
@@ -88,10 +88,10 @@ function getTotalDuration(): string {
                         >
                             {{ albumsStore.currentAlbum.artist_name }}
                         </RouterLink>
-                        <span v-if="albumsStore.currentAlbum.year" class="text-gray-400">
+                        <span v-if="albumsStore.currentAlbum.year" class="text-surface-400">
                             &bull; {{ albumsStore.currentAlbum.year }}
                         </span>
-                        <span class="text-gray-400">
+                        <span class="text-surface-400">
                             &bull; {{ albumsStore.currentAlbumSongs.length }} songs, {{ getTotalDuration() }}
                         </span>
                     </div>
@@ -112,10 +112,10 @@ function getTotalDuration(): string {
             </div>
 
             <!-- Songs List -->
-            <div class="bg-gray-800/50 rounded-lg overflow-hidden">
+            <div class="bg-surface-800/50 rounded-lg overflow-hidden">
                 <table class="w-full">
-                    <thead class="border-b border-gray-700">
-                        <tr class="text-left text-sm text-gray-400">
+                    <thead class="border-b border-surface-700">
+                        <tr class="text-left text-sm text-surface-400">
                             <th class="px-4 py-3 w-12">#</th>
                             <th class="px-4 py-3">Title</th>
                             <th class="px-4 py-3 text-right">Duration</th>

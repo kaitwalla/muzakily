@@ -53,12 +53,12 @@ function formatDuration(seconds: number): string {
                 v-model="searchInput"
                 type="search"
                 placeholder="Search for songs, albums, artists..."
-                class="w-full px-6 py-4 bg-gray-800 border border-gray-700 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg"
+                class="w-full px-6 py-4 bg-surface-800 border border-surface-700 rounded-full text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-lg"
             />
         </div>
 
         <div v-if="searchStore.loading" class="text-center py-12">
-            <p class="text-gray-400">Searching...</p>
+            <p class="text-surface-400">Searching...</p>
         </div>
 
         <div v-else-if="searchStore.error" class="text-center py-12">
@@ -66,35 +66,35 @@ function formatDuration(seconds: number): string {
         </div>
 
         <div v-else-if="searchStore.hasSearched && !searchStore.hasResults" class="text-center py-12">
-            <p class="text-gray-400">No results found for "{{ searchStore.query }}"</p>
+            <p class="text-surface-400">No results found for "{{ searchStore.query }}"</p>
         </div>
 
         <div v-else-if="searchStore.hasResults">
             <!-- Songs -->
             <section v-if="searchStore.songs.length > 0" class="mb-8">
                 <h2 class="text-xl font-semibold text-white mb-4">Songs</h2>
-                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                <div class="bg-surface-800 rounded-lg overflow-hidden">
                     <table class="w-full">
                         <tbody>
                             <tr
                                 v-for="song in searchStore.songs.slice(0, 5)"
                                 :key="song.id"
                                 @click="playSong(song)"
-                                class="hover:bg-gray-700 cursor-pointer transition-colors"
+                                class="hover:bg-surface-700 cursor-pointer transition-colors"
                             >
                                 <td class="px-4 py-3">
                                     <p class="text-white font-medium">{{ song.title }}</p>
                                     <RouterLink
                                         v-if="song.artist_slug"
                                         :to="{ name: 'artist-detail', params: { slug: song.artist_slug } }"
-                                        class="text-gray-400 text-sm hover:text-white hover:underline"
+                                        class="text-surface-400 text-sm hover:text-white hover:underline"
                                         @click.stop
                                     >
                                         {{ song.artist_name }}
                                     </RouterLink>
-                                    <p v-else class="text-gray-400 text-sm">{{ song.artist_name ?? 'Unknown' }}</p>
+                                    <p v-else class="text-surface-400 text-sm">{{ song.artist_name ?? 'Unknown' }}</p>
                                 </td>
-                                <td class="px-4 py-3 text-gray-400 text-right">
+                                <td class="px-4 py-3 text-surface-400 text-right">
                                     {{ formatDuration(song.length) }}
                                 </td>
                             </tr>
@@ -111,9 +111,9 @@ function formatDuration(seconds: number): string {
                         v-for="album in searchStore.albums.slice(0, 5)"
                         :key="album.id"
                         :to="{ name: 'album-detail', params: { slug: album.id } }"
-                        class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors"
+                        class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors"
                     >
-                        <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                        <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                             <img
                                 v-if="album.cover"
                                 :src="album.cover"
@@ -122,7 +122,7 @@ function formatDuration(seconds: number): string {
                             />
                         </div>
                         <p class="text-white font-medium truncate">{{ album.name }}</p>
-                        <p class="text-gray-400 text-sm truncate">{{ album.artist_name ?? 'Unknown' }}</p>
+                        <p class="text-surface-400 text-sm truncate">{{ album.artist_name ?? 'Unknown' }}</p>
                     </RouterLink>
                 </div>
             </section>
@@ -135,9 +135,9 @@ function formatDuration(seconds: number): string {
                         v-for="artist in searchStore.artists.slice(0, 5)"
                         :key="artist.id"
                         :to="{ name: 'artist-detail', params: { slug: artist.id } }"
-                        class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors text-center"
+                        class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors text-center"
                     >
-                        <div class="aspect-square bg-gray-700 rounded-full mb-3 mx-auto overflow-hidden w-24 h-24">
+                        <div class="aspect-square bg-surface-700 rounded-full mb-3 mx-auto overflow-hidden w-24 h-24">
                             <img
                                 v-if="artist.image"
                                 :src="artist.image"
@@ -146,7 +146,7 @@ function formatDuration(seconds: number): string {
                             />
                         </div>
                         <p class="text-white font-medium truncate">{{ artist.name }}</p>
-                        <p class="text-gray-500 text-sm">Artist</p>
+                        <p class="text-surface-500 text-sm">Artist</p>
                     </RouterLink>
                 </div>
             </section>
@@ -159,9 +159,9 @@ function formatDuration(seconds: number): string {
                         v-for="playlist in searchStore.playlists.slice(0, 5)"
                         :key="playlist.id"
                         :to="{ name: 'playlist-detail', params: { slug: playlist.slug } }"
-                        class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors"
+                        class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors"
                     >
-                        <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                        <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                             <img
                                 v-if="playlist.cover_url"
                                 :src="playlist.cover_url"
@@ -170,14 +170,14 @@ function formatDuration(seconds: number): string {
                             />
                         </div>
                         <p class="text-white font-medium truncate">{{ playlist.name }}</p>
-                        <p class="text-gray-400 text-sm truncate">{{ playlist.songs_count ?? 0 }} songs</p>
+                        <p class="text-surface-400 text-sm truncate">{{ playlist.songs_count ?? 0 }} songs</p>
                     </RouterLink>
                 </div>
             </section>
         </div>
 
         <div v-else class="text-center py-12">
-            <p class="text-gray-400">Search for your favorite music</p>
+            <p class="text-surface-400">Search for your favorite music</p>
         </div>
     </div>
 </template>

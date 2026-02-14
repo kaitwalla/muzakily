@@ -67,7 +67,8 @@ onUnmounted(() => {
 <template>
     <header class="bg-surface-900 border-b border-surface-800 px-6 py-4 transition-colors duration-300">
         <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3">
+                <img src="/logo.png" alt="Muzakily" class="w-8 h-8 rounded-lg" />
                 <h1 class="text-xl font-bold text-surface-50">Muzakily</h1>
             </div>
 

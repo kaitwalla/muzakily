@@ -45,7 +45,7 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
 <template>
     <div>
         <div v-if="artistsStore.loading && !artistsStore.currentArtist" class="text-center py-12">
-            <p class="text-gray-400">Loading artist...</p>
+            <p class="text-surface-400">Loading artist...</p>
         </div>
 
         <div v-else-if="artistsStore.error" class="text-center py-12">
@@ -55,7 +55,7 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
         <template v-else-if="artistsStore.currentArtist">
             <!-- Artist Header -->
             <div class="flex gap-6 mb-8">
-                <div class="w-48 h-48 bg-gray-700 rounded-full overflow-hidden flex-shrink-0 shadow-xl">
+                <div class="w-48 h-48 bg-surface-700 rounded-full overflow-hidden flex-shrink-0 shadow-xl">
                     <img
                         v-if="artistsStore.currentArtist.image"
                         :src="artistsStore.currentArtist.image"
@@ -63,17 +63,17 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
                         class="w-full h-full object-cover"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center">
-                        <svg class="w-24 h-24 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-24 h-24 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                         </svg>
                     </div>
                 </div>
                 <div class="flex flex-col justify-end">
-                    <p class="text-sm text-gray-400 uppercase font-medium">Artist</p>
+                    <p class="text-sm text-surface-400 uppercase font-medium">Artist</p>
                     <h1 class="text-5xl font-bold text-white mt-2 mb-4">
                         {{ artistsStore.currentArtist.name }}
                     </h1>
-                    <p v-if="artistsStore.currentArtist.bio" class="text-gray-300 max-w-2xl line-clamp-2">
+                    <p v-if="artistsStore.currentArtist.bio" class="text-surface-300 max-w-2xl line-clamp-2">
                         {{ artistsStore.currentArtist.bio }}
                     </p>
                 </div>
@@ -95,7 +95,7 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
             <!-- Popular Songs -->
             <section v-if="artistsStore.currentArtistSongs.length > 0" class="mb-8">
                 <h2 class="text-xl font-semibold text-white mb-4">Popular</h2>
-                <div class="bg-gray-800/50 rounded-lg overflow-hidden">
+                <div class="bg-surface-800/50 rounded-lg overflow-hidden">
                     <table class="w-full">
                         <tbody>
                             <SongRow
@@ -122,9 +122,9 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
                         v-for="album in artistsStore.currentArtistAlbums"
                         :key="album.id"
                         :to="{ name: 'album-detail', params: { slug: album.id } }"
-                        class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors group"
+                        class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors group"
                     >
-                        <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                        <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                             <img
                                 v-if="album.cover"
                                 :src="album.cover"
@@ -133,7 +133,7 @@ function handleSongUpdated(updatedSong: Song, index: number): void {
                             />
                         </div>
                         <p class="text-white font-medium truncate">{{ album.name }}</p>
-                        <p v-if="album.year" class="text-gray-500 text-sm">
+                        <p v-if="album.year" class="text-surface-500 text-sm">
                             {{ album.year }}
                         </p>
                     </RouterLink>

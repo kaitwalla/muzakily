@@ -36,7 +36,7 @@ function handleVolumeChange(event: Event): void {
 </script>
 
 <template>
-    <footer class="bg-gray-800 border-t border-gray-700 px-6 py-3">
+    <footer class="bg-surface-800 border-t border-surface-700 px-6 py-3">
         <audio ref="audioRef" />
 
         <div class="flex items-center gap-4">
@@ -44,18 +44,18 @@ function handleVolumeChange(event: Event): void {
             <div class="w-64 flex items-center gap-3">
                 <template v-if="playerStore.currentSong">
                     <div
-                        class="w-12 h-12 bg-gray-700 rounded flex-shrink-0"
+                        class="w-12 h-12 bg-surface-700 rounded flex-shrink-0"
                         :style="playerStore.currentSong.album_cover ? { backgroundImage: `url(${playerStore.currentSong.album_cover})`, backgroundSize: 'cover' } : {}"
                     />
                     <div class="min-w-0">
                         <p class="text-sm text-white truncate">{{ playerStore.currentSong.title }}</p>
-                        <p class="text-xs text-gray-400 truncate">{{ playerStore.currentSong.artist_name ?? 'Unknown Artist' }}</p>
+                        <p class="text-xs text-surface-400 truncate">{{ playerStore.currentSong.artist_name ?? 'Unknown Artist' }}</p>
                     </div>
                 </template>
                 <template v-else>
-                    <div class="w-12 h-12 bg-gray-700 rounded flex-shrink-0" />
+                    <div class="w-12 h-12 bg-surface-700 rounded flex-shrink-0" />
                     <div class="min-w-0">
-                        <p class="text-sm text-gray-500">No song playing</p>
+                        <p class="text-sm text-surface-500">No song playing</p>
                     </div>
                 </template>
             </div>
@@ -65,8 +65,8 @@ function handleVolumeChange(event: Event): void {
                 <div class="flex items-center gap-4">
                     <button
                         @click="playerStore.toggleShuffle"
-                        class="p-2 hover:bg-gray-700 rounded-full transition-colors"
-                        :class="playerStore.isShuffled ? 'text-green-500' : 'text-gray-400'"
+                        class="p-2 hover:bg-surface-700 rounded-full transition-colors"
+                        :class="playerStore.isShuffled ? 'text-green-500' : 'text-surface-400'"
                         aria-label="Shuffle"
                         :aria-pressed="playerStore.isShuffled"
                     >
@@ -78,7 +78,7 @@ function handleVolumeChange(event: Event): void {
                     <button
                         @click="playerStore.previous"
                         :disabled="!playerStore.hasPrevious"
-                        class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="p-2 text-surface-400 hover:text-white hover:bg-surface-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Previous track"
                     >
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -89,7 +89,7 @@ function handleVolumeChange(event: Event): void {
                     <button
                         @click="playerStore.togglePlayPause"
                         :disabled="!playerStore.currentSong"
-                        class="p-3 bg-white text-gray-900 rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="p-3 bg-white text-surface-900 rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                         :aria-label="playerStore.isPlaying ? 'Pause' : 'Play'"
                     >
                         <svg v-if="playerStore.isPlaying" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -103,7 +103,7 @@ function handleVolumeChange(event: Event): void {
                     <button
                         @click="playerStore.next"
                         :disabled="!playerStore.hasNext"
-                        class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="p-2 text-surface-400 hover:text-white hover:bg-surface-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="Next track"
                     >
                         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -113,8 +113,8 @@ function handleVolumeChange(event: Event): void {
 
                     <button
                         @click="playerStore.cycleRepeatMode"
-                        class="p-2 hover:bg-gray-700 rounded-full transition-colors"
-                        :class="playerStore.repeatMode !== 'off' ? 'text-green-500' : 'text-gray-400'"
+                        class="p-2 hover:bg-surface-700 rounded-full transition-colors"
+                        :class="playerStore.repeatMode !== 'off' ? 'text-green-500' : 'text-surface-400'"
                         :aria-label="playerStore.repeatMode === 'one' ? 'Repeat one' : playerStore.repeatMode === 'all' ? 'Repeat all' : 'Repeat off'"
                         :aria-pressed="playerStore.repeatMode !== 'off'"
                     >
@@ -129,11 +129,11 @@ function handleVolumeChange(event: Event): void {
 
                 <!-- Progress bar -->
                 <div class="w-full max-w-xl flex items-center gap-2">
-                    <span class="text-xs text-gray-400 w-10 text-right">
+                    <span class="text-xs text-surface-400 w-10 text-right">
                         {{ formatTime(playerStore.currentTime) }}
                     </span>
                     <div
-                        class="flex-1 h-1 bg-gray-600 rounded-full cursor-pointer group"
+                        class="flex-1 h-1 bg-surface-600 rounded-full cursor-pointer group"
                         @click="handleProgressClick"
                     >
                         <div
@@ -143,7 +143,7 @@ function handleVolumeChange(event: Event): void {
                             <div class="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                     </div>
-                    <span class="text-xs text-gray-400 w-10">
+                    <span class="text-xs text-surface-400 w-10">
                         {{ formatTime(playerStore.duration) }}
                     </span>
                 </div>
@@ -153,7 +153,7 @@ function handleVolumeChange(event: Event): void {
             <div class="w-40 flex items-center gap-2">
                 <button
                     @click="playerStore.toggleMute"
-                    class="p-2 text-gray-400 hover:text-white transition-colors"
+                    class="p-2 text-surface-400 hover:text-white transition-colors"
                     :aria-label="playerStore.isMuted ? 'Unmute' : 'Mute'"
                     :aria-pressed="playerStore.isMuted"
                 >
@@ -175,7 +175,7 @@ function handleVolumeChange(event: Event): void {
                     :value="playerStore.volume"
                     @input="handleVolumeChange"
                     aria-label="Volume"
-                    class="flex-1 h-1 bg-gray-600 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
+                    class="flex-1 h-1 bg-surface-600 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full"
                 />
             </div>
         </div>

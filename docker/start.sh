@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Ensure npm dependencies are installed for the correct platform
+if [ ! -f "/var/www/html/node_modules/.container-installed" ]; then
+    echo "Installing npm dependencies for container platform..."
+    npm install
+    touch /var/www/html/node_modules/.container-installed
+fi
+
 # Start queue worker in background
 php artisan queue:work --sleep=3 --tries=3 --max-time=3600 &
 echo "Queue worker started"

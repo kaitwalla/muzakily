@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Auth\UpdateUserProfile;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\LoginRequest;
 use App\Http\Resources\Api\V1\UserResource;
@@ -11,11 +12,13 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly UpdateUserProfile $updateUserProfile,
+    ) {}
     /**
      * Login and receive API token.
      */
@@ -79,34 +82,9 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        if (isset($validated['name'])) {
-            $user->name = $validated['name'];
-        }
+        $avatar = $request->hasFile('avatar') ? $request->file('avatar') : null;
 
-        if (isset($validated['preferences'])) {
-            $currentPreferences = $user->preferences ?? [];
-            $user->preferences = array_merge($currentPreferences, $validated['preferences']);
-        }
-
-        // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            // Delete old avatar if exists
-            if ($user->avatar_path) {
-                Storage::disk('public')->delete($user->avatar_path);
-            }
-
-            $path = $request->file('avatar')->store('avatars', 'public');
-            if ($path !== false) {
-                $user->avatar_path = $path;
-            }
-        }
-
-        // Handle password change
-        if (isset($validated['password'])) {
-            $user->password = $validated['password'];
-        }
-
-        $user->save();
+        $user = $this->updateUserProfile->execute($user, $validated, $avatar);
 
         return response()->json([
             'data' => new UserResource($user),

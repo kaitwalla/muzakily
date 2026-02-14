@@ -38,10 +38,11 @@ async function handleSubmit(): Promise<void> {
 </script>
 
 <template>
-    <div class="bg-gray-800 rounded-lg p-8 shadow-xl">
+    <div class="bg-surface-800 rounded-lg p-8 shadow-xl">
         <div class="text-center mb-8">
+            <img src="/logo.png" alt="Muzakily" class="w-20 h-20 mx-auto mb-4 rounded-2xl" />
             <h1 class="text-3xl font-bold text-white">Muzakily</h1>
-            <p class="text-gray-400 mt-2">Sign in to your account</p>
+            <p class="text-surface-400 mt-2">Sign in to your account</p>
         </div>
 
         <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -50,7 +51,7 @@ async function handleSubmit(): Promise<void> {
             </div>
 
             <div>
-                <label for="email" class="block text-sm font-medium text-gray-300 mb-2">
+                <label for="email" class="block text-sm font-medium text-surface-300 mb-2">
                     Email
                 </label>
                 <input
@@ -59,13 +60,13 @@ async function handleSubmit(): Promise<void> {
                     type="email"
                     required
                     autocomplete="email"
-                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    class="w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-lg text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="you@example.com"
                 />
             </div>
 
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                <label for="password" class="block text-sm font-medium text-surface-300 mb-2">
                     Password
                 </label>
                 <input
@@ -74,7 +75,7 @@ async function handleSubmit(): Promise<void> {
                     type="password"
                     required
                     autocomplete="current-password"
-                    class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    class="w-full px-4 py-3 bg-surface-700 border border-surface-600 rounded-lg text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Enter your password"
                 />
             </div>

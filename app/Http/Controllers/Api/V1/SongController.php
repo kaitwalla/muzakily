@@ -21,7 +21,7 @@ class SongController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $query = Song::query()
-            ->with(['artist', 'album', 'smartFolder', 'genres']);
+            ->with(['artist', 'album', 'smartFolder', 'genres', 'tags']);
 
         // Search
         if ($search = $request->input('search')) {
@@ -78,7 +78,7 @@ class SongController extends Controller
      */
     public function show(Song $song): JsonResponse
     {
-        $song->load(['artist', 'album', 'smartFolder', 'genres']);
+        $song->load(['artist', 'album', 'smartFolder', 'genres', 'tags']);
 
         return response()->json([
             'data' => new SongResource($song),
@@ -95,7 +95,7 @@ class SongController extends Controller
         $song->update($request->validated());
 
         return response()->json([
-            'data' => new SongResource($song->fresh(['artist', 'album', 'smartFolder', 'genres'])),
+            'data' => new SongResource($song->fresh(['artist', 'album', 'smartFolder', 'genres', 'tags'])),
         ]);
     }
 

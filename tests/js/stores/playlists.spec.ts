@@ -118,25 +118,25 @@ describe('usePlaylistsStore', () => {
 
     describe('fetchPlaylist', () => {
         it('should fetch playlist by ID', async () => {
-            const mockPlaylist = createMockPlaylist({ id: 1 });
+            const mockPlaylist = createMockPlaylist({ id: '1' });
             vi.mocked(playlistsApi.getPlaylist).mockResolvedValue(mockPlaylist);
 
             const store = usePlaylistsStore();
-            const result = await store.fetchPlaylist(1);
+            const result = await store.fetchPlaylist('1');
 
             expect(result).toEqual(mockPlaylist);
             expect(store.currentPlaylist).toEqual(mockPlaylist);
         });
 
-        it('should fetch playlist by slug', async () => {
-            const mockPlaylist = createMockPlaylist({ slug: 'my-playlist' });
-            vi.mocked(playlistsApi.getPlaylistBySlug).mockResolvedValue(mockPlaylist);
+        it('should fetch playlist by slug (UUID)', async () => {
+            const mockPlaylist = createMockPlaylist({ id: 'abc-123', slug: 'abc-123' });
+            vi.mocked(playlistsApi.getPlaylist).mockResolvedValue(mockPlaylist);
 
             const store = usePlaylistsStore();
-            const result = await store.fetchPlaylist('my-playlist');
+            const result = await store.fetchPlaylist('abc-123');
 
             expect(result).toEqual(mockPlaylist);
-            expect(playlistsApi.getPlaylistBySlug).toHaveBeenCalledWith('my-playlist');
+            expect(playlistsApi.getPlaylist).toHaveBeenCalledWith('abc-123');
         });
     });
 
@@ -146,7 +146,7 @@ describe('usePlaylistsStore', () => {
             vi.mocked(playlistsApi.getPlaylistSongs).mockResolvedValue(mockSongs);
 
             const store = usePlaylistsStore();
-            const result = await store.fetchPlaylistSongs(1);
+            const result = await store.fetchPlaylistSongs('1');
 
             expect(result).toEqual(mockSongs);
             expect(store.currentPlaylistSongs).toEqual(mockSongs);
@@ -155,11 +155,11 @@ describe('usePlaylistsStore', () => {
 
     describe('createPlaylist', () => {
         it('should create and add playlist to list', async () => {
-            const newPlaylist = createMockPlaylist({ id: 3, name: 'New Playlist' });
+            const newPlaylist = createMockPlaylist({ id: '3', name: 'New Playlist' });
             vi.mocked(playlistsApi.createPlaylist).mockResolvedValue(newPlaylist);
 
             const store = usePlaylistsStore();
-            store.playlists = [createMockPlaylist({ id: 1 }), createMockPlaylist({ id: 2 })];
+            store.playlists = [createMockPlaylist({ id: '1' }), createMockPlaylist({ id: '2' })];
 
             const result = await store.createPlaylist({ name: 'New Playlist' });
 
@@ -171,27 +171,27 @@ describe('usePlaylistsStore', () => {
 
     describe('updatePlaylist', () => {
         it('should update playlist in list', async () => {
-            const updatedPlaylist = createMockPlaylist({ id: 1, name: 'Updated Name' });
+            const updatedPlaylist = createMockPlaylist({ id: '1', name: 'Updated Name' });
             vi.mocked(playlistsApi.updatePlaylist).mockResolvedValue(updatedPlaylist);
 
             const store = usePlaylistsStore();
-            store.playlists = [createMockPlaylist({ id: 1, name: 'Original' })];
+            store.playlists = [createMockPlaylist({ id: '1', name: 'Original' })];
 
-            const result = await store.updatePlaylist(1, { name: 'Updated Name' });
+            const result = await store.updatePlaylist('1', { name: 'Updated Name' });
 
             expect(result).toEqual(updatedPlaylist);
             expect(store.playlists[0].name).toBe('Updated Name');
         });
 
         it('should update currentPlaylist if same ID', async () => {
-            const updatedPlaylist = createMockPlaylist({ id: 1, name: 'Updated' });
+            const updatedPlaylist = createMockPlaylist({ id: '1', name: 'Updated' });
             vi.mocked(playlistsApi.updatePlaylist).mockResolvedValue(updatedPlaylist);
 
             const store = usePlaylistsStore();
-            store.playlists = [createMockPlaylist({ id: 1 })];
-            store.currentPlaylist = createMockPlaylist({ id: 1 });
+            store.playlists = [createMockPlaylist({ id: '1' })];
+            store.currentPlaylist = createMockPlaylist({ id: '1' });
 
-            await store.updatePlaylist(1, { name: 'Updated' });
+            await store.updatePlaylist('1', { name: 'Updated' });
 
             expect(store.currentPlaylist?.name).toBe('Updated');
         });
@@ -203,25 +203,25 @@ describe('usePlaylistsStore', () => {
 
             const store = usePlaylistsStore();
             store.playlists = [
-                createMockPlaylist({ id: 1 }),
-                createMockPlaylist({ id: 2 }),
+                createMockPlaylist({ id: '1' }),
+                createMockPlaylist({ id: '2' }),
             ];
 
-            await store.deletePlaylist(1);
+            await store.deletePlaylist('1');
 
             expect(store.playlists).toHaveLength(1);
-            expect(store.playlists[0].id).toBe(2);
+            expect(store.playlists[0].id).toBe('2');
         });
 
         it('should clear currentPlaylist if deleted', async () => {
             vi.mocked(playlistsApi.deletePlaylist).mockResolvedValue();
 
             const store = usePlaylistsStore();
-            store.playlists = [createMockPlaylist({ id: 1 })];
-            store.currentPlaylist = createMockPlaylist({ id: 1 });
+            store.playlists = [createMockPlaylist({ id: '1' })];
+            store.currentPlaylist = createMockPlaylist({ id: '1' });
             store.currentPlaylistSongs = [createMockSong()];
 
-            await store.deletePlaylist(1);
+            await store.deletePlaylist('1');
 
             expect(store.currentPlaylist).toBeNull();
             expect(store.currentPlaylistSongs).toEqual([]);
@@ -234,12 +234,12 @@ describe('usePlaylistsStore', () => {
             vi.mocked(playlistsApi.getPlaylistSongs).mockResolvedValue([createMockSong()]);
 
             const store = usePlaylistsStore();
-            store.currentPlaylist = createMockPlaylist({ id: 1 });
+            store.currentPlaylist = createMockPlaylist({ id: '1' });
 
-            await store.addSongsToPlaylist(1, ['song-1', 'song-2']);
+            await store.addSongsToPlaylist('1', ['song-1', 'song-2']);
 
-            expect(playlistsApi.addSongsToPlaylist).toHaveBeenCalledWith(1, ['song-1', 'song-2']);
-            expect(playlistsApi.getPlaylistSongs).toHaveBeenCalledWith(1);
+            expect(playlistsApi.addSongsToPlaylist).toHaveBeenCalledWith('1', ['song-1', 'song-2']);
+            expect(playlistsApi.getPlaylistSongs).toHaveBeenCalledWith('1');
             expect(store.currentPlaylistSongs).toHaveLength(1);
         });
     });
@@ -249,14 +249,14 @@ describe('usePlaylistsStore', () => {
             vi.mocked(playlistsApi.removeSongsFromPlaylist).mockResolvedValue();
 
             const store = usePlaylistsStore();
-            store.currentPlaylist = createMockPlaylist({ id: 1 });
+            store.currentPlaylist = createMockPlaylist({ id: '1' });
             store.currentPlaylistSongs = [
                 createMockSong({ id: '1' }),
                 createMockSong({ id: '2' }),
                 createMockSong({ id: '3' }),
             ];
 
-            await store.removeSongsFromPlaylist(1, ['1', '3']);
+            await store.removeSongsFromPlaylist('1', ['1', '3']);
 
             expect(store.currentPlaylistSongs).toHaveLength(1);
             expect(store.currentPlaylistSongs[0].id).toBe('2');

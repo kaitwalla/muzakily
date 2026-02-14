@@ -42,6 +42,7 @@ docker compose exec app composer <command>
 
 ## Development Practices
 
+- Use the Action pattern in PHP where it makes sense, instead of leaving logic in controllers
 - **Always create tests** - Follow TDD: write tests before implementation
 - **PHPStan level 6** - All PHP code must pass static analysis
 - **TypeScript strict mode** - Run `npm run type-check` for frontend changes

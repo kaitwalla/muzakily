@@ -72,7 +72,7 @@ async function createPlaylist(): Promise<void> {
         </div>
 
         <div v-if="playlistsStore.loading && !playlistsStore.hasPlaylists" class="text-center py-12">
-            <p class="text-gray-400">Loading playlists...</p>
+            <p class="text-surface-400">Loading playlists...</p>
         </div>
 
         <div v-else-if="playlistsStore.error" class="text-center py-12">
@@ -80,10 +80,10 @@ async function createPlaylist(): Promise<void> {
         </div>
 
         <div v-else-if="!playlistsStore.hasPlaylists" class="text-center py-12">
-            <p class="text-gray-400">No playlists yet</p>
+            <p class="text-surface-400">No playlists yet</p>
             <button
                 @click="showCreateModal = true"
-                class="mt-4 px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full transition-colors"
+                class="mt-4 px-6 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-full transition-colors"
             >
                 Create your first playlist
             </button>
@@ -94,9 +94,9 @@ async function createPlaylist(): Promise<void> {
                 v-for="playlist in playlistsStore.playlists"
                 :key="playlist.id"
                 :to="{ name: 'playlist-detail', params: { slug: playlist.slug } }"
-                class="bg-gray-800 rounded-lg p-4 hover:bg-gray-700 transition-colors group"
+                class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors group"
             >
-                <div class="aspect-square bg-gray-700 rounded-lg mb-3 overflow-hidden">
+                <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                     <img
                         v-if="playlist.cover_url"
                         :src="playlist.cover_url"
@@ -104,13 +104,13 @@ async function createPlaylist(): Promise<void> {
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
                     <div v-else class="w-full h-full flex items-center justify-center">
-                        <svg class="w-16 h-16 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-16 h-16 text-surface-600" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/>
                         </svg>
                     </div>
                 </div>
                 <p class="text-white font-medium truncate">{{ playlist.name }}</p>
-                <p class="text-gray-400 text-sm truncate">
+                <p class="text-surface-400 text-sm truncate">
                     {{ playlist.songs_count ?? 0 }} songs
                 </p>
             </RouterLink>
@@ -120,7 +120,7 @@ async function createPlaylist(): Promise<void> {
             <button
                 @click="playlistsStore.loadMore"
                 :disabled="playlistsStore.loading"
-                class="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full transition-colors disabled:opacity-50"
+                class="px-6 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-full transition-colors disabled:opacity-50"
             >
                 {{ playlistsStore.loading ? 'Loading...' : 'Load More' }}
             </button>
@@ -134,13 +134,13 @@ async function createPlaylist(): Promise<void> {
                 @click.self="showCreateModal = false; resetCreateForm()"
             >
                 <div
-                    class="bg-gray-800 rounded-lg p-6 w-full mx-4 my-auto"
+                    class="bg-surface-800 rounded-lg p-6 w-full mx-4 my-auto"
                     :class="isSmartPlaylist ? 'max-w-2xl' : 'max-w-md'"
                 >
                     <h2 class="text-xl font-bold text-white mb-4">Create Playlist</h2>
                     <form @submit.prevent="createPlaylist">
                         <div class="mb-4">
-                            <label for="playlist-name" class="block text-sm font-medium text-gray-300 mb-2">
+                            <label for="playlist-name" class="block text-sm font-medium text-surface-300 mb-2">
                                 Name
                             </label>
                             <input
@@ -148,19 +148,19 @@ async function createPlaylist(): Promise<void> {
                                 v-model="newPlaylistName"
                                 type="text"
                                 required
-                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                class="w-full px-4 py-2 bg-surface-700 border border-surface-600 rounded-lg text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500"
                                 placeholder="My Playlist"
                             />
                         </div>
                         <div class="mb-4">
-                            <label for="playlist-description" class="block text-sm font-medium text-gray-300 mb-2">
+                            <label for="playlist-description" class="block text-sm font-medium text-surface-300 mb-2">
                                 Description (optional)
                             </label>
                             <textarea
                                 id="playlist-description"
                                 v-model="newPlaylistDescription"
                                 rows="3"
-                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                                class="w-full px-4 py-2 bg-surface-700 border border-surface-600 rounded-lg text-white placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
                                 placeholder="Add a description..."
                             />
                         </div>
@@ -171,11 +171,11 @@ async function createPlaylist(): Promise<void> {
                                 <input
                                     v-model="isSmartPlaylist"
                                     type="checkbox"
-                                    class="w-5 h-5 rounded bg-gray-700 border-gray-600 text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+                                    class="w-5 h-5 rounded bg-surface-700 border-surface-600 text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
                                 />
                                 <div>
                                     <span class="text-white font-medium">Smart Playlist</span>
-                                    <p class="text-sm text-gray-400">Automatically populate based on rules</p>
+                                    <p class="text-sm text-surface-400">Automatically populate based on rules</p>
                                 </div>
                             </label>
                         </div>
@@ -195,7 +195,7 @@ async function createPlaylist(): Promise<void> {
                             <button
                                 type="button"
                                 @click="showCreateModal = false; resetCreateForm()"
-                                class="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                                class="flex-1 px-4 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-lg transition-colors"
                             >
                                 Cancel
                             </button>

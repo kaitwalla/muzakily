@@ -28,7 +28,7 @@ export async function getPlaylists(filters: PlaylistFilters = {}): Promise<Pagin
     return response.data;
 }
 
-export async function getPlaylist(id: number): Promise<Playlist> {
+export async function getPlaylist(id: string): Promise<Playlist> {
     const response = await apiClient.get<ApiResponse<Playlist>>(`/playlists/${id}`);
     return response.data.data;
 }
@@ -43,28 +43,28 @@ export async function createPlaylist(data: CreatePlaylistData): Promise<Playlist
     return response.data.data;
 }
 
-export async function updatePlaylist(id: number, data: UpdatePlaylistData): Promise<Playlist> {
+export async function updatePlaylist(id: string, data: UpdatePlaylistData): Promise<Playlist> {
     const response = await apiClient.put<ApiResponse<Playlist>>(`/playlists/${id}`, data);
     return response.data.data;
 }
 
-export async function deletePlaylist(id: number): Promise<void> {
+export async function deletePlaylist(id: string): Promise<void> {
     await apiClient.delete(`/playlists/${id}`);
 }
 
-export async function getPlaylistSongs(playlistId: number): Promise<Song[]> {
+export async function getPlaylistSongs(playlistId: string): Promise<Song[]> {
     const response = await apiClient.get<ApiResponse<Song[]>>(`/playlists/${playlistId}/songs`);
     return response.data.data;
 }
 
-export async function addSongsToPlaylist(playlistId: number, songIds: string[]): Promise<void> {
+export async function addSongsToPlaylist(playlistId: string, songIds: string[]): Promise<void> {
     await apiClient.post(`/playlists/${playlistId}/songs`, { song_ids: songIds });
 }
 
-export async function removeSongsFromPlaylist(playlistId: number, songIds: string[]): Promise<void> {
+export async function removeSongsFromPlaylist(playlistId: string, songIds: string[]): Promise<void> {
     await apiClient.delete(`/playlists/${playlistId}/songs`, { data: { song_ids: songIds } });
 }
 
-export async function reorderPlaylistSongs(playlistId: number, songIds: string[]): Promise<void> {
+export async function reorderPlaylistSongs(playlistId: string, songIds: string[]): Promise<void> {
     await apiClient.put(`/playlists/${playlistId}/songs/reorder`, { song_ids: songIds });
 }

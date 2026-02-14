@@ -9,7 +9,7 @@ useRemotePlayer();
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-900 text-white flex flex-col">
+    <div class="min-h-screen bg-surface-950 text-surface-50 flex flex-col transition-colors duration-300">
         <AppNavbar />
 
         <div class="flex flex-1 overflow-hidden">

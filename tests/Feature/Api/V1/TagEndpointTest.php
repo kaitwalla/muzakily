@@ -233,7 +233,10 @@ class TagEndpointTest extends TestCase
         ]);
 
         $response->assertOk()
+            ->assertJsonPath('data.id', $song->id)
             ->assertJsonCount(2, 'data.tags');
+
+        $this->assertDatabaseHas('song_tag', ['song_id' => $song->id, 'tag_id' => $tags->first()->id]);
     }
 
     public function test_add_tags_requires_at_least_one_tag(): void
@@ -260,7 +263,11 @@ class TagEndpointTest extends TestCase
         ]);
 
         $response->assertOk()
+            ->assertJsonPath('data.id', $song->id)
             ->assertJsonCount(1, 'data.tags');
+
+        $this->assertDatabaseMissing('song_tag', ['song_id' => $song->id, 'tag_id' => $tag1->id]);
+        $this->assertDatabaseHas('song_tag', ['song_id' => $song->id, 'tag_id' => $tag2->id]);
     }
 
     public function test_unauthenticated_cannot_access_tags(): void
@@ -312,5 +319,81 @@ class TagEndpointTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_song_index_includes_tags(): void
+    {
+        $tag = Tag::factory()->create(['name' => 'Rock', 'color' => '#e74c3c']);
+        $song = Song::factory()->create();
+        $song->tags()->attach($tag);
+
+        $response = $this->actingAs($this->user)->getJson('/api/v1/songs');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.tags.0.id', $tag->id)
+            ->assertJsonPath('data.0.tags.0.name', 'Rock')
+            ->assertJsonPath('data.0.tags.0.color', '#e74c3c');
+    }
+
+    public function test_song_show_includes_tags(): void
+    {
+        $tag = Tag::factory()->create(['name' => 'Jazz', 'color' => '#3498db']);
+        $song = Song::factory()->create();
+        $song->tags()->attach($tag);
+
+        $response = $this->actingAs($this->user)->getJson("/api/v1/songs/{$song->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.tags.0.id', $tag->id)
+            ->assertJsonPath('data.tags.0.name', 'Jazz');
+    }
+
+    public function test_song_update_includes_tags(): void
+    {
+        $tag = Tag::factory()->create(['name' => 'Pop']);
+        $song = Song::factory()->create(['title' => 'Old Title']);
+        $song->tags()->attach($tag);
+
+        $response = $this->actingAs($this->admin)->putJson("/api/v1/songs/{$song->id}", [
+            'title' => 'New Title',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.title', 'New Title')
+            ->assertJsonPath('data.tags.0.id', $tag->id)
+            ->assertJsonPath('data.tags.0.name', 'Pop');
+    }
+
+    public function test_add_tags_returns_full_song_resource(): void
+    {
+        $song = Song::factory()->create(['title' => 'Test Song']);
+        $tag = Tag::factory()->create(['name' => 'Electronic', 'color' => '#9b59b6']);
+
+        $response = $this->actingAs($this->user)->postJson("/api/v1/songs/{$song->id}/tags", [
+            'tag_ids' => [$tag->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.title', 'Test Song')
+            ->assertJsonPath('data.tags.0.id', $tag->id)
+            ->assertJsonPath('data.tags.0.name', 'Electronic')
+            ->assertJsonPath('data.tags.0.color', '#9b59b6');
+    }
+
+    public function test_remove_tags_returns_full_song_resource(): void
+    {
+        $song = Song::factory()->create(['title' => 'Another Song']);
+        $tag1 = Tag::factory()->create(['name' => 'Tag1']);
+        $tag2 = Tag::factory()->create(['name' => 'Tag2']);
+        $song->tags()->attach([$tag1->id, $tag2->id]);
+
+        $response = $this->actingAs($this->user)->deleteJson("/api/v1/songs/{$song->id}/tags", [
+            'tag_ids' => [$tag1->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.title', 'Another Song')
+            ->assertJsonCount(1, 'data.tags')
+            ->assertJsonPath('data.tags.0.name', 'Tag2');
     }
 }

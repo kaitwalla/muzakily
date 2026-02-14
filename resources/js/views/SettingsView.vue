@@ -179,7 +179,7 @@ const userInitial = computed(() => {
         </div>
 
         <!-- Profile Section -->
-        <section class="bg-gray-800 rounded-lg p-6 mb-6">
+        <section class="bg-surface-800 rounded-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-white mb-4">Profile</h2>
             <div v-if="saveError" class="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
                 {{ saveError }}
@@ -189,7 +189,7 @@ const userInitial = computed(() => {
                 <!-- Avatar -->
                 <div class="flex-shrink-0">
                     <div
-                        class="relative w-24 h-24 rounded-full overflow-hidden bg-gray-700 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                        class="relative w-24 h-24 rounded-full overflow-hidden bg-surface-700 cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-surface-800"
                         role="button"
                         tabindex="0"
                         aria-label="Upload avatar"
@@ -204,7 +204,7 @@ const userInitial = computed(() => {
                         />
                         <div
                             v-else
-                            class="w-full h-full flex items-center justify-center text-3xl font-bold text-gray-400"
+                            class="w-full h-full flex items-center justify-center text-3xl font-bold text-surface-400"
                         >
                             {{ userInitial }}
                         </div>
@@ -245,7 +245,7 @@ const userInitial = computed(() => {
                 <!-- Name and Email -->
                 <div class="flex-1 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-1">Name</label>
+                        <label class="block text-sm font-medium text-surface-400 mb-1">Name</label>
                         <div v-if="!editingName" class="flex items-center gap-2">
                             <p class="text-white">{{ authStore.user?.name ?? '-' }}</p>
                             <button
@@ -259,7 +259,7 @@ const userInitial = computed(() => {
                             <input
                                 v-model="nameInput"
                                 type="text"
-                                class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-1.5 text-white text-sm"
+                                class="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-1.5 text-white text-sm"
                                 @keyup.enter="saveName"
                                 @keyup.escape="cancelEditingName"
                             />
@@ -272,14 +272,14 @@ const userInitial = computed(() => {
                             </button>
                             <button
                                 @click="cancelEditingName"
-                                class="px-3 py-1.5 text-gray-400 hover:text-white text-sm"
+                                class="px-3 py-1.5 text-surface-400 hover:text-white text-sm"
                             >
                                 Cancel
                             </button>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-1">Email</label>
+                        <label class="block text-sm font-medium text-surface-400 mb-1">Email</label>
                         <p class="text-white">{{ authStore.user?.email ?? '-' }}</p>
                     </div>
                 </div>
@@ -287,37 +287,37 @@ const userInitial = computed(() => {
         </section>
 
         <!-- Password Section -->
-        <section class="bg-gray-800 rounded-lg p-6 mb-6">
+        <section class="bg-surface-800 rounded-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-white mb-4">Change Password</h2>
             <div v-if="passwordError" class="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
                 {{ passwordError }}
             </div>
             <div class="space-y-4 max-w-md">
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Current Password</label>
+                    <label class="block text-sm font-medium text-surface-400 mb-1">Current Password</label>
                     <input
                         v-model="currentPassword"
                         type="password"
                         autocomplete="current-password"
-                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        class="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-2 text-white"
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">New Password</label>
+                    <label class="block text-sm font-medium text-surface-400 mb-1">New Password</label>
                     <input
                         v-model="newPassword"
                         type="password"
                         autocomplete="new-password"
-                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        class="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-2 text-white"
                     />
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-1">Confirm New Password</label>
+                    <label class="block text-sm font-medium text-surface-400 mb-1">Confirm New Password</label>
                     <input
                         v-model="confirmPassword"
                         type="password"
                         autocomplete="new-password"
-                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white"
+                        class="w-full bg-surface-700 border border-surface-600 rounded-lg px-4 py-2 text-white"
                     />
                 </div>
                 <button
@@ -331,18 +331,18 @@ const userInitial = computed(() => {
         </section>
 
         <!-- Playback Section -->
-        <section class="bg-gray-800 rounded-lg p-6">
+        <section class="bg-surface-800 rounded-lg p-6">
             <h2 class="text-xl font-semibold text-white mb-4">Playback</h2>
             <div class="space-y-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-white font-medium">Audio Quality</p>
-                        <p class="text-gray-400 text-sm">Stream in the highest quality available</p>
+                        <p class="text-surface-400 text-sm">Stream in the highest quality available</p>
                     </div>
                     <select
                         v-model="audioQuality"
                         :disabled="saving"
-                        class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white disabled:opacity-50"
+                        class="bg-surface-700 border border-surface-600 rounded-lg px-4 py-2 text-white disabled:opacity-50"
                     >
                         <option value="auto">Auto</option>
                         <option value="high">High</option>
@@ -353,12 +353,12 @@ const userInitial = computed(() => {
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-white font-medium">Crossfade</p>
-                        <p class="text-gray-400 text-sm">Smooth transition between songs</p>
+                        <p class="text-surface-400 text-sm">Smooth transition between songs</p>
                     </div>
                     <select
                         v-model.number="crossfade"
                         :disabled="saving"
-                        class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white disabled:opacity-50"
+                        class="bg-surface-700 border border-surface-600 rounded-lg px-4 py-2 text-white disabled:opacity-50"
                     >
                         <option :value="0">Off</option>
                         <option :value="3">3 seconds</option>

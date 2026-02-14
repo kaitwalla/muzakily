@@ -197,11 +197,11 @@ describe('useSongsStore', () => {
     });
 
     describe('getSongStreamUrl', () => {
-        it('should return stream URL from API', () => {
-            vi.mocked(songsApi.getStreamUrl).mockReturnValue('/api/v1/songs/1/stream');
+        it('should return stream URL from API', async () => {
+            vi.mocked(songsApi.getStreamUrl).mockResolvedValue('/api/v1/songs/1/stream');
 
             const store = useSongsStore();
-            const url = store.getSongStreamUrl('1');
+            const url = await store.getSongStreamUrl('1');
 
             expect(url).toBe('/api/v1/songs/1/stream');
         });

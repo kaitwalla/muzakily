@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Tags\CreateTag;
+use App\Actions\Tags\UpdateTag;
+use App\Exceptions\CircularTagReferenceException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\CreateTagRequest;
 use App\Http\Requests\Api\V1\UpdateTagRequest;
@@ -18,7 +21,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 class TagController extends Controller
 {
     public function __construct(
-        private TagService $tagService,
+        private readonly CreateTag $createTag,
+        private readonly UpdateTag $updateTag,
+        private readonly TagService $tagService,
     ) {}
 
     /**
@@ -42,23 +47,7 @@ class TagController extends Controller
      */
     public function store(CreateTagRequest $request): JsonResponse
     {
-        $parent = null;
-        if ($request->filled('parent_id')) {
-            $parent = Tag::findOrFail($request->integer('parent_id'));
-        }
-
-        $tag = new Tag([
-            'name' => $request->string('name')->toString(),
-            'color' => $request->string('color')->toString() ?: Tag::getDefaultColor($request->string('name')->toString()),
-            'auto_assign_pattern' => $request->string('auto_assign_pattern')->toString() ?: null,
-            'depth' => $parent ? $parent->depth + 1 : 1,
-        ]);
-
-        if ($parent) {
-            $tag->parent_id = $parent->id;
-        }
-
-        $tag->save();
+        $tag = $this->createTag->execute($request->validated());
 
         return response()->json([
             'data' => new TagResource($tag),
@@ -80,50 +69,14 @@ class TagController extends Controller
      */
     public function update(UpdateTagRequest $request, Tag $tag): JsonResponse
     {
-        $data = [];
-        $parentChanged = false;
-
-        if ($request->has('name')) {
-            $data['name'] = $request->string('name')->toString();
-        }
-
-        if ($request->has('color')) {
-            $data['color'] = $request->string('color')->toString();
-        }
-
-        if ($request->has('parent_id')) {
-            $data['parent_id'] = $request->integer('parent_id') ?: null;
-
-            // Prevent circular references
-            if ($data['parent_id']) {
-                if ($data['parent_id'] === $tag->id) {
-                    abort(422, 'A tag cannot be its own parent.');
-                }
-                $descendantIds = $tag->getDescendantIds();
-                if (in_array($data['parent_id'], $descendantIds, true)) {
-                    abort(422, 'A tag cannot have a descendant as its parent.');
-                }
-            }
-
-            $parent = $data['parent_id'] ? Tag::find($data['parent_id']) : null;
-            $data['depth'] = $parent ? $parent->depth + 1 : 1;
-            $parentChanged = $tag->parent_id !== $data['parent_id'];
-        }
-
-        if ($request->has('auto_assign_pattern')) {
-            $data['auto_assign_pattern'] = $request->string('auto_assign_pattern')->toString() ?: null;
-        }
-
-        $tag->update($data);
-
-        // Cascade depth updates to descendants if parent changed
-        if ($parentChanged) {
-            $tag->refresh();
-            $tag->updateDescendantDepths();
+        try {
+            $tag = $this->updateTag->execute($tag, $request->validated());
+        } catch (CircularTagReferenceException $e) {
+            abort(422, $e->getMessage());
         }
 
         return response()->json([
-            'data' => new TagResource($tag->fresh()),
+            'data' => new TagResource($tag),
         ]);
     }
 

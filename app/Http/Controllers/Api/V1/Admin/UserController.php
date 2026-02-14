@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\UserRole;
+use App\Actions\Admin\CreateUser;
+use App\Actions\Admin\UpdateUser;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private readonly CreateUser $createUser,
+        private readonly UpdateUser $updateUser,
+    ) {}
     /**
      * Display a listing of users.
      */
@@ -51,12 +55,7 @@ class UserController extends Controller
             'role' => ['nullable', 'string', 'in:admin,user'],
         ]);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => UserRole::tryFrom($validated['role'] ?? 'user') ?? UserRole::USER,
-        ]);
+        $user = $this->createUser->execute($validated);
 
         return response()->json([
             'data' => new UserResource($user),
@@ -85,18 +84,10 @@ class UserController extends Controller
             'role' => ['sometimes', 'string', 'in:admin,user'],
         ]);
 
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
-        if (isset($validated['role'])) {
-            $validated['role'] = UserRole::tryFrom($validated['role']) ?? UserRole::USER;
-        }
-
-        $user->update($validated);
+        $user = $this->updateUser->execute($user, $validated);
 
         return response()->json([
-            'data' => new UserResource($user->fresh()),
+            'data' => new UserResource($user),
         ]);
     }
 
