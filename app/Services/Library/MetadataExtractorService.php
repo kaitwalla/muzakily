@@ -112,11 +112,12 @@ class MetadataExtractorService
     {
         $tags = [];
 
-        // Priority: ID3v2 > ID3v1 > Vorbis > APE
+        // Priority: ID3v2 > ID3v1 > Vorbis > QuickTime (M4A/AAC) > APE
         $tagSources = [
             'tags.id3v2' => $info['tags']['id3v2'] ?? [],
             'tags.id3v1' => $info['tags']['id3v1'] ?? [],
             'tags.vorbiscomment' => $info['tags']['vorbiscomment'] ?? [],
+            'tags.quicktime' => $info['tags']['quicktime'] ?? [],
             'tags.ape' => $info['tags']['ape'] ?? [],
         ];
 
