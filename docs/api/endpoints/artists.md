@@ -15,6 +15,7 @@ Returns a paginated list of artists.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `search` | string | - | Search in artist name |
+| `updated_since` | ISO 8601 | - | Filter artists updated since timestamp (for incremental sync) |
 | `sort` | string | name | Sort field: name, created_at |
 | `order` | string | asc | Sort order: asc, desc |
 | `per_page` | integer | 50 | Results per page (max 100) |

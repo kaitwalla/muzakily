@@ -65,6 +65,7 @@ curl "https://api.example.com/api/v1/songs/recently-played?limit=10" \
 | `format` | string | - | Filter by format (MP3, AAC, FLAC) |
 | `favorited` | boolean | - | Show only favorited songs |
 | `incomplete` | boolean | - | Show only songs with missing metadata |
+| `updated_since` | ISO 8601 | - | Filter songs updated since timestamp (for incremental sync) |
 | `sort` | string | title | Sort field: title, artist_name, album_name, year, created_at |
 | `order` | string | asc | Sort order: asc, desc |
 | `per_page` | integer | 50 | Results per page (max 100) |

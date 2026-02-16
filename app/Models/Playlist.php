@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\TracksDeletion;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,6 +34,7 @@ class Playlist extends Model
     /** @use HasFactory<\Database\Factories\PlaylistFactory> */
     use HasFactory;
     use HasUuids;
+    use TracksDeletion;
 
     /**
      * The primary key for the model.
@@ -256,5 +258,13 @@ class Playlist extends Model
     public function scopeRegular(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
     {
         return $query->where('is_smart', false);
+    }
+
+    /**
+     * Get the user ID associated with this playlist for deletion tracking.
+     */
+    protected function getDeletableUserId(): ?int
+    {
+        return $this->user_id;
     }
 }

@@ -10,6 +10,12 @@ GET /api/v1/playlists
 
 Returns all playlists owned by the authenticated user. This endpoint returns a flat list (not paginated) since users typically have a manageable number of playlists.
 
+### Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `updated_since` | ISO 8601 | - | Filter playlists updated since timestamp (for incremental sync) |
+
 ### Example Response
 
 ```json

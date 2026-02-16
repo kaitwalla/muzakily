@@ -13,6 +13,7 @@ use App\Models\Song;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SongController extends Controller
@@ -64,6 +65,15 @@ class SongController extends Controller
                     ->orWhere('artist_name', 'Unknown')
                     ->orWhere('artist_name', 'Unknown Artist');
             });
+        }
+
+        // Filter by updated_since for incremental sync
+        if ($updatedSince = $request->input('updated_since')) {
+            try {
+                $query->where('updated_at', '>=', Carbon::parse($updatedSince));
+            } catch (\Carbon\Exceptions\InvalidFormatException) {
+                abort(422, 'Invalid date format for updated_since parameter');
+            }
         }
 
         // Sorting

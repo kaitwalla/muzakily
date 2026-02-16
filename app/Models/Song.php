@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AudioFormat;
+use App\Models\Concerns\TracksDeletion;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -57,6 +58,7 @@ class Song extends Model
     use HasUuids;
     use Searchable;
     use SoftDeletes;
+    use TracksDeletion;
 
     /**
      * The primary key for the model.

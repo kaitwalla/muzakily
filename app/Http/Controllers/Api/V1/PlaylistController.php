@@ -25,6 +25,7 @@ use App\Services\Playlist\SmartPlaylistEvaluator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class PlaylistController extends Controller
 {
@@ -43,11 +44,20 @@ class PlaylistController extends Controller
      */
     public function index(Request $request): AnonymousResourceCollection
     {
-        $playlists = $request->user()
+        $query = $request->user()
             ->playlists()
-            ->withCount('songs')
-            ->orderBy('name')
-            ->get();
+            ->withCount('songs');
+
+        // Filter by updated_since for incremental sync
+        if ($updatedSince = $request->input('updated_since')) {
+            try {
+                $query->where('updated_at', '>=', Carbon::parse($updatedSince));
+            } catch (\Carbon\Exceptions\InvalidFormatException) {
+                abort(422, 'Invalid date format for updated_since parameter');
+            }
+        }
+
+        $playlists = $query->orderBy('name')->get();
 
         // Calculate song counts for smart playlists
         foreach ($playlists as $playlist) {

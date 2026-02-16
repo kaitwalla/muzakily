@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\SongController;
 use App\Http\Controllers\Api\V1\SongTagController;
 use App\Http\Controllers\Api\V1\StreamController;
+use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\Admin\LibraryController;
@@ -92,6 +93,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Search
     Route::get('search', [SearchController::class, 'search'])->name('search');
+
+    // Sync
+    Route::get('deleted', [SyncController::class, 'deleted'])->name('sync.deleted');
+    Route::get('sync/status', [SyncController::class, 'status'])->name('sync.status');
 
     // Upload
     Route::post('upload', [UploadController::class, 'upload'])->name('upload');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Models\DeletedItem;
 use App\Models\ScanCache;
 use App\Models\Song;
 use App\Models\Tag;
@@ -91,6 +92,9 @@ class ScanR2BucketCleanupJob implements ShouldQueue
                 DB::transaction(function () use ($entry, &$removedCount) {
                     $song = Song::findByStoragePath($entry->object_key);
                     if ($song) {
+                        // Record deletion for incremental sync before forceDelete
+                        // (forceDelete bypasses model events, so TracksDeletion won't fire)
+                        DeletedItem::recordDeletion('song', $song->id);
                         $song->tags()->detach();
                         $song->forceDelete();
                         $removedCount++;

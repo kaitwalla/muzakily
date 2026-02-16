@@ -12,6 +12,7 @@ use App\Models\Artist;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class ArtistController extends Controller
 {
@@ -25,6 +26,15 @@ class ArtistController extends Controller
         // Search
         if ($search = $request->input('search')) {
             $query->where('name', 'ilike', "%{$search}%");
+        }
+
+        // Filter by updated_since for incremental sync
+        if ($updatedSince = $request->input('updated_since')) {
+            try {
+                $query->where('updated_at', '>=', Carbon::parse($updatedSince));
+            } catch (\Carbon\Exceptions\InvalidFormatException) {
+                abort(422, 'Invalid date format for updated_since parameter');
+            }
         }
 
         // Sorting

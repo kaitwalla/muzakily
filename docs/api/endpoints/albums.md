@@ -17,6 +17,7 @@ Returns a paginated list of albums.
 | `search` | string | - | Search in album name |
 | `artist_id` | uuid | - | Filter by artist |
 | `year` | integer | - | Filter by release year |
+| `updated_since` | ISO 8601 | - | Filter albums updated since timestamp (for incremental sync) |
 | `sort` | string | name | Sort field: name, year, created_at |
 | `order` | string | asc | Sort order: asc, desc |
 | `per_page` | integer | 50 | Results per page (max 100) |
