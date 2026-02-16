@@ -167,7 +167,22 @@ class StreamingEndpointTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_download_redirects_to_download_url(): void
+    public function test_download_returns_signed_url(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->getJson("/api/v1/songs/{$this->song->id}/download");
+
+        $response->assertOk()
+            ->assertJsonStructure(['data' => ['url']]);
+
+        // Verify the URL is a signed URL pointing to the download route
+        $url = $response->json('data.url');
+        $this->assertStringContainsString('/api/v1/songs/', $url);
+        $this->assertStringContainsString('/download/signed', $url);
+        $this->assertStringContainsString('signature=', $url);
+    }
+
+    public function test_download_signed_redirects_to_storage(): void
     {
         $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
             $mock->shouldReceive('getDownloadUrl')
@@ -180,10 +195,23 @@ class StreamingEndpointTest extends TestCase
                 ->andReturn('https://storage.example.com/music/test-song.flac?download=1');
         });
 
-        $response = $this->actingAs($this->user)
-            ->get("/api/v1/songs/{$this->song->id}/download");
+        // Generate a valid signed URL
+        $signedUrl = \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'songs.download.signed',
+            now()->addSeconds(60),
+            ['song' => $this->song->id]
+        );
+
+        $response = $this->get($signedUrl);
 
         $response->assertRedirect('https://storage.example.com/music/test-song.flac?download=1');
+    }
+
+    public function test_download_signed_rejects_invalid_signature(): void
+    {
+        $response = $this->get("/api/v1/songs/{$this->song->id}/download/signed?signature=invalid");
+
+        $response->assertForbidden();
     }
 
     public function test_stream_returns_404_for_nonexistent_song(): void

@@ -4,7 +4,7 @@ import { RouterLink } from 'vue-router';
 import type { Song } from '@/types/models';
 import { usePlayerStore } from '@/stores/player';
 import { toggleFavorite } from '@/api/favorites';
-import { getDownloadUrl } from '@/api/songs';
+import { downloadSong } from '@/api/songs';
 import SongDetailsModal from './SongDetailsModal.vue';
 
 interface Props {
@@ -113,10 +113,9 @@ function handleCheckboxClick(event: Event): void {
     emit('toggle-select');
 }
 
-function handleDownload(): void {
+async function handleDownload(): Promise<void> {
     showMenu.value = false;
-    const url = getDownloadUrl(props.song.id);
-    window.open(url, '_blank');
+    await downloadSong(props.song.id);
 }
 </script>
 

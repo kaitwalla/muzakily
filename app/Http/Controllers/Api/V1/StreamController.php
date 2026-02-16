@@ -11,6 +11,7 @@ use App\Services\Streaming\TranscodingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\URL;
 
 class StreamController extends Controller
 {
@@ -40,10 +41,34 @@ class StreamController extends Controller
     }
 
     /**
-     * Download a song (redirect to presigned download URL).
+     * Get a signed download URL for a song (authenticated).
+     * Returns a temporary signed URL that can be opened directly.
      */
-    public function download(Song $song): RedirectResponse
+    public function download(Song $song): JsonResponse
     {
+        // Generate a signed URL valid for 60 seconds
+        $signedUrl = URL::temporarySignedRoute(
+            'songs.download.signed',
+            now()->addSeconds(60),
+            ['song' => $song->id]
+        );
+
+        return response()->json([
+            'data' => [
+                'url' => $signedUrl,
+            ],
+        ]);
+    }
+
+    /**
+     * Execute the download (validates signed URL, redirects to presigned R2 URL).
+     */
+    public function downloadSigned(Request $request, Song $song): RedirectResponse
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403, 'Invalid or expired download link');
+        }
+
         // Generate a safe filename for the download
         $filename = $this->generateDownloadFilename($song);
 

@@ -37,6 +37,9 @@ Route::prefix('auth')->group(function () {
 // Local streaming (uses signed URL for auth)
 Route::get('stream/local', [LocalStreamController::class, 'stream'])->name('stream.local');
 
+// Download (uses signed URL for auth)
+Route::get('songs/{song}/download/signed', [StreamController::class, 'downloadSigned'])->name('songs.download.signed');
+
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication

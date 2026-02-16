@@ -37,12 +37,14 @@ export async function getStreamUrl(songId: string): Promise<string> {
     return response.data.data.url;
 }
 
-export function getDownloadUrl(songId: string): string {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-        throw new Error('Authentication token not found');
-    }
-    return `/api/v1/songs/${songId}/download?token=${encodeURIComponent(token)}`;
+export async function getDownloadUrl(songId: string): Promise<string> {
+    const response = await apiClient.get<{ data: { url: string } }>(`/songs/${songId}/download`);
+    return response.data.data.url;
+}
+
+export async function downloadSong(songId: string): Promise<void> {
+    const url = await getDownloadUrl(songId);
+    window.location.href = url;
 }
 
 export async function addTagsToSong(songId: string, tagIds: number[]): Promise<Song> {

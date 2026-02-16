@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAudio, usePlayer, useKeyboardShortcuts } from '@/composables';
-import { getDownloadUrl } from '@/api/songs';
+import { downloadSong } from '@/api/songs';
 import PlayPauseButton from './PlayPauseButton.vue';
 import VolumeControl from './VolumeControl.vue';
 import ProgressBar from './ProgressBar.vue';
@@ -12,10 +12,9 @@ import DevicePicker from './DevicePicker.vue';
 const { audioRef, registerAudioElement } = useAudio({ autoRegister: false });
 const { currentSong, isShuffled, repeatMode, hasNext, hasPrevious, next, previous, toggleShuffle, cycleRepeatMode } = usePlayer();
 
-function handleDownload(): void {
+async function handleDownload(): Promise<void> {
     if (currentSong.value) {
-        const url = getDownloadUrl(currentSong.value.id);
-        window.open(url, '_blank');
+        await downloadSong(currentSong.value.id);
     }
 }
 
