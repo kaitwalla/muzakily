@@ -96,6 +96,8 @@ class RescanSongsCommand extends Command
         $updated = 0;
         $skipped = 0;
         $errors = 0;
+        $zeroDurationStillZero = 0;
+        $fixingDuration = (bool) $this->option('zero-duration');
 
         $progressBar = $this->output->createProgressBar($total);
         $progressBar->start();
@@ -127,10 +129,27 @@ class RescanSongsCommand extends Command
                     file_put_contents($tempFile, $stream);
                     fclose($stream);
 
-                    // Extract metadata
-                    $metadata = $extractor->extract($tempFile);
+                    // Extract metadata - use estimation for zero-duration fixes
+                    if ($fixingDuration) {
+                        $metadata = $extractor->extractWithEstimation($tempFile, $song->file_size);
+                    } else {
+                        $metadata = $extractor->extract($tempFile);
+                    }
 
                     $hasNewData = !empty($metadata['artist']) || !empty($metadata['album']) || ($metadata['duration'] > 0 && $song->length <= 0);
+
+                    // When fixing duration, track if we still couldn't get it
+                    if ($fixingDuration && $metadata['duration'] <= 0) {
+                        $zeroDurationStillZero++;
+                        if ($this->option('verbose')) {
+                            $this->newLine();
+                            $this->warn("  Could not extract duration: {$song->title}");
+                            $this->line("    Bitrate: " . ($metadata['bitrate'] ?? 'unknown') . ", File size: {$song->file_size}");
+                        }
+                        $skipped++;
+                        $progressBar->advance();
+                        continue;
+                    }
 
                     if (!$hasNewData) {
                         $skipped++;
@@ -141,8 +160,14 @@ class RescanSongsCommand extends Command
                     if ($dryRun) {
                         $this->newLine();
                         $this->info("  Would update: {$song->title}");
-                        $this->info("    Artist: {$song->artist_name} -> " . ($metadata['artist'] ?? 'null'));
-                        $this->info("    Album: {$song->album_name} -> " . ($metadata['album'] ?? 'null'));
+                        if ($fixingDuration && $metadata['duration'] > 0) {
+                            $estimated = !empty($metadata['duration_estimated']) ? ' (estimated)' : '';
+                            $this->info("    Duration: 0:00 -> " . gmdate('i:s', (int) $metadata['duration']) . $estimated);
+                        }
+                        if (!$fixingDuration) {
+                            $this->info("    Artist: {$song->artist_name} -> " . ($metadata['artist'] ?? 'null'));
+                            $this->info("    Album: {$song->album_name} -> " . ($metadata['album'] ?? 'null'));
+                        }
                         $updated++;
                         $progressBar->advance();
                         continue;
@@ -198,15 +223,18 @@ class RescanSongsCommand extends Command
         $this->newLine(2);
 
         $this->info('Rescan complete!');
-        $this->table(
-            ['Metric', 'Count'],
-            [
-                ['Songs processed', $total],
-                ['Songs updated', $updated],
-                ['Songs skipped (no new data)', $skipped],
-                ['Errors', $errors],
-            ]
-        );
+        $rows = [
+            ['Songs processed', $total],
+            ['Songs updated', $updated],
+            ['Songs skipped (no new data)', $skipped],
+            ['Errors', $errors],
+        ];
+
+        if ($fixingDuration && $zeroDurationStillZero > 0) {
+            $rows[] = ['Duration still zero (unfixable)', $zeroDurationStillZero];
+        }
+
+        $this->table(['Metric', 'Count'], $rows);
 
         return Command::SUCCESS;
     }
