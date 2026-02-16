@@ -28,6 +28,14 @@ const routes: RouteRecordRaw[] = [
         },
     },
     {
+        path: '/songs/incomplete',
+        name: 'incomplete-songs',
+        component: () => import('@/views/IncompleteSongsView.vue'),
+        meta: {
+            requiresAuth: true,
+        },
+    },
+    {
         path: '/albums',
         name: 'albums',
         component: () => import('@/views/AlbumsView.vue'),

@@ -6,6 +6,7 @@ export interface SongFilters {
     search?: string;
     album_id?: number;
     artist_id?: number;
+    incomplete?: boolean;
     page?: number;
     per_page?: number;
 }

@@ -59,6 +59,17 @@ class SongController extends Controller
             $query->whereHas('favorites', fn ($q) => $q->where('user_id', $request->user()->id));
         }
 
+        // Filter for incomplete metadata
+        if ($request->boolean('incomplete')) {
+            $query->where(function ($q) {
+                $q->whereNull('album_id')
+                    ->orWhereNull('artist_id')
+                    ->orWhere('artist_name', '')
+                    ->orWhere('artist_name', 'Unknown')
+                    ->orWhere('artist_name', 'Unknown Artist');
+            });
+        }
+
         // Sorting
         $sortField = $request->input('sort', 'title');
         $sortOrder = in_array(strtolower($request->input('order', 'asc')), ['asc', 'desc'], true)
