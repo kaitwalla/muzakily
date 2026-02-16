@@ -118,12 +118,13 @@ curl -X PATCH https://your-domain.com/api/v1/auth/me \
 
 | Value | Bitrate | Use Case |
 |-------|---------|----------|
+| `raw` | Original | No transcoding, streams file as-is (FLAC, high-bitrate MP3, etc.) |
 | `auto` | Adaptive | Adjusts based on network conditions |
-| `high` | 320 kbps | Best quality, highest bandwidth usage |
+| `high` | 320 kbps | Best lossy quality, higher bandwidth |
 | `normal` | 256 kbps | Good quality, moderate bandwidth (default) |
-| `low` | 128 kbps | Data saver, for slow connections |
+| `low` | 128 kbps | Data saver, for slow/metered connections |
 
-When transcoding is requested, files are converted to the target bitrate. Original files are always available at their native quality regardless of this setting.
+When transcoding is requested, files are converted to the target bitrate. With `raw`, files stream at their original quality without any conversion.
 | `avatar` | file | Profile image (max 2MB) |
 | `current_password` | string | Required when changing password |
 | `password` | string | New password (min 8 chars) |

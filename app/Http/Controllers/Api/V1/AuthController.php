@@ -72,7 +72,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'preferences' => ['sometimes', 'array'],
-            'preferences.audio_quality' => ['sometimes', 'string', 'in:auto,high,normal,low'],
+            'preferences.audio_quality' => ['sometimes', 'string', 'in:raw,auto,high,normal,low'],
             'preferences.crossfade' => ['sometimes', 'integer', 'in:0,3,5,10'],
             'avatar' => ['nullable', 'image', 'max:2048'],
             'current_password' => ['required_with:password', 'current_password'],
