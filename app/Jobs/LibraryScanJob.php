@@ -6,8 +6,8 @@ namespace App\Jobs;
 
 use App\Contracts\MusicStorageInterface;
 use App\Models\ScanCache;
-use App\Models\SmartFolder;
 use App\Models\Song;
+use App\Models\Tag;
 use App\Services\Library\LibraryScannerService;
 use App\Services\Metadata\MetadataAggregatorService;
 use Illuminate\Bus\Queueable;
@@ -178,11 +178,8 @@ class LibraryScanJob implements ShouldQueue
         // Prune orphans
         $removedCount = $this->pruneOrphans($bucket, $scanStartedAt);
 
-        // Update smart folder and tag counts (chunked to avoid memory issues)
-        SmartFolder::chunk(100, function ($folders) {
-            $folders->each->updateSongCount();
-        });
-        \App\Models\Tag::chunk(100, function ($tags) {
+        // Update tag counts (chunked to avoid memory issues)
+        Tag::chunk(100, function ($tags) {
             $tags->each->updateSongCount();
         });
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Models\ScanCache;
-use App\Models\SmartFolder;
 use App\Models\Song;
 use App\Models\Tag;
 use App\Services\Metadata\MetadataAggregatorService;
@@ -72,14 +71,11 @@ class LibraryScanCleanupJob implements ShouldQueue
         // Prune orphans
         $removedCount = $this->pruneOrphans($scanStartedAt);
 
-        $this->updateStatus('cleaning', 'Updating folder counts...', [
+        $this->updateStatus('cleaning', 'Updating tag counts...', [
             'removed_songs' => $removedCount,
         ]);
 
-        // Update smart folder and tag counts (chunked to avoid memory issues)
-        SmartFolder::chunk(100, function ($folders) {
-            $folders->each->updateSongCount();
-        });
+        // Update tag counts (chunked to avoid memory issues)
         Tag::chunk(100, function ($tags) {
             $tags->each->updateSongCount();
         });

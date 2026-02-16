@@ -8,12 +8,10 @@ use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
 use App\Models\Artist;
 use App\Models\ScanCache;
-use App\Models\SmartFolder;
 use App\Models\Song;
 use App\Services\Library\CoverArtService;
 use App\Services\Library\LibraryScannerService;
 use App\Services\Library\MetadataExtractorService;
-use App\Services\Library\SmartFolderService;
 use App\Services\Library\TagService;
 use DateTimeImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -29,7 +27,6 @@ class LibraryScannerServiceTest extends TestCase
 
     private MusicStorageInterface&MockInterface $storageMock;
     private MetadataExtractorService&MockInterface $metadataExtractorMock;
-    private SmartFolderService&MockInterface $smartFolderServiceMock;
     private TagService&MockInterface $tagServiceMock;
     private CoverArtService&MockInterface $coverArtServiceMock;
     private LibraryScannerService $service;
@@ -51,14 +48,12 @@ class LibraryScannerServiceTest extends TestCase
 
         $this->storageMock = Mockery::mock(MusicStorageInterface::class);
         $this->metadataExtractorMock = Mockery::mock(MetadataExtractorService::class);
-        $this->smartFolderServiceMock = Mockery::mock(SmartFolderService::class);
         $this->tagServiceMock = Mockery::mock(TagService::class);
         $this->coverArtServiceMock = Mockery::mock(CoverArtService::class);
 
         $this->service = new LibraryScannerService(
             $this->storageMock,
             $this->metadataExtractorMock,
-            $this->smartFolderServiceMock,
             $this->tagServiceMock,
             $this->coverArtServiceMock
         );
@@ -133,14 +128,6 @@ class LibraryScannerServiceTest extends TestCase
                 'cover_art' => null,
             ]);
 
-        // Mock smart folder assignment
-        $smartFolder = SmartFolder::factory()->create();
-        $this->smartFolderServiceMock
-            ->shouldReceive('assignFromPath')
-            ->once()
-            ->with($objectKey)
-            ->andReturn($smartFolder);
-
         $this->tagServiceMock
             ->shouldReceive('assignFromPath')
             ->once()
@@ -213,12 +200,6 @@ class LibraryScannerServiceTest extends TestCase
                 'lyrics' => null,
                 'cover_art' => null,
             ]);
-
-        $smartFolder = SmartFolder::factory()->create();
-        $this->smartFolderServiceMock
-            ->shouldReceive('assignFromPath')
-            ->once()
-            ->andReturn($smartFolder);
 
         $this->tagServiceMock
             ->shouldReceive('assignFromPath')
@@ -319,12 +300,6 @@ class LibraryScannerServiceTest extends TestCase
                 'cover_art' => null,
             ]);
 
-        $smartFolder = SmartFolder::factory()->create();
-        $this->smartFolderServiceMock
-            ->shouldReceive('assignFromPath')
-            ->once()
-            ->andReturn($smartFolder);
-
         $this->tagServiceMock
             ->shouldReceive('assignFromPath')
             ->once();
@@ -402,13 +377,6 @@ class LibraryScannerServiceTest extends TestCase
                 'lyrics' => null,
                 'cover_art' => null,
             ]);
-
-        $smartFolder = SmartFolder::factory()->create();
-        $this->smartFolderServiceMock
-            ->shouldReceive('assignFromPath')
-            ->once()
-            ->with($objectKey)
-            ->andReturn($smartFolder);
 
         $this->tagServiceMock
             ->shouldReceive('assignFromPath')
@@ -500,12 +468,6 @@ class LibraryScannerServiceTest extends TestCase
                 'lyrics' => null,
                 'cover_art' => null,
             ]);
-
-        $smartFolder = SmartFolder::factory()->create();
-        $this->smartFolderServiceMock
-            ->shouldReceive('assignFromPath')
-            ->twice()
-            ->andReturn($smartFolder);
 
         $this->tagServiceMock
             ->shouldReceive('assignFromPath')
@@ -635,8 +597,6 @@ class LibraryScannerServiceTest extends TestCase
                 'cover_art' => null,
             ]);
 
-        $smartFolder = SmartFolder::factory()->create();
-        $this->smartFolderServiceMock->shouldReceive('assignFromPath')->twice()->andReturn($smartFolder);
         $this->tagServiceMock->shouldReceive('assignFromPath')->twice();
 
         $this->service->scan(force: false, limit: 2);

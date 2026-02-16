@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\V1\PlayerDeviceController;
 use App\Http\Controllers\Api\V1\PlaylistController;
 use App\Http\Controllers\Api\V1\RemoteControlController;
 use App\Http\Controllers\Api\V1\SearchController;
-use App\Http\Controllers\Api\V1\SmartFolderController;
 use App\Http\Controllers\Api\V1\SongController;
 use App\Http\Controllers\Api\V1\SongTagController;
 use App\Http\Controllers\Api\V1\StreamController;
@@ -75,10 +74,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('playlists/{playlist}/songs/reorder', [PlaylistController::class, 'reorderSongs'])->name('playlists.songs.reorder');
     Route::post('playlists/{playlist}/refresh-cover', [PlaylistController::class, 'refreshCover'])->name('playlists.refresh-cover');
     Route::post('playlists/{playlist}/cover', [PlaylistController::class, 'uploadCover'])->name('playlists.upload-cover');
-
-    // Smart Folders
-    Route::get('smart-folders', [SmartFolderController::class, 'index'])->name('smart-folders.index');
-    Route::get('smart-folders/{smartFolder}/songs', [SmartFolderController::class, 'songs'])->name('smart-folders.songs');
 
     // Tags
     Route::apiResource('tags', TagController::class);

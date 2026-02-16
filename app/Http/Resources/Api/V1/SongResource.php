@@ -37,7 +37,6 @@ class SongResource extends JsonResource
         'audio_format',
         'is_favorite',
         'play_count',
-        'smart_folder',
         'tags',
         'storage_path',
         'created_at',
@@ -71,14 +70,6 @@ class SongResource extends JsonResource
             'audio_format' => $this->audio_format->value,
             'is_favorite' => $user ? $this->isFavoriteFor($user) : false,
             'play_count' => $user ? $this->getPlayCountForUser($user) : 0,
-            'smart_folder' => $this->when(
-                $this->smartFolder !== null,
-                fn () => [
-                    'id' => $this->smartFolder->id,
-                    'name' => $this->smartFolder->name,
-                    'path' => $this->smartFolder->path_prefix,
-                ]
-            ),
             'tags' => $this->when(
                 $this->relationLoaded('tags'),
                 fn () => $this->tags->map(fn ($tag): array => [

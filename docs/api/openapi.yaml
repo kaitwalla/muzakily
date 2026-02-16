@@ -40,8 +40,6 @@ tags:
     description: Artist browsing and details
   - name: Playlists
     description: Regular and smart playlist management
-  - name: Smart Folders
-    description: Folder-based song organization
   - name: Tags
     description: Hierarchical tagging system
   - name: Favorites
@@ -108,10 +106,6 @@ components:
           type: boolean
         play_count:
           type: integer
-        smart_folder:
-          nullable: true
-          allOf:
-            - $ref: '#/components/schemas/SmartFolderBasic'
         tags:
           type: array
           items:
@@ -204,37 +198,6 @@ components:
         updated_at:
           type: string
           format: date-time
-
-    SmartFolder:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        path:
-          type: string
-        depth:
-          type: integer
-        song_count:
-          type: integer
-        parent_id:
-          type: integer
-          nullable: true
-        children:
-          type: array
-          items:
-            $ref: '#/components/schemas/SmartFolder'
-
-    SmartFolderBasic:
-      type: object
-      properties:
-        id:
-          type: integer
-        name:
-          type: string
-        path:
-          type: string
 
     Tag:
       type: object
@@ -554,10 +517,6 @@ paths:
           in: query
           schema:
             type: string
-        - name: smart_folder_id
-          in: query
-          schema:
-            type: integer
         - name: format
           in: query
           schema:
@@ -1503,68 +1462,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BusinessError'
-
-  /smart-folders:
-    get:
-      tags: [Smart Folders]
-      summary: List smart folders hierarchy
-      responses:
-        '200':
-          description: Smart folders tree
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/SmartFolder'
-
-  /smart-folders/{smartFolder}/songs:
-    get:
-      tags: [Smart Folders]
-      summary: Get songs in smart folder
-      parameters:
-        - name: smartFolder
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: sort
-          in: query
-          schema:
-            type: string
-            enum: [title, artist_name, album_name, year]
-            default: title
-        - name: order
-          in: query
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: asc
-        - name: per_page
-          in: query
-          schema:
-            type: integer
-            maximum: 100
-            default: 50
-      responses:
-        '200':
-          description: Smart folder songs
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Song'
-                  links:
-                    $ref: '#/components/schemas/PaginationLinks'
-                  meta:
-                    $ref: '#/components/schemas/PaginationMeta'
 
   /tags:
     get:

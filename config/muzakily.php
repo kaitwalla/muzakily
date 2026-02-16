@@ -16,22 +16,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Smart Folders Configuration
-    |--------------------------------------------------------------------------
-    |
-    | Configure how smart folders are extracted from storage paths.
-    |
-    */
-    'smart_folders' => [
-        // Folders that use second-level categorization (e.g., Xmas/Contemporary)
-        'special' => explode(',', env('MUZAKILY_SPECIAL_FOLDERS', 'Xmas,Holiday,Seasonal')),
-
-        // Default depth for normal folders
-        'default_depth' => 1,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Tags Configuration
     |--------------------------------------------------------------------------
     |

@@ -10,7 +10,6 @@ use App\Models\Album;
 use App\Models\Artist;
 use App\Models\Song;
 use App\Services\Library\MetadataExtractorService;
-use App\Services\Library\SmartFolderService;
 use App\Services\Library\TagService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -62,7 +61,6 @@ class ProcessUploadedSongJob implements ShouldQueue
     public function handle(
         MusicStorageInterface $storage,
         MetadataExtractorService $metadataExtractor,
-        SmartFolderService $smartFolderService,
         TagService $tagService,
     ): void {
         // Download file temporarily
@@ -90,7 +88,7 @@ class ProcessUploadedSongJob implements ShouldQueue
             }
 
             // Wrap all database operations in a transaction to prevent partial state
-            $song = DB::transaction(function () use ($metadata, $format, $storageMetadata, $smartFolderService, $tagService) {
+            $song = DB::transaction(function () use ($metadata, $format, $storageMetadata, $tagService) {
                 // Find or create artist
                 $artist = null;
                 if ($metadata['artist'] ?? null) {
@@ -106,14 +104,10 @@ class ProcessUploadedSongJob implements ShouldQueue
                     }
                 }
 
-                // Assign smart folder
-                $smartFolder = $smartFolderService->assignFromPath($this->storagePath);
-
                 // Create song
                 $song = Song::create([
                     'album_id' => $album?->id,
                     'artist_id' => $artist?->id,
-                    'smart_folder_id' => $smartFolder?->id,
                     'title' => $metadata['title'] ?? pathinfo($this->originalFilename, PATHINFO_FILENAME),
                     'album_name' => $metadata['album'] ?? null,
                     'artist_name' => $metadata['artist'] ?? null,
@@ -130,9 +124,6 @@ class ProcessUploadedSongJob implements ShouldQueue
                     'r2_etag' => $storageMetadata['etag'] ?? null,
                     'r2_last_modified' => $storageMetadata['last_modified'] ?? null,
                 ]);
-
-                // Update smart folder song count
-                $smartFolder?->updateSongCount();
 
                 // Assign tags based on folder path
                 if (config('muzakily.tags.auto_create_from_folders', true)) {

@@ -21,7 +21,6 @@ use Laravel\Scout\Searchable;
  * @property string $id
  * @property int|null $album_id
  * @property int|null $artist_id
- * @property int|null $smart_folder_id
  * @property string $title
  * @property string $title_normalized
  * @property string|null $album_name
@@ -45,7 +44,6 @@ use Laravel\Scout\Searchable;
  * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property-read Album|null $album
  * @property-read Artist|null $artist
- * @property-read SmartFolder|null $smartFolder
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Genre> $genres
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Tag> $tags
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Playlist> $playlists
@@ -89,7 +87,6 @@ class Song extends Model
     protected $fillable = [
         'album_id',
         'artist_id',
-        'smart_folder_id',
         'title',
         'title_normalized',
         'album_name',
@@ -188,16 +185,6 @@ class Song extends Model
     public function artist(): BelongsTo
     {
         return $this->belongsTo(Artist::class);
-    }
-
-    /**
-     * Get the song's smart folder.
-     *
-     * @return BelongsTo<SmartFolder, $this>
-     */
-    public function smartFolder(): BelongsTo
-    {
-        return $this->belongsTo(SmartFolder::class);
     }
 
     /**
@@ -322,7 +309,6 @@ class Song extends Model
             'album_name' => $this->album_name,
             'artist_id' => $this->artist_id,
             'album_id' => $this->album_id,
-            'smart_folder_id' => $this->smart_folder_id,
             'year' => $this->year,
             'audio_format' => $this->audio_format->value,
             'lyrics' => $this->lyrics,

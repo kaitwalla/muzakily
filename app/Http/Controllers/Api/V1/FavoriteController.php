@@ -46,7 +46,7 @@ class FavoriteController extends Controller
                 ->where('favoritable_type', Song::class)
                 ->pluck('favoritable_id');
             $songs = Song::whereIn('id', $songIds)
-                ->with(['artist', 'album', 'smartFolder', 'genres', 'tags'])
+                ->with(['artist', 'album', 'genres', 'tags'])
                 ->get();
             $data['songs'] = SongResource::collection($songs);
         }

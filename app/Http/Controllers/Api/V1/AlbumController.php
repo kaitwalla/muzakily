@@ -74,7 +74,7 @@ class AlbumController extends Controller
     public function songs(Album $album): AnonymousResourceCollection
     {
         $songs = $album->songs()
-            ->with(['artist', 'smartFolder', 'genres'])
+            ->with(['artist', 'genres', 'tags'])
             ->orderBy('disc')
             ->orderBy('track')
             ->get();

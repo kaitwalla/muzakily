@@ -38,11 +38,6 @@ export interface Song {
     audio_format: string;
     is_favorite: boolean;
     play_count: number;
-    smart_folder?: {
-        id: number;
-        name: string;
-        path: string;
-    };
     tags?: Array<{
         id: number;
         name: string;

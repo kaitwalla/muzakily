@@ -72,7 +72,7 @@ class ArtistController extends Controller
     public function songs(Request $request, Artist $artist): AnonymousResourceCollection
     {
         $query = $artist->songs()
-            ->with(['album', 'smartFolder', 'genres']);
+            ->with(['album', 'genres', 'tags']);
 
         // Sorting
         $sortField = $request->input('sort', 'album_name');

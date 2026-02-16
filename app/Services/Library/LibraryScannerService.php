@@ -10,8 +10,8 @@ use App\Jobs\FetchArtistImageJob;
 use App\Models\Album;
 use App\Models\Artist;
 use App\Models\ScanCache;
-use App\Models\SmartFolder;
 use App\Models\Song;
+use App\Models\Tag;
 use App\Services\Library\TagService;
 use Closure;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +21,6 @@ class LibraryScannerService
     public function __construct(
         private MusicStorageInterface $storage,
         private MetadataExtractorService $metadataExtractor,
-        private SmartFolderService $smartFolderService,
         private TagService $tagService,
         private CoverArtService $coverArtService,
     ) {}
@@ -91,11 +90,8 @@ class LibraryScannerService
         // Prune orphaned entries (files that no longer exist in R2)
         $stats['removed_songs'] = $this->pruneOrphans($bucket, $scanStartedAt);
 
-        // Update smart folder song counts
-        SmartFolder::all()->each->updateSongCount();
-
         // Update tag song counts
-        \App\Models\Tag::all()->each->updateSongCount();
+        Tag::all()->each->updateSongCount();
 
         if ($onProgress) {
             $onProgress($stats);
@@ -212,14 +208,10 @@ class LibraryScannerService
                 }
             }
 
-            // Assign smart folder
-            $smartFolder = $this->smartFolderService->assignFromPath($object['key']);
-
             // Create or update song
             $songData = [
                 'album_id' => $album?->id,
                 'artist_id' => $artist?->id,
-                'smart_folder_id' => $smartFolder?->id,
                 'title' => $metadata['title'] ?? pathinfo($object['key'], PATHINFO_FILENAME),
                 'album_name' => $metadata['album'] ?? null,
                 'artist_name' => $metadata['artist'] ?? null,

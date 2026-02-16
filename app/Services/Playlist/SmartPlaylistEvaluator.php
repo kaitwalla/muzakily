@@ -31,12 +31,12 @@ class SmartPlaylistEvaluator
         // Use materialized results if available and up-to-date
         if ($playlist->materialized_at !== null && !$playlist->needsRematerialization()) {
             return $playlist->songs()
-                ->with(['artist', 'album', 'genres', 'smartFolder'])
+                ->with(['artist', 'album', 'genres', 'tags'])
                 ->get();
         }
 
         // Fall back to dynamic evaluation
-        $query = Song::query()->with(['artist', 'album', 'genres', 'smartFolder']);
+        $query = Song::query()->with(['artist', 'album', 'genres', 'tags']);
 
         foreach ($playlist->rules as $ruleGroup) {
             $this->applyRuleGroup($query, $ruleGroup, $user);
@@ -58,7 +58,7 @@ class SmartPlaylistEvaluator
             return new Collection();
         }
 
-        $query = Song::query()->with(['artist', 'album', 'genres', 'smartFolder']);
+        $query = Song::query()->with(['artist', 'album', 'genres', 'tags']);
 
         foreach ($playlist->rules as $ruleGroup) {
             $this->applyRuleGroup($query, $ruleGroup, $user);

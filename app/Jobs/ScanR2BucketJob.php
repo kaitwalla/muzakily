@@ -176,9 +176,6 @@ class ScanR2BucketJob implements ShouldQueue
             });
         }
 
-        \App\Models\SmartFolder::chunk(100, function ($folders) {
-            $folders->each->updateSongCount();
-        });
         \App\Models\Tag::chunk(100, function ($tags) {
             $tags->each->updateSongCount();
         });

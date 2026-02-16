@@ -7,7 +7,6 @@ namespace Database\Factories;
 use App\Enums\AudioFormat;
 use App\Models\Album;
 use App\Models\Artist;
-use App\Models\SmartFolder;
 use App\Models\Song;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -34,7 +33,6 @@ class SongFactory extends Factory
         return [
             'album_id' => Album::factory(),
             'artist_id' => Artist::factory(),
-            'smart_folder_id' => null,
             'title' => $title,
             'title_normalized' => Str::lower(Str::ascii($title)),
             'album_name' => $albumName,
@@ -99,17 +97,6 @@ class SongFactory extends Factory
             'audio_format' => AudioFormat::FLAC,
             'mime_type' => 'audio/flac',
             'storage_path' => preg_replace('/\.\w+$/', '.flac', $attributes['storage_path']),
-        ]);
-    }
-
-    /**
-     * Assign to a smart folder.
-     */
-    public function inFolder(SmartFolder $folder): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'smart_folder_id' => $folder->id,
-            'storage_path' => $folder->path_prefix . '/' . basename($attributes['storage_path']),
         ]);
     }
 

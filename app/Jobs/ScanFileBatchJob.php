@@ -13,7 +13,6 @@ use App\Models\ScanCache;
 use App\Models\Song;
 use App\Services\Library\CoverArtService;
 use App\Services\Library\MetadataExtractorService;
-use App\Services\Library\SmartFolderService;
 use App\Services\Library\TagService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -54,7 +53,6 @@ class ScanFileBatchJob implements ShouldQueue
      */
     public function handle(
         MusicStorageInterface $storage,
-        SmartFolderService $smartFolderService,
         TagService $tagService,
         CoverArtService $coverArtService,
     ): void {
@@ -82,7 +80,6 @@ class ScanFileBatchJob implements ShouldQueue
 
                 $this->processFile(
                     $storage,
-                    $smartFolderService,
                     $tagService,
                     $coverArtService,
                     $object,
@@ -107,7 +104,6 @@ class ScanFileBatchJob implements ShouldQueue
      */
     private function processFile(
         MusicStorageInterface $storage,
-        SmartFolderService $smartFolderService,
         TagService $tagService,
         CoverArtService $coverArtService,
         array $object,
@@ -151,7 +147,7 @@ class ScanFileBatchJob implements ShouldQueue
         }
 
         // Wrap all database operations in a transaction
-        DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache, $smartFolderService, $tagService, $coverArtService) {
+        DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache, $tagService, $coverArtService) {
             // Find or create artist
             $artist = null;
             if ($metadata['artist'] ?? null) {
@@ -176,14 +172,10 @@ class ScanFileBatchJob implements ShouldQueue
                 }
             }
 
-            // Assign smart folder
-            $smartFolder = $smartFolderService->assignFromPath($object['key']);
-
             // Create or update song
             $songData = [
                 'album_id' => $album?->id,
                 'artist_id' => $artist?->id,
-                'smart_folder_id' => $smartFolder?->id,
                 'title' => $metadata['title'] ?? pathinfo($object['key'], PATHINFO_FILENAME),
                 'album_name' => $metadata['album'] ?? null,
                 'artist_name' => $metadata['artist'] ?? null,

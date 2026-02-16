@@ -63,7 +63,7 @@ class PostgresSearchService
                     ->orWhere('artist_name', 'ilike', "%{$escapedQuery}%")
                     ->orWhere('album_name', 'ilike', "%{$escapedQuery}%");
             })
-            ->with(['artist', 'album', 'smartFolder', 'genres', 'tags']);
+            ->with(['artist', 'album', 'genres', 'tags']);
 
         // Apply filters
         if (!empty($filters['year'])) {

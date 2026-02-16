@@ -125,7 +125,7 @@ class PlaylistController extends Controller
             $songs = $this->smartPlaylistEvaluator->evaluate($playlist, $request->user());
         } else {
             $songs = $playlist->songs()
-                ->with(['artist', 'album', 'smartFolder', 'genres'])
+                ->with(['artist', 'album', 'genres', 'tags'])
                 ->get();
         }
 

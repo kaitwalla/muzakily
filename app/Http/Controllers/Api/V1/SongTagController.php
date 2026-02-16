@@ -34,7 +34,7 @@ class SongTagController extends Controller
 
         $this->tagService->addTagsToSong($song, $tagIds);
 
-        $song->load(['artist', 'album', 'smartFolder', 'genres', 'tags']);
+        $song->load(['artist', 'album', 'genres', 'tags']);
 
         return response()->json([
             'data' => new SongResource($song),
@@ -58,7 +58,7 @@ class SongTagController extends Controller
 
         $this->tagService->removeTagsFromSong($song, $tagIds);
 
-        $song->load(['artist', 'album', 'smartFolder', 'genres', 'tags']);
+        $song->load(['artist', 'album', 'genres', 'tags']);
 
         return response()->json([
             'data' => new SongResource($song),
