@@ -23,6 +23,7 @@ class ImportPlexRatingsCommand extends Command
         {--min-rating=2 : Minimum star rating to import (1-5, default 2)}
         {--dry-run : Preview matches without creating favorites}
         {--debug : Show sample paths to help diagnose matching issues}
+        {--diagnose : Analyze why first 5 unmatched songs fail to match}
         {--limit= : Limit number of tracks to process}';
 
     /**
@@ -166,6 +167,8 @@ class ImportPlexRatingsCommand extends Command
         $created = 0;
         $alreadyFavorited = 0;
         $notFound = [];
+        $diagnose = (bool) $this->option('diagnose');
+        $diagnosedCount = 0;
 
         $progressBar = $this->output->createProgressBar(count($tracks));
         $progressBar->start();
@@ -201,6 +204,16 @@ class ImportPlexRatingsCommand extends Command
                     'path' => $relativePath,
                     'rating' => $track['rating'],
                 ];
+
+                // Diagnose why this track didn't match
+                if ($diagnose && $diagnosedCount < 5) {
+                    $diagnosedCount++;
+                    $progressBar->clear();
+                    $this->newLine();
+                    $this->warn("=== Diagnosing: {$track['title']} by {$track['artist']} ===");
+                    $this->diagnoseMismatch($r2Path, $relativePath, $track);
+                    $progressBar->display();
+                }
             }
 
             $progressBar->advance();
@@ -291,5 +304,82 @@ class ImportPlexRatingsCommand extends Command
     private function escapeLikeWildcards(string $value): string
     {
         return addcslashes($value, '%_\\');
+    }
+
+    /**
+     * Diagnose why a track didn't match any song.
+     *
+     * @param array{title: string, artist: string, album: string} $track
+     */
+    private function diagnoseMismatch(string $r2Path, string $relativePath, array $track): void
+    {
+        $this->line("  Plex path: {$relativePath}");
+        $this->line("  R2 path:   {$r2Path}");
+        $this->newLine();
+
+        // Strategy 1: Exact path
+        $this->info("  Strategy 1 - Exact path match:");
+        $exactCount = Song::where('storage_path', $r2Path)->count();
+        $this->line("    Query: storage_path = '{$r2Path}'");
+        $this->line("    Result: {$exactCount} matches");
+
+        // Strategy 2: Path suffix
+        $this->info("  Strategy 2 - Path suffix match:");
+        $escapedRelativePath = $this->escapeLikeWildcards($relativePath);
+        $suffixCount = Song::where('storage_path', 'ilike', '%' . $escapedRelativePath)->count();
+        $this->line("    Query: storage_path ILIKE '%{$escapedRelativePath}'");
+        $this->line("    Result: {$suffixCount} matches");
+
+        // Show similar paths if no match
+        if ($suffixCount === 0) {
+            $pathParts = explode('/', $relativePath);
+            $lastTwoParts = implode('/', array_slice($pathParts, -2));
+            $similarPaths = Song::where('storage_path', 'ilike', '%' . $this->escapeLikeWildcards($lastTwoParts) . '%')
+                ->limit(3)
+                ->pluck('storage_path');
+            if ($similarPaths->isNotEmpty()) {
+                $this->line("    Similar paths in DB:");
+                foreach ($similarPaths as $p) {
+                    $this->line("      - {$p}");
+                }
+            }
+        }
+
+        // Strategy 3: Filename
+        $this->info("  Strategy 3 - Filename match:");
+        $filename = pathinfo($relativePath, PATHINFO_BASENAME);
+        $escapedFilename = $this->escapeLikeWildcards($filename);
+        $filenameCount = Song::where('storage_path', 'ilike', '%/' . $escapedFilename)->count();
+        $this->line("    Filename: {$filename}");
+        $this->line("    Result: {$filenameCount} matches");
+
+        // Strategy 4: Title + Artist
+        $this->info("  Strategy 4 - Title + Artist match:");
+        $normalizedTitle = Song::normalizeName($track['title']);
+        $this->line("    Title: '{$track['title']}' -> normalized: '{$normalizedTitle}'");
+        $this->line("    Artist: '{$track['artist']}'");
+
+        // Check title matches
+        $titleMatches = Song::where('title_normalized', $normalizedTitle)->get(['id', 'title', 'artist_name']);
+        $this->line("    Songs with matching title: {$titleMatches->count()}");
+
+        if ($titleMatches->isNotEmpty()) {
+            foreach ($titleMatches->take(3) as $s) {
+                $this->line("      - '{$s->title}' by '{$s->artist_name}'");
+            }
+        } else {
+            // Show similar titles
+            $similarTitles = Song::where('title_normalized', 'ilike', '%' . $normalizedTitle . '%')
+                ->limit(3)
+                ->get(['title', 'artist_name']);
+            if ($similarTitles->isNotEmpty()) {
+                $this->line("    Similar titles in DB:");
+                foreach ($similarTitles as $s) {
+                    $this->line("      - '{$s->title}' by '{$s->artist_name}'");
+                }
+            }
+        }
+
+        $this->newLine();
     }
 }
