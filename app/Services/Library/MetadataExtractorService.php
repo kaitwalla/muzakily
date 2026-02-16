@@ -11,25 +11,6 @@ use Illuminate\Support\Facades\Process;
 class MetadataExtractorService
 {
     /**
-     * Memory threshold (in bytes) below which we use subprocess extraction.
-     * Default: 256MB available memory required for in-process extraction.
-     */
-    private const MEMORY_THRESHOLD = 268435456;
-
-    /**
-     * File size threshold (in bytes) above which we always use subprocess.
-     * Default: 50MB - large files are more likely to cause memory issues.
-     */
-    private const LARGE_FILE_THRESHOLD = 52428800;
-
-    /**
-     * File extensions that are known to be memory-intensive to parse.
-     *
-     * @var array<string>
-     */
-    private const MEMORY_INTENSIVE_FORMATS = ['flac', 'wav', 'aiff', 'aif'];
-
-    /**
      * Create a fresh getID3 instance.
      *
      * We create a new instance per extraction to avoid memory accumulation
@@ -66,84 +47,11 @@ class MetadataExtractorService
      */
     public function safeExtract(string $filePath): ?array
     {
-        // Check if we should use subprocess directly
-        if ($this->shouldUseSubprocess($filePath)) {
-            Log::debug('Using subprocess extraction for memory-intensive file', [
-                'file' => basename($filePath),
-            ]);
-            return $this->extractInSubprocess($filePath);
-        }
-
-        // Try in-process extraction first
-        try {
-            return $this->extract($filePath);
-        } catch (\Throwable $e) {
-            Log::warning('In-process metadata extraction failed, trying subprocess', [
-                'file' => basename($filePath),
-                'error' => $e->getMessage(),
-            ]);
-
-            return $this->extractInSubprocess($filePath);
-        }
+        // Always use subprocess extraction during scanning.
+        // getID3 can trigger PHP OOM FatalError which can't be caught.
+        // Subprocess isolates memory so crashes don't kill the queue worker.
+        return $this->extractInSubprocess($filePath);
     }
-
-    /**
-     * Determine if subprocess extraction should be used for this file.
-     */
-    private function shouldUseSubprocess(string $filePath): bool
-    {
-        // Check file extension
-        $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
-        if (in_array($extension, self::MEMORY_INTENSIVE_FORMATS, true)) {
-            return true;
-        }
-
-        // Check file size
-        $fileSize = @filesize($filePath);
-        if ($fileSize !== false && $fileSize > self::LARGE_FILE_THRESHOLD) {
-            return true;
-        }
-
-        // Check available memory
-        $memoryLimit = $this->getMemoryLimitBytes();
-        $memoryUsed = memory_get_usage(true);
-        $availableMemory = $memoryLimit - $memoryUsed;
-
-        if ($availableMemory < self::MEMORY_THRESHOLD) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Get PHP memory limit in bytes.
-     */
-    private function getMemoryLimitBytes(): int
-    {
-        $limit = ini_get('memory_limit');
-
-        // Handle empty or unlimited memory
-        if ($limit === '' || $limit === '-1') {
-            return PHP_INT_MAX;
-        }
-
-        $limit = strtolower($limit);
-        $value = (int) $limit;
-
-        if (str_ends_with($limit, 'g')) {
-            return $value * 1024 * 1024 * 1024;
-        }
-        if (str_ends_with($limit, 'm')) {
-            return $value * 1024 * 1024;
-        }
-        if (str_ends_with($limit, 'k')) {
-            return $value * 1024;
-        }
-
-        return $value;
-    }
-
     /**
      * Extract metadata in a subprocess to isolate memory usage.
      *
