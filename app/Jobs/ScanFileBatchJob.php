@@ -33,9 +33,19 @@ class ScanFileBatchJob implements ShouldQueue
     public int $tries = 1;
 
     /**
+     * The maximum number of unhandled exceptions to allow before failing.
+     */
+    public int $maxExceptions = 1;
+
+    /**
      * The number of seconds the job can run before timing out.
      */
     public int $timeout = 600; // 10 minutes per batch
+
+    /**
+     * Indicate if the job should be marked as failed on timeout.
+     */
+    public bool $failOnTimeout = true;
 
     /**
      * Create a new job instance.
@@ -270,5 +280,21 @@ class ScanFileBatchJob implements ShouldQueue
         } finally {
             @unlink($tempPath);
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(?\Throwable $exception): void
+    {
+        $fileKeys = array_map(fn ($f) => $f['key'], $this->files);
+
+        Log::error('ScanFileBatchJob failed', [
+            'batch_id' => $this->batchId,
+            'file_count' => count($this->files),
+            'first_files' => array_slice($fileKeys, 0, 5),
+            'error' => $exception?->getMessage(),
+            'exception_class' => $exception ? get_class($exception) : null,
+        ]);
     }
 }
