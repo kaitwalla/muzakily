@@ -20,6 +20,7 @@ use App\Http\Requests\Api\V1\ReorderPlaylistSongsRequest;
 use App\Http\Requests\Api\V1\UploadPlaylistCoverRequest;
 use App\Http\Resources\Api\V1\PlaylistResource;
 use App\Http\Resources\Api\V1\SongResource;
+use App\Jobs\RefreshSmartPlaylistJob;
 use App\Models\Playlist;
 use App\Services\Playlist\SmartPlaylistEvaluator;
 use Illuminate\Http\Request;
@@ -131,15 +132,40 @@ class PlaylistController extends Controller
     {
         $this->authorize('view', $playlist);
 
+        $limit = max(1, min($request->integer('limit', 75), 500));
+        $offset = max($request->integer('offset', 0), 0);
+
         if ($playlist->is_smart) {
-            $songs = $this->smartPlaylistEvaluator->evaluate($playlist, $request->user());
+            // Use materialized results if available and up-to-date
+            if ($playlist->materialized_at !== null && !$playlist->needsRematerialization()) {
+                $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
+                $total = $query->count();
+                $songs = $query->skip($offset)->take($limit)->get();
+            } else {
+                // Dynamic evaluation with pagination
+                $result = $this->smartPlaylistEvaluator->evaluatePaginated(
+                    $playlist,
+                    $request->user(),
+                    $limit,
+                    $offset
+                );
+                $songs = $result['songs'];
+                $total = $result['total'];
+            }
         } else {
-            $songs = $playlist->songs()
-                ->with(['artist', 'album', 'genres', 'tags'])
-                ->get();
+            $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
+            $total = $query->count();
+            $songs = $query->skip($offset)->take($limit)->get();
         }
 
-        return SongResource::collection($songs);
+        return SongResource::collection($songs)->additional([
+            'meta' => [
+                'total' => $total,
+                'limit' => $limit,
+                'offset' => $offset,
+                'has_more' => ($offset + $songs->count()) < $total,
+            ],
+        ]);
     }
 
     /**
@@ -277,6 +303,30 @@ class PlaylistController extends Controller
 
         return response()->json([
             'data' => new PlaylistResource($playlist->fresh()),
+        ]);
+    }
+
+    /**
+     * Refresh the songs in a smart playlist by re-evaluating rules.
+     */
+    public function refresh(Playlist $playlist): JsonResponse
+    {
+        $this->authorize('update', $playlist);
+
+        if (!$playlist->is_smart) {
+            return response()->json([
+                'error' => [
+                    'code' => 'INVALID_OPERATION',
+                    'message' => 'Refresh is only available for smart playlists',
+                ],
+            ], 422);
+        }
+
+        RefreshSmartPlaylistJob::dispatch($playlist);
+
+        return response()->json([
+            'data' => new PlaylistResource($playlist),
+            'message' => 'Playlist refresh has been queued',
         ]);
     }
 }

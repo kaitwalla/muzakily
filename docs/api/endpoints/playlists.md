@@ -165,7 +165,21 @@ Permanently delete a playlist.
 GET /api/v1/playlists/{id}/songs
 ```
 
-Returns songs in the playlist. For smart playlists, rules are evaluated dynamically.
+Returns songs in the playlist with pagination. For smart playlists, uses materialized results if available, otherwise evaluates rules dynamically.
+
+### Query Parameters
+
+| Parameter | Type | Default | Max | Description |
+|-----------|------|---------|-----|-------------|
+| `limit` | integer | 75 | 500 | Number of songs to return |
+| `offset` | integer | 0 | - | Number of songs to skip |
+
+### Example Request
+
+```bash
+curl "https://api.example.com/api/v1/playlists/1/songs?limit=50&offset=100" \
+  -H "Authorization: Bearer {token}"
+```
 
 ### Example Response
 
@@ -180,7 +194,13 @@ Returns songs in the playlist. For smart playlists, rules are evaluated dynamica
       "length": 245,
       ...
     }
-  ]
+  ],
+  "meta": {
+    "total": 250,
+    "limit": 50,
+    "offset": 100,
+    "has_more": true
+  }
 }
 ```
 
@@ -292,6 +312,51 @@ curl -X POST "https://api.example.com/api/v1/playlists/{id}/cover" \
 - JPEG
 - PNG
 - WebP
+
+## Refresh Smart Playlist
+
+```
+POST /api/v1/playlists/{id}/refresh
+```
+
+Re-evaluate smart playlist rules and update the materialized song list. Use this to force an immediate refresh after adding songs to the library.
+
+Smart playlists are automatically refreshed:
+- On creation
+- When rules are updated
+- Every hour, for playlists that haven't been refreshed in the last 24 hours
+
+### Request
+
+```bash
+curl -X POST "https://api.example.com/api/v1/playlists/{id}/refresh" \
+  -H "Authorization: Bearer {token}"
+```
+
+### Response
+
+```json
+{
+  "data": {
+    "id": 2,
+    "name": "Recently Added Rock",
+    "is_smart": true,
+    ...
+  },
+  "message": "Playlist refresh has been queued"
+}
+```
+
+### Error: Not a Smart Playlist
+
+```json
+{
+  "error": {
+    "code": "INVALID_OPERATION",
+    "message": "Refresh is only available for smart playlists"
+  }
+}
+```
 
 ## Refresh Playlist Cover (Smart Playlists Only)
 

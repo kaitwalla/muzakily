@@ -164,6 +164,21 @@ OR Tag: has "Energy"
 
 Songs update immediately based on new rules.
 
+## Refreshing Smart Playlists
+
+Smart playlists automatically update when:
+- You edit the rules
+- New songs are added to your library (checked hourly)
+- Songs in your library are modified
+
+To force an immediate refresh:
+
+1. Open the smart playlist
+2. Click **...** menu
+3. Select **Refresh**
+
+This is useful after bulk-adding new music to ensure all matching songs appear immediately.
+
 ## Limitations
 
 Smart playlists are dynamic:

@@ -106,6 +106,36 @@ class SmartPlaylistEvaluator
     }
 
     /**
+     * Evaluate a smart playlist with pagination support.
+     *
+     * Returns both the paginated songs and total count for efficient pagination.
+     *
+     * @return array{songs: Collection<int, Song>, total: int}
+     */
+    public function evaluatePaginated(Playlist $playlist, ?User $user, int $limit, int $offset): array
+    {
+        if (!$playlist->is_smart || empty($playlist->rules)) {
+            return ['songs' => new Collection(), 'total' => 0];
+        }
+
+        $query = Song::query();
+
+        foreach ($playlist->rules as $ruleGroup) {
+            $this->applyRuleGroup($query, $ruleGroup, $user);
+        }
+
+        $total = $query->count();
+
+        $songs = (clone $query)
+            ->with(['artist', 'album', 'genres', 'tags'])
+            ->skip($offset)
+            ->take($limit)
+            ->get();
+
+        return ['songs' => $songs, 'total' => $total];
+    }
+
+    /**
      * Apply a rule group to the query.
      *
      * @param Builder<Song> $query

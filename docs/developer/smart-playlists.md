@@ -60,45 +60,69 @@ class Playlist extends Model
 
 ### SmartPlaylistEvaluator
 
+The evaluator is located at `app/Services/Playlist/SmartPlaylistEvaluator.php`:
+
 ```php
-namespace App\Services;
+namespace App\Services\Playlist;
 
 class SmartPlaylistEvaluator
 {
-    public function evaluate(array $rules): Builder
-    {
-        $query = Song::query();
+    /**
+     * Evaluate a smart playlist and return matching songs.
+     * Uses materialized results if available and up-to-date.
+     */
+    public function evaluate(Playlist $playlist, ?User $user = null): Collection;
 
-        foreach ($rules as $group) {
-            $query = $this->applyGroup($query, $group);
-        }
+    /**
+     * Always evaluates rules from scratch (bypasses materialization).
+     * Used by RefreshSmartPlaylistJob.
+     */
+    public function evaluateDynamic(Playlist $playlist, ?User $user = null): Collection;
 
-        return $query;
-    }
+    /**
+     * Paginated evaluation for large playlists.
+     * Returns ['songs' => Collection, 'total' => int]
+     */
+    public function evaluatePaginated(Playlist $playlist, ?User $user, int $limit, int $offset): array;
 
-    protected function applyGroup(Builder $query, array $group): Builder
-    {
-        $logic = $group['logic'] ?? 'and';
-        $rules = $group['rules'] ?? [];
+    /**
+     * Check if a single song matches the playlist rules.
+     * Used for incremental updates.
+     */
+    public function matches(Playlist $playlist, Song $song, ?User $user = null): bool;
 
-        return $query->where(function ($q) use ($logic, $rules) {
-            foreach ($rules as $rule) {
-                $method = $logic === 'or' ? 'orWhere' : 'where';
-                $this->applyRule($q, $rule, $method);
-            }
-        });
-    }
-
-    protected function applyRule(Builder $query, array $rule, string $method): void
-    {
-        $field = $rule['field'];
-        $operator = $rule['operator'];
-        $value = $rule['value'];
-
-        $handler = $this->getFieldHandler($field);
-        $handler->apply($query, $operator, $value, $method);
-    }
+    /**
+     * Count matching songs without loading them.
+     */
+    public function count(Playlist $playlist, ?User $user = null): int;
 }
+```
+
+The evaluator applies rule groups using AND/OR logic:
+
+```php
+private function applyRuleGroup(Builder $query, array $ruleGroup, ?User $user): void
+{
+    $logic = strtolower($ruleGroup['logic']);
+    $rules = $ruleGroup['rules'];
+
+    $query->where(function (Builder $groupQuery) use ($rules, $logic, $user) {
+        foreach ($rules as $rule) {
+            $method = $logic === 'or' ? 'orWhere' : 'where';
+            $this->applyRule($groupQuery, $rule, $method, $user);
+        }
+    });
+}
+
+/**
+ * Apply a single rule to the query builder.
+ *
+ * @param Builder $query The query builder to modify
+ * @param array $rule The rule with field, operator, and value
+ * @param string $method The where method to use ('where' or 'orWhere')
+ * @param User|null $user The user context for user-specific rules (play_count, is_favorite, etc.)
+ */
+private function applyRule(Builder $query, array $rule, string $method, ?User $user): void;
 ```
 
 ### Field Handlers
@@ -351,55 +375,251 @@ export const fields = {
 };
 ```
 
+## Materialization
+
+Smart playlists use a hybrid evaluation strategy combining materialized results with dynamic evaluation.
+
+### Database Schema
+
+The `playlists` table includes:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `is_smart` | boolean | Whether this is a smart playlist |
+| `rules` | jsonb | Rule groups for smart playlists |
+| `rules_updated_at` | timestamp | When rules were last modified |
+| `materialized_at` | timestamp | When songs were last materialized |
+
+### Materialization Strategy
+
+Smart playlist songs are stored in the `playlist_song` pivot table (same as regular playlists) for fast retrieval.
+
+**When materialization occurs:**
+
+1. **On creation** - `PlaylistObserver::created()` dispatches `RefreshSmartPlaylistJob`
+2. **When rules change** - `PlaylistObserver::updated()` dispatches `RefreshSmartPlaylistJob`
+3. **Scheduled refresh** - `RefreshStaleSmartPlaylistsJob` runs hourly for playlists not refreshed in 24 hours
+4. **Manual refresh** - `POST /api/v1/playlists/{id}/refresh` queues immediate refresh
+
+### RefreshSmartPlaylistJob
+
+Located at `app/Jobs/RefreshSmartPlaylistJob.php`:
+
+```php
+class RefreshSmartPlaylistJob implements ShouldQueue, ShouldBeUnique
+{
+    public function __construct(
+        public Playlist $playlist
+    ) {}
+
+    public function handle(SmartPlaylistEvaluator $evaluator): void
+    {
+        if (!$this->playlist->is_smart) {
+            return;
+        }
+
+        $user = $this->playlist->user;
+
+        DB::transaction(function () use ($evaluator, $user) {
+            // Clear existing materialized songs
+            $this->playlist->songs()->detach();
+
+            if (empty($this->playlist->rules)) {
+                $this->playlist->update(['materialized_at' => now()]);
+                return;
+            }
+
+            // Get all matching song IDs
+            $matchingSongIds = $evaluator->evaluateDynamic($this->playlist, $user)
+                ->pluck('id')
+                ->all();
+
+            if (count($matchingSongIds) > 0) {
+                // Bulk insert with positions
+                $pivotData = [];
+                foreach ($matchingSongIds as $index => $songId) {
+                    $pivotData[$songId] = [
+                        'position' => $index,
+                        'added_by' => null,
+                        'created_at' => now(),
+                    ];
+                }
+                $this->playlist->songs()->attach($pivotData);
+            }
+
+            $this->playlist->update(['materialized_at' => now()]);
+        });
+    }
+}
+```
+
+### Incremental Updates
+
+When songs are modified, `UpdateSmartPlaylistsForSongJob` updates materialized playlists incrementally:
+
+```php
+// app/Jobs/UpdateSmartPlaylistsForSongJob.php
+class UpdateSmartPlaylistsForSongJob implements ShouldQueue, ShouldBeUnique
+{
+    public function __construct(
+        public Song $song,
+        public bool $removing = false
+    ) {}
+
+    public function handle(SmartPlaylistEvaluator $evaluator): void
+    {
+    // Only updates already-materialized playlists
+    $smartPlaylists = Playlist::smart()
+        ->whereNotNull('materialized_at')
+        ->get();
+
+    foreach ($smartPlaylists as $playlist) {
+        $user = $playlist->user;
+        $matches = $evaluator->matches($playlist, $this->song, $user);
+        $existsInPlaylist = $playlist->songs()
+            ->where('songs.id', $this->song->id)
+            ->exists();
+
+        if ($matches && !$existsInPlaylist) {
+            // Add song to playlist at end
+            $maxPosition = $playlist->songs()->max('playlist_song.position') ?? -1;
+            $playlist->songs()->attach($this->song->id, [
+                'position' => $maxPosition + 1,
+                'added_by' => null,
+                'created_at' => now(),
+            ]);
+        } elseif (!$matches && $existsInPlaylist) {
+            // Remove song from playlist
+            $playlist->songs()->detach($this->song->id);
+        }
+    }
+    }
+}
+```
+
+### needsRematerialization()
+
+The `Playlist` model includes a helper method to check if materialization is stale:
+
+```php
+public function needsRematerialization(): bool
+{
+    if (!$this->is_smart) {
+        return false;
+    }
+
+    // Never materialized
+    if ($this->materialized_at === null) {
+        return true;
+    }
+
+    // Rules were updated after last materialization
+    if ($this->rules_updated_at !== null && $this->rules_updated_at > $this->materialized_at) {
+        return true;
+    }
+
+    return false;
+}
+```
+
+### Scheduled Refresh
+
+The `RefreshStaleSmartPlaylistsJob` ensures playlists stay current:
+
+```php
+// app/Jobs/RefreshStaleSmartPlaylistsJob.php
+class RefreshStaleSmartPlaylistsJob implements ShouldQueue
+{
+    public function __construct(
+        public int $staleAfterHours = 24
+    ) {}
+
+    public function handle(): void
+    {
+        $threshold = Carbon::now()->subHours($this->staleAfterHours);
+
+        Playlist::query()
+            ->where('is_smart', true)
+            ->where(function ($query) use ($threshold) {
+                $query->whereNull('materialized_at')
+                    ->orWhere('materialized_at', '<', $threshold);
+            })
+            ->each(function (Playlist $playlist) {
+                RefreshSmartPlaylistJob::dispatch($playlist);
+            });
+    }
+}
+```
+
+Scheduled in `routes/console.php`:
+
+```php
+Schedule::job(new RefreshStaleSmartPlaylistsJob(staleAfterHours: 24))
+    ->hourly()
+    ->withoutOverlapping();
+```
+
 ## Performance Considerations
 
 ### Eager Loading
 
+All evaluation methods eager load relationships:
+
 ```php
-public function evaluate(array $rules): Builder
-{
-    return Song::query()
-        ->with(['artist', 'album', 'tags'])
-        ->where(...);
-}
+$query = Song::query()->with(['artist', 'album', 'genres', 'tags']);
 ```
 
-### Caching Results
+### Pagination
 
-For frequently accessed smart playlists:
+The songs endpoint in `PlaylistController` supports pagination with default limit of 75 (min 1, max 500):
 
 ```php
-public function getCachedSongs(Playlist $playlist): Collection
+// app/Http/Controllers/Api/V1/PlaylistController.php
+class PlaylistController extends Controller
 {
-    if (!$playlist->is_smart) {
-        return $playlist->songs;
+    public function __construct(
+        // ... other dependencies
+        private readonly SmartPlaylistEvaluator $smartPlaylistEvaluator,
+    ) {}
+
+    public function songs(Request $request, Playlist $playlist): AnonymousResourceCollection
+    {
+        $this->authorize('view', $playlist);
+
+    $limit = max(1, min($request->integer('limit', 75), 500));
+    $offset = max($request->integer('offset', 0), 0);
+
+    if ($playlist->is_smart) {
+        // Use materialized results if available and up-to-date
+        if ($playlist->materialized_at !== null && !$playlist->needsRematerialization()) {
+            $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
+            $total = $query->count();
+            $songs = $query->skip($offset)->take($limit)->get();
+        } else {
+            // Dynamic evaluation with pagination
+            $result = $this->smartPlaylistEvaluator->evaluatePaginated(
+                $playlist,
+                $request->user(),
+                $limit,
+                $offset
+            );
+            $songs = $result['songs'];
+            $total = $result['total'];
+        }
+    } else {
+        $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
+        $total = $query->count();
+        $songs = $query->skip($offset)->take($limit)->get();
     }
 
-    return Cache::remember(
-        "smart_playlist:{$playlist->id}",
-        300, // 5 minutes
-        fn () => $this->evaluate($playlist->rules)->get()
-    );
-}
-
-// Invalidate on library changes
-Event::listen(SongCreated::class, function () {
-    Cache::tags('smart_playlists')->flush();
-});
-```
-
-### Limiting Results
-
-```php
-public function songs(Playlist $playlist, Request $request)
-{
-    $limit = $request->input('limit', 100);
-    $offset = $request->input('offset', 0);
-
-    $query = $this->evaluator->evaluate($playlist->rules);
-
-    return SongResource::collection(
-        $query->skip($offset)->take($limit)->get()
-    );
+    return SongResource::collection($songs)->additional([
+        'meta' => [
+            'total' => $total,
+            'limit' => $limit,
+            'offset' => $offset,
+            'has_more' => ($offset + $songs->count()) < $total,
+        ],
+    ]);
+    }
 }
 ```
