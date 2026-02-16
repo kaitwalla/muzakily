@@ -7,6 +7,7 @@ namespace App\Console\Commands;
 use App\Jobs\LibraryScanJob;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\DB;
 
 class LibraryScanStatusCommand extends Command
 {
@@ -16,7 +17,8 @@ class LibraryScanStatusCommand extends Command
      * @var string
      */
     protected $signature = 'library:scan:status
-        {--clear : Clear the scan status}';
+        {--clear : Clear the scan status}
+        {--cancel : Cancel any running scan}';
 
     /**
      * The console command description.
@@ -30,6 +32,10 @@ class LibraryScanStatusCommand extends Command
      */
     public function handle(): int
     {
+        if ($this->option('cancel')) {
+            return $this->cancelScan();
+        }
+
         if ($this->option('clear')) {
             LibraryScanJob::clearStatus();
             $this->info('Scan status cleared.');
@@ -66,6 +72,64 @@ class LibraryScanStatusCommand extends Command
             if (!empty($status['stats']['batch_id'])) {
                 $this->displayBatchProgress($status['stats']['batch_id']);
             }
+        }
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Cancel any running scan.
+     */
+    private function cancelScan(): int
+    {
+        $cancelled = 0;
+
+        // Try to cancel batch from current status
+        $status = LibraryScanJob::getStatus();
+        if (!empty($status['stats']['batch_id'])) {
+            $batch = Bus::findBatch($status['stats']['batch_id']);
+            if ($batch && !$batch->cancelled()) {
+                $batch->cancel();
+                $this->info("Cancelled batch: {$batch->id}");
+                $cancelled++;
+            }
+        }
+
+        // Also find any unfinished library-scan batches
+        $pendingBatches = DB::table('job_batches')
+            ->whereNull('cancelled_at')
+            ->whereNull('finished_at')
+            ->where('name', 'like', '%library-scan%')
+            ->orWhere('name', 'like', '%scan-%')
+            ->get();
+
+        foreach ($pendingBatches as $row) {
+            $batch = Bus::findBatch($row->id);
+            if ($batch && !$batch->cancelled()) {
+                $batch->cancel();
+                $this->info("Cancelled batch: {$batch->id} ({$batch->name})");
+                $cancelled++;
+            }
+        }
+
+        // Clear pending scan jobs from queue
+        $deletedJobs = DB::table('jobs')
+            ->where('payload', 'like', '%ScanFileBatchJob%')
+            ->orWhere('payload', 'like', '%LibraryScanJob%')
+            ->orWhere('payload', 'like', '%ScanR2BucketJob%')
+            ->delete();
+
+        if ($deletedJobs > 0) {
+            $this->info("Removed {$deletedJobs} pending scan jobs from queue.");
+        }
+
+        // Clear status
+        LibraryScanJob::clearStatus();
+
+        if ($cancelled > 0 || $deletedJobs > 0) {
+            $this->info('Scan cancelled successfully.');
+        } else {
+            $this->info('No running scan found.');
         }
 
         return Command::SUCCESS;
