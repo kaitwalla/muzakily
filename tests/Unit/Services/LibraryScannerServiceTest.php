@@ -114,9 +114,9 @@ class LibraryScannerServiceTest extends TestCase
             ->with('header_content', 'footer_content', $fileSize)
             ->andReturn($tempPath);
 
-        // Mock metadata extraction
+        // Mock metadata extraction (uses safeExtract for memory safety)
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->once()
             ->with($tempPath)
             ->andReturn([
@@ -130,6 +130,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 180.0,
                 'bitrate' => 320000,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         // Mock smart folder assignment
@@ -197,7 +198,7 @@ class LibraryScannerServiceTest extends TestCase
             });
 
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->once()
             ->andReturn([
                 'title' => 'Test Song',
@@ -210,6 +211,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 180.0,
                 'bitrate' => 320000,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         $smartFolder = SmartFolder::factory()->create();
@@ -274,7 +276,7 @@ class LibraryScannerServiceTest extends TestCase
 
         // First extraction returns zero duration
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->once()
             ->andReturn([
                 'title' => 'Test Song',
@@ -287,6 +289,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 0.0,
                 'bitrate' => null,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         // Fall back to full download
@@ -300,7 +303,7 @@ class LibraryScannerServiceTest extends TestCase
 
         // Second extraction gets proper duration
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->once()
             ->andReturn([
                 'title' => 'Test Song',
@@ -313,6 +316,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 180.0,
                 'bitrate' => 320000,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         $smartFolder = SmartFolder::factory()->create();
@@ -380,9 +384,9 @@ class LibraryScannerServiceTest extends TestCase
         $this->storageMock
             ->shouldNotReceive('download');
 
-        // Metadata extraction uses the local path directly
+        // Metadata extraction uses the local path directly (with safeExtract for memory safety)
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->once()
             ->with($localPath)
             ->andReturn([
@@ -396,6 +400,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 200.0,
                 'bitrate' => 256000,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         $smartFolder = SmartFolder::factory()->create();
@@ -463,7 +468,7 @@ class LibraryScannerServiceTest extends TestCase
             ->andReturn($file2Path);
 
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->with($file1Path)
             ->andReturn([
                 'title' => 'Song One',
@@ -476,10 +481,11 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 120.0,
                 'bitrate' => null,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->with($file2Path)
             ->andReturn([
                 'title' => 'Song Two',
@@ -492,6 +498,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 150.0,
                 'bitrate' => null,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         $smartFolder = SmartFolder::factory()->create();
@@ -612,7 +619,7 @@ class LibraryScannerServiceTest extends TestCase
         // song3 should not be processed due to limit
 
         $this->metadataExtractorMock
-            ->shouldReceive('extract')
+            ->shouldReceive('safeExtract')
             ->twice() // Only 2 files should be processed
             ->andReturn([
                 'title' => 'Test',
@@ -625,6 +632,7 @@ class LibraryScannerServiceTest extends TestCase
                 'duration' => 100.0,
                 'bitrate' => null,
                 'lyrics' => null,
+                'cover_art' => null,
             ]);
 
         $smartFolder = SmartFolder::factory()->create();

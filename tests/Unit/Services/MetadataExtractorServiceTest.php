@@ -77,4 +77,64 @@ class MetadataExtractorServiceTest extends TestCase
         $estimated = $this->service->estimateDuration(0, 10_000_000);
         $this->assertEquals(0.0, $estimated);
     }
+
+    #[Test]
+    public function safe_extract_returns_metadata_for_small_mp3_files(): void
+    {
+        // Create a minimal file
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_audio_');
+        if ($tempPath === false) {
+            $this->markTestSkipped('Could not create temp file');
+        }
+
+        try {
+            // Write minimal content
+            file_put_contents($tempPath, str_repeat("\x00", 1000));
+
+            // safeExtract should not throw even on invalid files
+            $result = $this->service->safeExtract($tempPath);
+
+            // Should return an array (possibly with null values)
+            $this->assertIsArray($result);
+            $this->assertArrayHasKey('title', $result);
+            $this->assertArrayHasKey('artist', $result);
+            $this->assertArrayHasKey('duration', $result);
+        } finally {
+            @unlink($tempPath);
+        }
+    }
+
+    #[Test]
+    public function extract_in_subprocess_returns_metadata(): void
+    {
+        // Create a minimal file
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_subprocess_');
+        if ($tempPath === false) {
+            $this->markTestSkipped('Could not create temp file');
+        }
+
+        try {
+            // Write minimal content
+            file_put_contents($tempPath, str_repeat("\x00", 1000));
+
+            $result = $this->service->extractInSubprocess($tempPath);
+
+            // Should return an array with expected keys
+            $this->assertIsArray($result);
+            $this->assertArrayHasKey('title', $result);
+            $this->assertArrayHasKey('artist', $result);
+            $this->assertArrayHasKey('duration', $result);
+            // cover_art is always null from subprocess
+            $this->assertNull($result['cover_art']);
+        } finally {
+            @unlink($tempPath);
+        }
+    }
+
+    #[Test]
+    public function extract_in_subprocess_returns_null_for_missing_file(): void
+    {
+        $result = $this->service->extractInSubprocess('/nonexistent/path/to/file.mp3');
+        $this->assertNull($result);
+    }
 }

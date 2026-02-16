@@ -155,7 +155,7 @@ class LibraryScannerService
 
         if ($localPath !== null && file_exists($localPath)) {
             // Local storage: read directly from filesystem
-            $metadata = $this->metadataExtractor->extract($localPath);
+            $metadata = $this->metadataExtractor->safeExtract($localPath);
         } else {
             // Remote storage: try partial download first for efficiency
             $metadata = $this->extractMetadataWithPartialDownload($object);
@@ -291,8 +291,8 @@ class LibraryScannerService
         }
 
         try {
-            // We use the regular extract method because createPartialTempFile makes a valid-looking file
-            return $this->metadataExtractor->extract($tempPath);
+            // Use safeExtract to handle memory-intensive files via subprocess
+            return $this->metadataExtractor->safeExtract($tempPath);
         } catch (\Throwable $e) {
             // If extraction fails on partial file, return null to trigger fallback
             return null;
@@ -333,7 +333,8 @@ class LibraryScannerService
                 return null;
             }
 
-            return $this->metadataExtractor->extract($tempPath);
+            // Use safeExtract to handle memory-intensive files via subprocess
+            return $this->metadataExtractor->safeExtract($tempPath);
         } finally {
             @unlink($tempPath);
         }
