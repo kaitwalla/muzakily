@@ -113,19 +113,6 @@ class Tag extends Model
     }
 
     /**
-     * Extract tag name from a storage path.
-     *
-     * @deprecated Use extractTagNamesFromPath instead
-     * @param list<string> $specialFolders
-     */
-    public static function extractFromPath(string $path, array $specialFolders = []): ?string
-    {
-        $tagNames = static::extractTagNamesFromPath($path, $specialFolders);
-
-        return $tagNames[0] ?? null;
-    }
-
-    /**
      * Extract tag names from a storage path.
      * For special folders (like xmas), returns multiple tags.
      *
@@ -170,19 +157,6 @@ class Tag extends Model
         }
 
         return [$topLevel];
-    }
-
-    /**
-     * Find or create a tag from a storage path.
-     *
-     * @deprecated Use findOrCreateTagsFromPath instead
-     * @param list<string> $specialFolders
-     */
-    public static function findOrCreateFromPath(string $path, array $specialFolders = []): ?self
-    {
-        $tags = static::findOrCreateTagsFromPath($path, $specialFolders);
-
-        return $tags->first();
     }
 
     /**

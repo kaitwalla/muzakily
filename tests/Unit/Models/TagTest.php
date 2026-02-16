@@ -15,9 +15,10 @@ class TagTest extends TestCase
     public function test_extracts_top_level_folder_as_tag(): void
     {
         $path = 'Rock/Artist/Album/song.mp3';
-        $tagName = Tag::extractFromPath($path);
+        $tagNames = Tag::extractTagNamesFromPath($path);
 
-        $this->assertEquals('Rock', $tagName);
+        $this->assertCount(1, $tagNames);
+        $this->assertEquals('Rock', $tagNames[0]);
     }
 
     public function test_extracts_multiple_tags_for_special_folders(): void
@@ -39,42 +40,45 @@ class TagTest extends TestCase
         $this->assertContains('xmas', $tagNames);
     }
 
-    public function test_returns_null_for_empty_path(): void
+    public function test_returns_empty_array_for_empty_path(): void
     {
         $path = '';
-        $tagName = Tag::extractFromPath($path);
+        $tagNames = Tag::extractTagNamesFromPath($path);
 
-        $this->assertNull($tagName);
+        $this->assertEmpty($tagNames);
     }
 
-    public function test_returns_null_for_root_level_file(): void
+    public function test_returns_empty_array_for_root_level_file(): void
     {
         $path = 'song.mp3';
-        $tagName = Tag::extractFromPath($path);
+        $tagNames = Tag::extractTagNamesFromPath($path);
 
-        $this->assertNull($tagName);
+        $this->assertEmpty($tagNames);
     }
 
-    public function test_find_or_create_from_path_creates_new_tag(): void
+    public function test_find_or_create_tags_from_path_creates_new_tag(): void
     {
         $path = 'Jazz/Artist/Album/song.mp3';
 
-        $tag = Tag::findOrCreateFromPath($path);
+        $tags = Tag::findOrCreateTagsFromPath($path);
 
+        $this->assertCount(1, $tags);
+        $tag = $tags->first();
         $this->assertNotNull($tag);
         $this->assertEquals('Jazz', $tag->name);
         $this->assertEquals('jazz', $tag->slug);
         $this->assertDatabaseHas('tags', ['name' => 'Jazz', 'slug' => 'jazz']);
     }
 
-    public function test_find_or_create_from_path_returns_existing_tag(): void
+    public function test_find_or_create_tags_from_path_returns_existing_tag(): void
     {
         $existingTag = Tag::factory()->create(['name' => 'Rock', 'slug' => 'rock']);
         $path = 'Rock/Artist/Album/song.mp3';
 
-        $tag = Tag::findOrCreateFromPath($path);
+        $tags = Tag::findOrCreateTagsFromPath($path);
 
-        $this->assertEquals($existingTag->id, $tag->id);
+        $this->assertCount(1, $tags);
+        $this->assertEquals($existingTag->id, $tags->first()->id);
         $this->assertDatabaseCount('tags', 1);
     }
 

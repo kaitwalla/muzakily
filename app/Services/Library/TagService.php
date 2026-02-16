@@ -26,18 +26,6 @@ class TagService
     }
 
     /**
-     * Extract tag name from a storage path.
-     *
-     * @deprecated Use extractTagNamesFromPath instead
-     */
-    public function extractTagNameFromPath(string $path): ?string
-    {
-        $tagNames = $this->extractTagNamesFromPath($path);
-
-        return $tagNames[0] ?? null;
-    }
-
-    /**
      * Extract tag names from a storage path.
      *
      * @return list<string>
