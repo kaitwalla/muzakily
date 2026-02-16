@@ -147,7 +147,7 @@ class LibraryScanJob implements ShouldQueue
         $enrich = $this->enrich;
         $scanStartedAtString = $scanStartedAt->toIso8601String();
 
-        Bus::batch($jobs)
+        $batch = Bus::batch($jobs)
             ->name('library-scan')
             ->allowFailures()
             ->finally(function () use ($bucket, $scanStartedAtString, $enrich) {
@@ -158,6 +158,7 @@ class LibraryScanJob implements ShouldQueue
             ->dispatch();
 
         $this->updateStatus('scanning', 'Batch jobs dispatched', [
+            'batch_id' => $batch->id,
             'batches' => count($jobs),
             'files_per_batch' => self::BATCH_SIZE,
             'total_files' => $matchedFiles,
