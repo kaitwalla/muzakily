@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\Process;
 
 class MetadataExtractorService
 {
-    private getID3 $getID3;
-
     /**
      * Memory threshold (in bytes) below which we use subprocess extraction.
      * Default: 256MB available memory required for in-process extraction.
@@ -31,11 +29,18 @@ class MetadataExtractorService
      */
     private const MEMORY_INTENSIVE_FORMATS = ['flac', 'wav', 'aiff', 'aif'];
 
-    public function __construct()
+    /**
+     * Create a fresh getID3 instance.
+     *
+     * We create a new instance per extraction to avoid memory accumulation
+     * from internal caches and buffers when processing many files.
+     */
+    private function createGetID3(): getID3
     {
-        $this->getID3 = new getID3();
-        $this->getID3->option_md5_data = false;
-        $this->getID3->option_md5_data_source = false;
+        $getID3 = new getID3();
+        $getID3->option_md5_data = false;
+        $getID3->option_md5_data_source = false;
+        return $getID3;
     }
 
     /**
@@ -216,7 +221,8 @@ class MetadataExtractorService
      */
     public function extract(string $filePath): array
     {
-        $info = $this->getID3->analyze($filePath);
+        $getID3 = $this->createGetID3();
+        $info = $getID3->analyze($filePath);
 
         // Get tags from various sources
         $tags = $this->extractTags($info);
@@ -416,7 +422,8 @@ class MetadataExtractorService
      */
     public function extractWithEstimation(string $filePath, ?int $actualFileSize = null): array
     {
-        $info = $this->getID3->analyze($filePath);
+        $getID3 = $this->createGetID3();
+        $info = $getID3->analyze($filePath);
 
         $tags = $this->extractTags($info);
         $bitrate = isset($info['audio']['bitrate']) ? (int) $info['audio']['bitrate'] : null;

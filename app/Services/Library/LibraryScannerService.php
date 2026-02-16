@@ -77,6 +77,11 @@ class LibraryScannerService
                 $onProgress($stats);
             }
 
+            // Periodic memory cleanup to prevent accumulation in sync mode
+            if ($stats['scanned_files'] % 50 === 0) {
+                gc_collect_cycles();
+            }
+
             // Check if limit reached
             if ($limit !== null && $stats['scanned_files'] >= $limit) {
                 break;

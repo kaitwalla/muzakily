@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\MusicStorageInterface;
+use App\Models\ScanCache;
+use App\Models\SmartFolder;
 use App\Models\Song;
 use App\Services\Library\LibraryScannerService;
 use App\Services\Metadata\MetadataAggregatorService;
@@ -12,7 +15,9 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class LibraryScanJob implements ShouldQueue
@@ -40,6 +45,11 @@ class LibraryScanJob implements ShouldQueue
     private const STATUS_CACHE_TTL = 7200;
 
     /**
+     * Number of files to process per batch job.
+     */
+    private const BATCH_SIZE = 100;
+
+    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -51,7 +61,7 @@ class LibraryScanJob implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(LibraryScannerService $scanner, MetadataAggregatorService $aggregator): void
+    public function handle(MusicStorageInterface $storage, MetadataAggregatorService $aggregator): void
     {
         $this->updateStatus('scanning', 'Starting library scan...');
 
@@ -61,24 +71,154 @@ class LibraryScanJob implements ShouldQueue
             'enrich' => $this->enrich,
         ]);
 
-        $scanner->scan(
-            force: $this->force,
-            limit: $this->limit,
-            onProgress: function (array $stats): void {
-                $this->updateStatus('scanning', 'Scanning files...', $stats);
+        $storageDriver = config('muzakily.storage.driver', 'r2');
+        $bucket = $storageDriver === 'local'
+            ? 'local'
+            : (config('filesystems.disks.r2.bucket') ?? throw new \RuntimeException('R2 bucket not configured'));
+        $extensions = config('muzakily.scanning.extensions', ['mp3', 'aac', 'm4a', 'flac']);
+
+        // Record scan start time for orphan detection
+        $scanStartedAt = now();
+
+        // Collect files and create batch jobs (streaming to avoid memory buildup)
+        $this->updateStatus('scanning', 'Collecting files...');
+
+        $batch = [];
+        $totalFiles = 0;
+        $matchedFiles = 0;
+        $jobs = [];
+
+        foreach ($storage->listObjects() as $object) {
+            $totalFiles++;
+
+            $extension = strtolower(pathinfo($object['key'], PATHINFO_EXTENSION));
+            if (!in_array($extension, $extensions, true)) {
+                continue;
             }
-        );
 
-        $this->updateStatus('scanned', 'Scan complete');
+            // Serialize DateTimeInterface to string for job serialization
+            $batch[] = [
+                'key' => $object['key'],
+                'size' => $object['size'],
+                'last_modified' => $object['last_modified']->format(\DateTimeInterface::ATOM),
+                'etag' => $object['etag'],
+            ];
+            $matchedFiles++;
 
-        // Enrich metadata if requested
+            // Dispatch batch when full to avoid memory accumulation
+            if (count($batch) >= self::BATCH_SIZE) {
+                $jobs[] = new ScanFileBatchJob($batch, $bucket, $this->force);
+                $batch = [];
+            }
+
+            if ($this->limit !== null && $matchedFiles >= $this->limit) {
+                break;
+            }
+
+            // Update progress periodically
+            if ($totalFiles % 1000 === 0) {
+                $this->updateStatus('scanning', 'Collecting files...', [
+                    'collected' => $matchedFiles,
+                    'total_scanned' => $totalFiles,
+                ]);
+            }
+        }
+
+        // Don't forget remaining files
+        if (!empty($batch)) {
+            $jobs[] = new ScanFileBatchJob($batch, $bucket, $this->force);
+        }
+
+        $this->updateStatus('scanning', 'Dispatching batch jobs...', [
+            'total_files' => $matchedFiles,
+        ]);
+
+        Log::info('Collected files for scanning', [
+            'audio_files' => $matchedFiles,
+            'total_files' => $totalFiles,
+        ]);
+
+        if (empty($jobs)) {
+            $this->runPostScanCleanup($bucket, $scanStartedAt, $aggregator);
+            return;
+        }
+
+        // Store scan context for the completion callback
+        $enrich = $this->enrich;
+        $scanStartedAtString = $scanStartedAt->toIso8601String();
+
+        Bus::batch($jobs)
+            ->name('library-scan')
+            ->allowFailures()
+            ->finally(function () use ($bucket, $scanStartedAtString, $enrich) {
+                // Run post-scan cleanup in a separate job to ensure it runs
+                LibraryScanCleanupJob::dispatch($bucket, $scanStartedAtString, $enrich);
+            })
+            ->onQueue('default')
+            ->dispatch();
+
+        $this->updateStatus('scanning', 'Batch jobs dispatched', [
+            'batches' => count($jobs),
+            'files_per_batch' => self::BATCH_SIZE,
+            'total_files' => $matchedFiles,
+        ]);
+
+        Log::info('Dispatched scan batches', [
+            'batches' => count($jobs),
+            'total_files' => $matchedFiles,
+        ]);
+    }
+
+    /**
+     * Run post-scan cleanup (for empty file list case).
+     */
+    private function runPostScanCleanup(string $bucket, \DateTimeInterface $scanStartedAt, MetadataAggregatorService $aggregator): void
+    {
+        // Prune orphans
+        $removedCount = $this->pruneOrphans($bucket, $scanStartedAt);
+
+        // Update smart folder and tag counts (chunked to avoid memory issues)
+        SmartFolder::chunk(100, function ($folders) {
+            $folders->each->updateSongCount();
+        });
+        \App\Models\Tag::chunk(100, function ($tags) {
+            $tags->each->updateSongCount();
+        });
+
+        $this->updateStatus('scanned', 'Scan complete', [
+            'removed_songs' => $removedCount,
+        ]);
+
         if ($this->enrich) {
             $this->enrichMetadata($aggregator);
         }
 
         $this->updateStatus('completed', 'Library scan completed');
-
         Log::info('Library scan job completed');
+    }
+
+    /**
+     * Remove database entries for files that no longer exist in storage.
+     */
+    private function pruneOrphans(string $bucket, \DateTimeInterface $scanStartedAt): int
+    {
+        $removedCount = 0;
+
+        ScanCache::stale($bucket, $scanStartedAt)->chunkById(100, function ($staleEntries) use (&$removedCount) {
+            foreach ($staleEntries as $entry) {
+                DB::transaction(function () use ($entry, &$removedCount) {
+                    $song = Song::findByStoragePath($entry->object_key);
+                    if ($song) {
+                        $song->tags()->detach();
+                        $song->forceDelete();
+                        $removedCount++;
+                    }
+                    $entry->delete();
+                });
+            }
+        });
+
+        return $removedCount;
     }
 
     /**
