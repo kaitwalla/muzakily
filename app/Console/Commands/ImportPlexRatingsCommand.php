@@ -21,7 +21,9 @@ class ImportPlexRatingsCommand extends Command
         {--r2-base= : Base path prefix in R2 storage paths (e.g., "music")}
         {--user= : User ID to create favorites for (defaults to first user)}
         {--min-rating=2 : Minimum star rating to import (1-5, default 2)}
-        {--dry-run : Preview matches without creating favorites}';
+        {--dry-run : Preview matches without creating favorites}
+        {--debug : Show sample paths to help diagnose matching issues}
+        {--limit= : Limit number of tracks to process}';
 
     /**
      * The console command description.
@@ -100,8 +102,16 @@ class ImportPlexRatingsCommand extends Command
         $this->info("Importing songs with rating >= {$minRating} stars");
 
         // Filter tracks by rating
-        $tracks = array_filter($allTracks, fn ($t) => $t['rating'] >= $minRating);
+        $tracks = array_values(array_filter($allTracks, fn ($t) => $t['rating'] >= $minRating));
         $this->info('Tracks matching rating filter: ' . count($tracks));
+
+        // Apply limit if specified
+        $limitOption = $this->option('limit');
+        if ($limitOption !== null && $limitOption !== '') {
+            $limit = (int) $limitOption;
+            $tracks = array_slice($tracks, 0, $limit);
+            $this->info("Limiting to first {$limit} tracks");
+        }
 
         if (empty($tracks)) {
             $this->warn('No tracks to import.');
@@ -112,6 +122,40 @@ class ImportPlexRatingsCommand extends Command
         $r2Base = $this->option('r2-base');
         $r2Base = is_string($r2Base) ? $r2Base : '';
         $dryRun = $this->option('dry-run');
+
+        // Debug mode: show sample paths to diagnose matching issues
+        if ($this->option('debug')) {
+            $this->newLine();
+            $this->info('=== DEBUG: Path Comparison ===');
+            $this->newLine();
+
+            $this->info('Sample paths from Plex export (first 5):');
+            foreach (array_slice($tracks, 0, 5) as $i => $track) {
+                $relativePath = $track['path'];
+                $r2Path = $r2Base ? rtrim($r2Base, '/') . '/' . ltrim($relativePath, '/') : $relativePath;
+                $this->line("  [{$i}] Plex path: {$relativePath}");
+                $this->line("      R2 path:   {$r2Path}");
+            }
+
+            $this->newLine();
+            $this->info('Sample storage_path from database (first 5):');
+            $dbSongs = Song::limit(5)->pluck('storage_path');
+            foreach ($dbSongs as $i => $path) {
+                $this->line("  [{$i}] {$path}");
+            }
+
+            $this->newLine();
+            $this->warn('Compare the paths above to identify the mismatch.');
+            $this->info('Common issues:');
+            $this->line('  - Missing --strip-prefix when exporting from Plex');
+            $this->line('  - Missing or incorrect --r2-base when importing');
+            $this->line('  - Leading/trailing slashes');
+            $this->newLine();
+
+            if (!$this->confirm('Continue with import?', true)) {
+                return Command::SUCCESS;
+            }
+        }
 
         if ($dryRun) {
             $this->warn('DRY RUN - No favorites will be created');

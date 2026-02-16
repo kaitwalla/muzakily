@@ -21,8 +21,9 @@ class RescanSongsCommand extends Command
      * @var string
      */
     protected $signature = 'songs:rescan
-        {--format=aac : Audio format to rescan (mp3, aac, flac, or all)}
+        {--format=all : Audio format to rescan (mp3, aac, flac, or all)}
         {--unknown-only : Only rescan songs with unknown artist}
+        {--zero-duration : Only rescan songs with 0 duration}
         {--limit= : Limit number of songs to process}
         {--dry-run : Show what would be done without making changes}';
 
@@ -70,6 +71,11 @@ class RescanSongsCommand extends Command
                     ->orWhere('artist_name', 'Unknown');
             });
             $this->info('Filtering to unknown artists only');
+        }
+
+        if ($this->option('zero-duration')) {
+            $query->where('length', '<=', 0);
+            $this->info('Filtering to zero duration only');
         }
 
         if ($limit !== null) {
@@ -124,7 +130,7 @@ class RescanSongsCommand extends Command
                     // Extract metadata
                     $metadata = $extractor->extract($tempFile);
 
-                    $hasNewData = !empty($metadata['artist']) || !empty($metadata['album']);
+                    $hasNewData = !empty($metadata['artist']) || !empty($metadata['album']) || ($metadata['duration'] > 0 && $song->length <= 0);
 
                     if (!$hasNewData) {
                         $skipped++;
@@ -170,6 +176,7 @@ class RescanSongsCommand extends Command
                             'disc' => $metadata['disc'] ?? $song->disc,
                             'year' => $metadata['year'] ?? $song->year,
                             'lyrics' => $metadata['lyrics'] ?? $song->lyrics,
+                            'length' => $metadata['duration'] > 0 ? $metadata['duration'] : $song->length,
                         ]);
                     });
 
