@@ -40,15 +40,53 @@ class StreamController extends Controller
     }
 
     /**
-     * Download a song (redirect to stream URL).
+     * Download a song (redirect to presigned download URL).
      */
     public function download(Song $song): RedirectResponse
     {
-        $url = $this->storage->getStreamUrl(
+        // Generate a safe filename for the download
+        $filename = $this->generateDownloadFilename($song);
+
+        // Get download URL with attachment disposition
+        $url = $this->storage->getDownloadUrl(
             $song->storage_path,
-            config('muzakily.r2.presigned_expiry', 3600)
+            config('muzakily.r2.presigned_expiry', 3600),
+            $filename
         );
 
         return redirect()->away($url);
+    }
+
+    /**
+     * Generate a safe filename for downloading a song.
+     */
+    private function generateDownloadFilename(Song $song): string
+    {
+        $parts = [];
+
+        // Add artist if available
+        if ($song->artist_name) {
+            $parts[] = $song->artist_name;
+        }
+
+        // Add title
+        $parts[] = $song->title;
+
+        // Join parts and sanitize
+        $basename = implode(' - ', $parts);
+
+        // Remove or replace unsafe characters for filenames
+        $basename = preg_replace('/[\/\\\\:*?"<>|]/', '_', $basename);
+        $basename = trim($basename ?? '', ' .');
+
+        // Fallback if basename is empty after sanitization
+        if ($basename === '') {
+            $basename = 'download_' . $song->id;
+        }
+
+        // Get extension from audio format
+        $extension = $song->audio_format->value;
+
+        return "{$basename}.{$extension}";
     }
 }

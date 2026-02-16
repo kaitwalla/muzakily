@@ -129,11 +129,20 @@ class RescanSongsCommand extends Command
                     file_put_contents($tempFile, $stream);
                     fclose($stream);
 
-                    // Extract metadata - use estimation for zero-duration fixes
+                    // Extract metadata using subprocess to avoid OOM crashes
+                    // Use estimation for zero-duration fixes
                     if ($fixingDuration) {
-                        $metadata = $extractor->extractWithEstimation($tempFile, $song->file_size);
+                        $metadata = $extractor->safeExtractWithEstimation($tempFile, $song->file_size);
                     } else {
-                        $metadata = $extractor->extract($tempFile);
+                        $metadata = $extractor->safeExtract($tempFile);
+                    }
+
+                    if ($metadata === null) {
+                        $this->newLine();
+                        $this->warn("  Could not extract metadata: {$song->storage_path}");
+                        $errors++;
+                        $progressBar->advance();
+                        continue;
                     }
 
                     $hasNewData = !empty($metadata['artist']) || !empty($metadata['album']) || ($metadata['duration'] > 0 && $song->length <= 0);
@@ -217,6 +226,9 @@ class RescanSongsCommand extends Command
             }
 
             $progressBar->advance();
+
+            // Aggressive memory cleanup after each file
+            gc_collect_cycles();
         }
 
         $progressBar->finish();

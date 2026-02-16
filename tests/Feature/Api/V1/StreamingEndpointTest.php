@@ -167,18 +167,23 @@ class StreamingEndpointTest extends TestCase
         $response->assertUnauthorized();
     }
 
-    public function test_download_redirects_to_stream_url(): void
+    public function test_download_redirects_to_download_url(): void
     {
         $this->mock(MusicStorageInterface::class, function (MockInterface $mock): void {
-            $mock->shouldReceive('getStreamUrl')
-                ->with('music/test-song.flac', 3600)
-                ->andReturn('https://storage.example.com/music/test-song.flac');
+            $mock->shouldReceive('getDownloadUrl')
+                ->withArgs(function (string $key, int $expiry, ?string $filename) {
+                    return $key === 'music/test-song.flac'
+                        && $expiry === 3600
+                        && $filename !== null
+                        && str_ends_with($filename, '.flac');
+                })
+                ->andReturn('https://storage.example.com/music/test-song.flac?download=1');
         });
 
         $response = $this->actingAs($this->user)
             ->get("/api/v1/songs/{$this->song->id}/download");
 
-        $response->assertRedirect('https://storage.example.com/music/test-song.flac');
+        $response->assertRedirect('https://storage.example.com/music/test-song.flac?download=1');
     }
 
     public function test_stream_returns_404_for_nonexistent_song(): void

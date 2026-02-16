@@ -53,6 +53,29 @@ class MetadataExtractorService
         return $this->extractInSubprocess($filePath);
     }
     /**
+     * Safely extract metadata with duration estimation, using subprocess.
+     *
+     * @return array{
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: string|null,
+     *     cover_art: null,
+     *     duration_estimated?: bool,
+     * }|null
+     */
+    public function safeExtractWithEstimation(string $filePath, int $fileSize): ?array
+    {
+        return $this->extractInSubprocess($filePath, $fileSize);
+    }
+
+    /**
      * Extract metadata in a subprocess to isolate memory usage.
      *
      * @return array{
@@ -67,16 +90,23 @@ class MetadataExtractorService
      *     bitrate: int|null,
      *     lyrics: string|null,
      *     cover_art: null,
+     *     duration_estimated?: bool,
      * }|null
      */
-    public function extractInSubprocess(string $filePath): ?array
+    public function extractInSubprocess(string $filePath, ?int $fileSize = null): ?array
     {
-        $result = Process::timeout(120)->run([
+        $command = [
             'php',
             base_path('artisan'),
             'internal:extract-metadata',
             $filePath,
-        ]);
+        ];
+
+        if ($fileSize !== null) {
+            $command[] = '--file-size=' . $fileSize;
+        }
+
+        $result = Process::timeout(120)->run($command);
 
         if (!$result->successful()) {
             Log::error('Subprocess metadata extraction failed', [

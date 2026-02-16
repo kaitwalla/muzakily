@@ -15,7 +15,9 @@ use Illuminate\Console\Command;
  */
 class ExtractMetadataCommand extends Command
 {
-    protected $signature = 'internal:extract-metadata {file : Path to the audio file}';
+    protected $signature = 'internal:extract-metadata
+        {file : Path to the audio file}
+        {--file-size= : Actual file size for duration estimation}';
 
     protected $description = 'Extract metadata from an audio file (internal use)';
 
@@ -32,7 +34,22 @@ class ExtractMetadataCommand extends Command
         }
 
         try {
-            $metadata = $extractor->extract($filePath);
+            $fileSizeOption = $this->option('file-size');
+            $fileSize = null;
+            if ($fileSizeOption !== null && $fileSizeOption !== '') {
+                $parsedSize = filter_var($fileSizeOption, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($parsedSize === false) {
+                    $this->output->writeln(json_encode(['error' => 'Invalid file-size: must be a positive integer']));
+                    return Command::FAILURE;
+                }
+                $fileSize = $parsedSize;
+            }
+
+            if ($fileSize !== null) {
+                $metadata = $extractor->extractWithEstimation($filePath, $fileSize);
+            } else {
+                $metadata = $extractor->extract($filePath);
+            }
 
             // Remove cover_art from output - it's binary data that doesn't serialize well
             // and would be too large to pass via subprocess anyway

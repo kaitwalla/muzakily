@@ -54,6 +54,18 @@ class R2StorageService implements MusicStorageInterface
     }
 
     /**
+     * Get a URL for downloading the file.
+     */
+    public function getDownloadUrl(string $key, int $expiry = 3600, ?string $filename = null): string
+    {
+        $disposition = 'attachment';
+        if ($filename !== null) {
+            $disposition .= "; filename=\"{$filename}\"";
+        }
+        return $this->getPresignedUrl($key, $expiry, $disposition);
+    }
+
+    /**
      * Upload a file to R2.
      */
     public function upload(string $key, string $localPath): bool

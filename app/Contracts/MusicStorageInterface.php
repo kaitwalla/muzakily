@@ -27,9 +27,14 @@ interface MusicStorageInterface
     public function exists(string $key): bool;
 
     /**
-     * Get a URL for streaming the file.
+     * Get a URL for streaming the file (inline disposition).
      */
     public function getStreamUrl(string $key, int $expiry = 3600): string;
+
+    /**
+     * Get a URL for downloading the file (attachment disposition).
+     */
+    public function getDownloadUrl(string $key, int $expiry = 3600, ?string $filename = null): string;
 
     /**
      * Get file metadata.

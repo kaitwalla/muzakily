@@ -67,6 +67,22 @@ class LocalStorageService implements MusicStorageInterface
     }
 
     /**
+     * Get a signed URL for downloading the file.
+     */
+    public function getDownloadUrl(string $key, int $expiry = 3600, ?string $filename = null): string
+    {
+        return URL::temporarySignedRoute(
+            'stream.local',
+            now()->addSeconds($expiry),
+            [
+                'path' => $key,
+                'download' => '1',
+                'filename' => $filename,
+            ]
+        );
+    }
+
+    /**
      * Get file metadata.
      *
      * @return array{size: int, last_modified: \DateTimeInterface|null, etag: string|null}|null

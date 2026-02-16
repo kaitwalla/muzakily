@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAudio, usePlayer, useKeyboardShortcuts } from '@/composables';
+import { getDownloadUrl } from '@/api/songs';
 import PlayPauseButton from './PlayPauseButton.vue';
 import VolumeControl from './VolumeControl.vue';
 import ProgressBar from './ProgressBar.vue';
@@ -9,7 +10,14 @@ import QueuePanel from './QueuePanel.vue';
 import DevicePicker from './DevicePicker.vue';
 
 const { audioRef, registerAudioElement } = useAudio({ autoRegister: false });
-const { isShuffled, repeatMode, hasNext, hasPrevious, next, previous, toggleShuffle, cycleRepeatMode } = usePlayer();
+const { currentSong, isShuffled, repeatMode, hasNext, hasPrevious, next, previous, toggleShuffle, cycleRepeatMode } = usePlayer();
+
+function handleDownload(): void {
+    if (currentSong.value) {
+        const url = getDownloadUrl(currentSong.value.id);
+        window.open(url, '_blank');
+    }
+}
 
 // Initialize keyboard shortcuts
 useKeyboardShortcuts();
@@ -138,6 +146,18 @@ function toggleDevices(): void {
                 >
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM9 8h2v8H9zm4 0h2v8h-2z"/>
+                    </svg>
+                </button>
+
+                <!-- Download button -->
+                <button
+                    @click="handleDownload"
+                    :disabled="!currentSong"
+                    class="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Download current song"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
                 </button>
 
