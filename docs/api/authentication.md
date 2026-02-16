@@ -93,16 +93,66 @@ curl https://your-domain.com/api/v1/auth/me \
 }
 ```
 
-## Error Responses
+## Update Profile
 
-### Invalid Credentials (422)
+Update the authenticated user's profile:
+
+```bash
+curl -X PATCH https://your-domain.com/api/v1/auth/me \
+  -H "Authorization: Bearer 1|abc123def456..." \
+  -H "Content-Type: multipart/form-data" \
+  -F "name=Jane Doe" \
+  -F "preferences[audio_quality]=high" \
+  -F "preferences[crossfade]=5"
+```
+
+### Update Profile Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Display name (max 255 chars) |
+| `preferences.audio_quality` | string | Audio quality: auto, high, normal, low |
+| `preferences.crossfade` | integer | Crossfade duration: 0, 3, 5, or 10 seconds |
+| `avatar` | file | Profile image (max 2MB) |
+| `current_password` | string | Required when changing password |
+| `password` | string | New password (min 8 chars) |
+| `password_confirmation` | string | Must match password |
+
+### Change Password
+
+```bash
+curl -X PATCH https://your-domain.com/api/v1/auth/me \
+  -H "Authorization: Bearer 1|abc123def456..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "current_password": "old-password",
+    "password": "new-password",
+    "password_confirmation": "new-password"
+  }'
+```
+
+**Response:**
 
 ```json
 {
-  "message": "The given data was invalid.",
-  "errors": {
-    "email": ["The provided credentials are incorrect."]
+  "data": {
+    "id": 1,
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Jane Doe",
+    "email": "user@example.com",
+    "role": "user",
+    "created_at": "2024-01-01T00:00:00.000000Z"
   }
+}
+```
+
+## Error Responses
+
+### Invalid Credentials (401)
+
+```json
+{
+  "message": "The provided credentials are incorrect."
 }
 ```
 

@@ -22,12 +22,12 @@ Returns songs the current user has recently played, ordered by last played time 
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `per_page` | integer | 20 | Results per page (max 100) |
+| `limit` | integer | 10 | Number of results (max 50) |
 
 ### Example Request
 
 ```bash
-curl "https://api.example.com/api/v1/songs/recently-played?per_page=10" \
+curl "https://api.example.com/api/v1/songs/recently-played?limit=10" \
   -H "Authorization: Bearer {token}"
 ```
 
@@ -64,6 +64,7 @@ curl "https://api.example.com/api/v1/songs/recently-played?per_page=10" \
 | `smart_folder_id` | integer | - | Filter by smart folder |
 | `format` | string | - | Filter by format (MP3, AAC, FLAC) |
 | `favorited` | boolean | - | Show only favorited songs |
+| `incomplete` | boolean | - | Show only songs with missing metadata |
 | `sort` | string | title | Sort field: title, artist_name, album_name, year, created_at |
 | `order` | string | asc | Sort order: asc, desc |
 | `per_page` | integer | 50 | Results per page (max 100) |
@@ -198,6 +199,73 @@ curl -X PATCH "https://api.example.com/api/v1/songs/{id}" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{"title": "Updated Title", "year": 2024}'
+```
+
+## Bulk Update Songs (Admin Only)
+
+```
+PUT /api/v1/songs/bulk
+```
+
+Update metadata and tags for multiple songs at once. Requires admin role.
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `song_ids` | array | Yes | UUIDs of songs to update |
+| `title` | string | No | Set title for all songs |
+| `artist_name` | string | No | Set artist for all songs |
+| `album_name` | string | No | Set album for all songs |
+| `year` | integer | No | Set year for all songs |
+| `track` | integer | No | Set track number for all songs |
+| `disc` | integer | No | Set disc number for all songs |
+| `genre` | string | No | Set genre for all songs |
+| `add_tag_ids` | array | No | Tag IDs to add to all songs |
+| `remove_tag_ids` | array | No | Tag IDs to remove from all songs |
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.example.com/api/v1/songs/bulk" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "song_ids": [
+      "550e8400-e29b-41d4-a716-446655440000",
+      "550e8400-e29b-41d4-a716-446655440001"
+    ],
+    "genre": "Rock",
+    "add_tag_ids": [1, 2],
+    "remove_tag_ids": [3]
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Song One",
+      "genre": "Rock",
+      "tags": [
+        {"id": 1, "name": "Favorites", "slug": "favorites"},
+        {"id": 2, "name": "Rock", "slug": "rock"}
+      ]
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Song Two",
+      "genre": "Rock",
+      "tags": [
+        {"id": 1, "name": "Favorites", "slug": "favorites"},
+        {"id": 2, "name": "Rock", "slug": "rock"}
+      ]
+    }
+  ]
+}
 ```
 
 ## Stream Song

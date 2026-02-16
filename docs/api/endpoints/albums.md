@@ -136,3 +136,77 @@ curl "https://api.example.com/api/v1/albums?year=2023&sort=name&order=asc" \
 1. Get album songs: `GET /api/v1/albums/{id}/songs`
 2. Add all songs to the player queue
 3. For each song, get streaming URL: `GET /api/v1/songs/{song_id}/stream`
+
+## Upload Album Cover
+
+```
+POST /api/v1/albums/{id}/cover
+```
+
+Upload a custom cover image for an album.
+
+### Request
+
+```bash
+curl -X POST "https://api.example.com/api/v1/albums/{id}/cover" \
+  -H "Authorization: Bearer {token}" \
+  -F "cover=@/path/to/cover.jpg"
+```
+
+### Response
+
+```json
+{
+  "data": {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "name": "Greatest Hits",
+    "cover": "https://cdn.example.com/covers/album-new.jpg",
+    ...
+  }
+}
+```
+
+### Supported Formats
+
+- JPEG
+- PNG
+- WebP
+
+## Refresh Album Cover
+
+```
+POST /api/v1/albums/{id}/refresh-cover
+```
+
+Fetch cover art from external sources (MusicBrainz, Discogs, etc.).
+
+### Request
+
+```bash
+curl -X POST "https://api.example.com/api/v1/albums/{id}/refresh-cover" \
+  -H "Authorization: Bearer {token}"
+```
+
+### Response
+
+```json
+{
+  "data": {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "name": "Greatest Hits",
+    "cover": "https://cdn.example.com/covers/album-refreshed.jpg",
+    ...
+  }
+}
+```
+
+### Error: Cover Not Found
+
+```json
+{
+  "error": {
+    "code": "COVER_FETCH_FAILED",
+    "message": "Could not find or download cover art for this album"
+  }
+}
+```

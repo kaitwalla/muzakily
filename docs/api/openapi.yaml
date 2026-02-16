@@ -418,12 +418,16 @@ paths:
                         type: string
                       user:
                         $ref: '#/components/schemas/User'
-        '422':
+        '401':
           description: Invalid credentials
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: The provided credentials are incorrect.
 
   /auth/logout:
     delete:
@@ -447,6 +451,58 @@ paths:
                 properties:
                   data:
                     $ref: '#/components/schemas/User'
+    patch:
+      tags: [Authentication]
+      summary: Update current user profile
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                preferences:
+                  type: object
+                  properties:
+                    audio_quality:
+                      type: string
+                      enum: [auto, high, normal, low]
+                    crossfade:
+                      type: integer
+                      enum: [0, 3, 5, 10]
+                avatar:
+                  type: string
+                  format: binary
+                  description: Profile image (max 2MB)
+                current_password:
+                  type: string
+                  format: password
+                  description: Required when changing password
+                password:
+                  type: string
+                  format: password
+                  description: New password (min 8 chars)
+                password_confirmation:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
 
   /songs/recently-played:
     get:
@@ -454,12 +510,12 @@ paths:
       summary: Get recently played songs
       description: Returns songs the current user has recently played, ordered by most recent first
       parameters:
-        - name: per_page
+        - name: limit
           in: query
           schema:
             type: integer
-            maximum: 100
-            default: 20
+            maximum: 50
+            default: 10
       responses:
         '200':
           description: Recently played songs
@@ -471,17 +527,7 @@ paths:
                   data:
                     type: array
                     items:
-                      allOf:
-                        - $ref: '#/components/schemas/Song'
-                        - type: object
-                          properties:
-                            last_played_at:
-                              type: string
-                              format: date-time
-                  links:
-                    $ref: '#/components/schemas/PaginationLinks'
-                  meta:
-                    $ref: '#/components/schemas/PaginationMeta'
+                      $ref: '#/components/schemas/Song'
 
   /songs:
     get:
@@ -517,6 +563,11 @@ paths:
             enum: [MP3, AAC, FLAC]
         - name: favorited
           in: query
+          schema:
+            type: boolean
+        - name: incomplete
+          in: query
+          description: Filter songs with missing metadata (no artist, album, or unknown artist)
           schema:
             type: boolean
         - name: sort
@@ -627,6 +678,74 @@ paths:
                     $ref: '#/components/schemas/Song'
         '403':
           description: Not authorized
+
+  /songs/bulk:
+    put:
+      tags: [Songs]
+      summary: Bulk update multiple songs (admin only)
+      description: Update metadata and tags for multiple songs at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [song_ids]
+              properties:
+                song_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                title:
+                  type: string
+                  maxLength: 255
+                artist_name:
+                  type: string
+                  maxLength: 255
+                  nullable: true
+                album_name:
+                  type: string
+                  maxLength: 255
+                  nullable: true
+                year:
+                  type: integer
+                  nullable: true
+                track:
+                  type: integer
+                  nullable: true
+                disc:
+                  type: integer
+                  nullable: true
+                genre:
+                  type: string
+                  maxLength: 255
+                  nullable: true
+                add_tag_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Tag IDs to add to all songs
+                remove_tag_ids:
+                  type: array
+                  items:
+                    type: integer
+                  description: Tag IDs to remove from all songs
+      responses:
+        '200':
+          description: Songs updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Song'
+        '403':
+          description: Not authorized (admin only)
 
   /songs/{song}/stream:
     get:
@@ -848,6 +967,75 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Song'
+
+  /albums/{album}/cover:
+    post:
+      tags: [Albums]
+      summary: Upload custom album cover
+      parameters:
+        - name: album
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [cover]
+              properties:
+                cover:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP)
+      responses:
+        '200':
+          description: Cover uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Album'
+        '500':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+
+  /albums/{album}/refresh-cover:
+    post:
+      tags: [Albums]
+      summary: Refresh album cover from external sources
+      description: Fetches cover art from MusicBrainz, Discogs, or other sources
+      parameters:
+        - name: album
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cover refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Album'
+        '404':
+          description: Could not find cover art
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
 
   /artists:
     get:
@@ -1240,6 +1428,79 @@ paths:
       responses:
         '200':
           description: Songs reordered
+
+  /playlists/{playlist}/cover:
+    post:
+      tags: [Playlists]
+      summary: Upload custom playlist cover
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [cover]
+              properties:
+                cover:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP)
+      responses:
+        '200':
+          description: Cover uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+        '500':
+          description: Upload failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+
+  /playlists/{playlist}/refresh-cover:
+    post:
+      tags: [Playlists]
+      summary: Refresh smart playlist cover
+      description: Generates a new cover image for smart playlists based on matching songs
+      parameters:
+        - name: playlist
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cover refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Playlist'
+        '422':
+          description: Only available for smart playlists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
+        '500':
+          description: Failed to generate cover
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusinessError'
 
   /smart-folders:
     get:
@@ -1654,6 +1915,68 @@ paths:
                               $ref: '#/components/schemas/Artist'
                           total:
                             type: integer
+
+  /stream/local:
+    get:
+      tags: [Songs]
+      summary: Stream from local storage
+      description: |
+        Stream audio files from local storage using signed URLs.
+        This endpoint does not require Bearer token authentication - instead it uses
+        URL signature verification. The signed URL is obtained from the /songs/{id}/stream
+        endpoint when local storage is configured.
+      security: []
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Path to the audio file
+        - name: signature
+          in: query
+          required: true
+          schema:
+            type: string
+          description: URL signature for authentication
+        - name: expires
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Expiration timestamp
+        - name: Range
+          in: header
+          schema:
+            type: string
+          description: HTTP Range header for seeking (e.g., "bytes=0-1023")
+      responses:
+        '200':
+          description: Full file stream
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            audio/mp4:
+              schema:
+                type: string
+                format: binary
+            audio/flac:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Partial content (Range request)
+          headers:
+            Content-Range:
+              schema:
+                type: string
+              description: "Byte range (e.g., bytes 0-1023/5000)"
+        '403':
+          description: Invalid or expired signature
+        '404':
+          description: File not found
 
   /upload:
     post:

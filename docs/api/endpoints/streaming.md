@@ -111,6 +111,63 @@ Location: https://your-r2-bucket.r2.cloudflarestorage.com/songs/abc123.flac?...&
 
 The download URL includes a `Content-Disposition: attachment` header to trigger a file download in browsers.
 
+## Local Storage Streaming
+
+```
+GET /api/v1/stream/local
+```
+
+When using local storage instead of R2, songs are streamed through this endpoint using signed URLs. This endpoint supports HTTP Range requests for seeking.
+
+### Authentication
+
+This endpoint uses URL signature verification instead of Bearer tokens. The signed URL is provided by the `/songs/{id}/stream` endpoint when local storage is configured.
+
+### Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Path to the audio file |
+| `signature` | string | URL signature |
+| `expires` | integer | Expiration timestamp |
+
+### HTTP Range Support
+
+The endpoint supports Range requests for audio seeking:
+
+```bash
+# Request bytes 0-1023
+curl "https://api.example.com/api/v1/stream/local?path=songs/abc.mp3&signature=xyz&expires=123" \
+  -H "Range: bytes=0-1023"
+```
+
+### Response Headers
+
+For full file requests (200):
+```
+Content-Type: audio/mpeg
+Accept-Ranges: bytes
+Content-Length: 5242880
+```
+
+For range requests (206):
+```
+Content-Type: audio/mpeg
+Accept-Ranges: bytes
+Content-Range: bytes 0-1023/5242880
+Content-Length: 1024
+```
+
+### Supported Formats
+
+| Extension | MIME Type |
+|-----------|-----------|
+| .mp3 | audio/mpeg |
+| .m4a, .aac | audio/mp4 |
+| .flac | audio/flac |
+| .wav | audio/wav |
+| .ogg | audio/ogg |
+
 ## Record Play
 
 After streaming starts, record the play for analytics:
@@ -126,7 +183,7 @@ curl -X POST "https://api.example.com/api/v1/interactions/play" \
   -d '{"song_id": "550e8400-e29b-41d4-a716-446655440000"}'
 ```
 
-See [Interactions API](../endpoints/interactions.md) for details.
+This increments the play count and updates the last played timestamp for recently played tracking.
 
 ## Streaming Best Practices
 

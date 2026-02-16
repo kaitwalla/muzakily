@@ -251,3 +251,78 @@ curl -X PUT "https://api.example.com/api/v1/playlists/1/songs/reorder" \
 ```
 
 The `song_ids` array must contain all songs currently in the playlist in the desired order.
+
+## Upload Playlist Cover
+
+```
+POST /api/v1/playlists/{id}/cover
+```
+
+Upload a custom cover image for a playlist.
+
+### Request
+
+```bash
+curl -X POST "https://api.example.com/api/v1/playlists/{id}/cover" \
+  -H "Authorization: Bearer {token}" \
+  -F "cover=@/path/to/cover.jpg"
+```
+
+### Response
+
+```json
+{
+  "data": {
+    "id": 1,
+    "name": "My Favorites",
+    "cover": "https://cdn.example.com/playlists/1-custom.jpg",
+    ...
+  }
+}
+```
+
+### Supported Formats
+
+- JPEG
+- PNG
+- WebP
+
+## Refresh Playlist Cover (Smart Playlists Only)
+
+```
+POST /api/v1/playlists/{id}/refresh-cover
+```
+
+Generate a new cover image for smart playlists based on the album covers of matching songs.
+
+### Request
+
+```bash
+curl -X POST "https://api.example.com/api/v1/playlists/{id}/refresh-cover" \
+  -H "Authorization: Bearer {token}"
+```
+
+### Response
+
+```json
+{
+  "data": {
+    "id": 2,
+    "name": "Recently Added Rock",
+    "is_smart": true,
+    "cover": "https://cdn.example.com/playlists/2-generated.jpg",
+    ...
+  }
+}
+```
+
+### Error: Not a Smart Playlist
+
+```json
+{
+  "error": {
+    "code": "INVALID_OPERATION",
+    "message": "Cover refresh is only available for smart playlists"
+  }
+}
+```
