@@ -469,9 +469,11 @@ paths:
                     audio_quality:
                       type: string
                       enum: [auto, high, normal, low]
+                      description: "Quality preference: auto (adaptive), high (320kbps), normal (256kbps), low (128kbps)"
                     crossfade:
                       type: integer
                       enum: [0, 3, 5, 10]
+                      description: "Crossfade duration in seconds between tracks"
                 avatar:
                   type: string
                   format: binary

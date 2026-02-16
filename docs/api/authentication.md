@@ -111,8 +111,19 @@ curl -X PATCH https://your-domain.com/api/v1/auth/me \
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Display name (max 255 chars) |
-| `preferences.audio_quality` | string | Audio quality: auto, high, normal, low |
+| `preferences.audio_quality` | string | Audio quality preference (see below) |
 | `preferences.crossfade` | integer | Crossfade duration: 0, 3, 5, or 10 seconds |
+
+### Audio Quality Settings
+
+| Value | Bitrate | Use Case |
+|-------|---------|----------|
+| `auto` | Adaptive | Adjusts based on network conditions |
+| `high` | 320 kbps | Best quality, highest bandwidth usage |
+| `normal` | 256 kbps | Good quality, moderate bandwidth (default) |
+| `low` | 128 kbps | Data saver, for slow connections |
+
+When transcoding is requested, files are converted to the target bitrate. Original files are always available at their native quality regardless of this setting.
 | `avatar` | file | Profile image (max 2MB) |
 | `current_password` | string | Required when changing password |
 | `password` | string | New password (min 8 chars) |
