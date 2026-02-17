@@ -103,30 +103,32 @@ curl -X POST "https://api.example.com/api/v1/playlists" \
       {
         "logic": "and",
         "rules": [
-          {"field": "year", "operator": "between", "value": [1980, 1989]},
-          {"field": "is_favorite", "operator": "equals", "value": true}
+          {"field": "year", "operator": "is_between", "value": [1980, 1989]},
+          {"field": "is_favorite", "operator": "is", "value": ""}
         ]
       }
     ]
   }'
 ```
 
+> **Note:** Boolean fields like `is_favorite` don't require a meaningful value—the operator (`is` or `is_not`) determines the logic. The value field must be present but can be empty.
+
 ### Smart Playlist Rule Fields
 
-| Field | Operators | Value Type |
-|-------|-----------|------------|
-| `title` | contains, equals, starts_with, ends_with | string |
-| `artist_name` | contains, equals, starts_with, ends_with | string |
-| `album_name` | contains, equals, starts_with, ends_with | string |
-| `genre` | equals, contains | string |
-| `year` | equals, greater_than, less_than, between | integer |
-| `play_count` | equals, greater_than, less_than | integer |
-| `is_favorite` | equals | boolean |
-| `audio_format` | equals | MP3, AAC, FLAC |
-| `smart_folder_id` | equals | integer |
-| `tag` | has, has_any | integer or array |
-| `created_at` | before, after, in_last | date or duration |
-| `length` | greater_than, less_than, between | seconds |
+| Field | Operators | Value Type | Notes |
+|-------|-----------|------------|-------|
+| `title` | is, is_not, contains, not_contains, begins_with, ends_with | string | |
+| `artist_name` | is, is_not, contains, not_contains, begins_with, ends_with | string | |
+| `album_name` | is, is_not, contains, not_contains, begins_with, ends_with | string | |
+| `genre` | is, is_not, contains, not_contains, begins_with, ends_with | string | |
+| `year` | is, is_not, is_greater_than, is_less_than, is_between | integer | |
+| `length` | is, is_not, is_greater_than, is_less_than, is_between | integer (seconds) | |
+| `play_count` | is, is_not, is_greater_than, is_less_than, is_between | integer | |
+| `last_played` | in_last, not_in_last, is_between | integer (days) or date range | |
+| `date_added` | in_last, not_in_last, is_between | integer (days) or date range | |
+| `audio_format` | is, is_not, contains, not_contains, begins_with, ends_with | string | MP3, AAC, FLAC, etc. |
+| `is_favorite` | is, is_not | (none) | Value not required |
+| `tag` | is, is_not, contains, not_contains | string | Tag name |
 
 ## Get Playlist
 

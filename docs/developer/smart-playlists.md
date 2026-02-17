@@ -214,64 +214,69 @@ class FieldRegistry
 
 ### CreatePlaylistRequest
 
+The request validates smart playlist rules with special handling for boolean fields:
+
 ```php
 class CreatePlaylistRequest extends FormRequest
 {
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'is_smart' => 'boolean',
-            'rules' => 'required_if:is_smart,true|array',
-            'rules.*.logic' => 'required|in:and,or',
-            'rules.*.rules' => 'required|array|min:1',
-            'rules.*.rules.*.field' => [
-                'required',
-                'string',
-                Rule::in($this->validFields()),
-            ],
-            'rules.*.rules.*.operator' => 'required|string',
-            'rules.*.rules.*.value' => 'required',
-        ];
-    }
-
-    protected function validFields(): array
-    {
-        return [
-            'title', 'artist_name', 'album_name', 'genre',
-            'year', 'play_count', 'length', 'is_favorite',
-            'audio_format', 'smart_folder_id', 'tag', 'created_at',
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'is_smart' => ['boolean'],
+            'rules' => ['required_if:is_smart,true', 'nullable', 'array'],
+            'rules.*.logic' => ['required_with:rules', 'string', 'in:and,or'],
+            'rules.*.rules' => ['required_with:rules', 'array'],
+            'rules.*.rules.*.field' => ['required', 'string'],
+            'rules.*.rules.*.operator' => ['required', 'string'],
+            'rules.*.rules.*.value' => ['present'], // Must be present but can be empty for boolean fields
+            'song_ids' => ['nullable', 'array'],
+            'song_ids.*' => ['uuid', 'exists:songs,id'],
         ];
     }
 
     public function withValidator(Validator $validator): void
     {
-        $validator->after(function ($validator) {
-            if ($this->input('is_smart')) {
-                $this->validateOperators($validator);
+        $validator->after(function (Validator $validator) {
+            $rules = $this->input('rules', []);
+            if (!is_array($rules)) {
+                return;
+            }
+
+            foreach ($rules as $groupIndex => $group) {
+                if (!is_array($group) || !isset($group['rules']) || !is_array($group['rules'])) {
+                    continue;
+                }
+
+                foreach ($group['rules'] as $ruleIndex => $rule) {
+                    if (!is_array($rule)) {
+                        continue;
+                    }
+
+                    $field = $rule['field'] ?? null;
+                    $value = $rule['value'] ?? null;
+
+                    // Boolean fields (like is_favorite) don't require a value
+                    if ($field === 'is_favorite') {
+                        continue;
+                    }
+
+                    // All other fields require a non-empty value
+                    if ($value === null || $value === '' || (is_array($value) && count($value) === 0)) {
+                        $validator->errors()->add(
+                            "rules.{$groupIndex}.rules.{$ruleIndex}.value",
+                            'The value field is required.'
+                        );
+                    }
+                }
             }
         });
     }
-
-    protected function validateOperators(Validator $validator): void
-    {
-        // Validate operators match field types
-        foreach ($this->input('rules', []) as $gi => $group) {
-            foreach ($group['rules'] ?? [] as $ri => $rule) {
-                $field = $rule['field'] ?? '';
-                $operator = $rule['operator'] ?? '';
-
-                if (!$this->isValidOperator($field, $operator)) {
-                    $validator->errors()->add(
-                        "rules.{$gi}.rules.{$ri}.operator",
-                        "Invalid operator '{$operator}' for field '{$field}'"
-                    );
-                }
-            }
-        }
-    }
 }
 ```
+
+**Note:** Boolean fields like `is_favorite` use the operator (`is` or `is_not`) to determine the logic—the value field must be present in the request but can be empty.
 
 ## API Endpoints
 
@@ -351,29 +356,23 @@ const playlistsStore = defineStore('playlists', () => {
 
 ```typescript
 // config/smartPlaylist/fields.ts
-export const fields = {
-  title: {
-    label: 'Title',
-    type: 'string',
-    operators: ['equals', 'contains', 'starts_with', 'ends_with'],
-  },
-  year: {
-    label: 'Year',
-    type: 'number',
-    operators: ['equals', 'greater_than', 'less_than', 'between'],
-  },
-  is_favorite: {
-    label: 'Is Favorite',
-    type: 'boolean',
-    operators: ['equals'],
-  },
-  tag: {
-    label: 'Tag',
-    type: 'tag',
-    operators: ['has', 'has_any'],
-  },
-};
+export const smartPlaylistFields: SmartPlaylistField[] = [
+    { value: 'title', label: 'Title', type: 'text' },
+    { value: 'artist_name', label: 'Artist', type: 'text' },
+    { value: 'album_name', label: 'Album', type: 'text' },
+    { value: 'genre', label: 'Genre', type: 'text' },
+    { value: 'year', label: 'Year', type: 'number' },
+    { value: 'length', label: 'Length', type: 'number' },
+    { value: 'play_count', label: 'Play Count', type: 'number' },
+    { value: 'last_played', label: 'Last Played', type: 'date' },
+    { value: 'date_added', label: 'Date Added', type: 'date' },
+    { value: 'audio_format', label: 'Format', type: 'text' },
+    { value: 'is_favorite', label: 'Favorite', type: 'boolean' },  // No value required
+    { value: 'tag', label: 'Tag', type: 'text' },
+];
 ```
+
+**Note:** For `is_favorite` (boolean type), the frontend skips the value input—the operator (`is` or `is_not`) alone determines whether to match favorited or non-favorited songs.
 
 ## Materialization
 
