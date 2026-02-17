@@ -70,9 +70,9 @@ class MetadataExtractorService
      *     duration_estimated?: bool,
      * }|null
      */
-    public function safeExtractWithEstimation(string $filePath, int $fileSize): ?array
+    public function safeExtractWithEstimation(string $filePath, int $fileSize, bool $ffprobeOnly = false): ?array
     {
-        return $this->extractInSubprocess($filePath, $fileSize);
+        return $this->extractInSubprocess($filePath, $fileSize, $ffprobeOnly);
     }
 
     /**
@@ -93,7 +93,7 @@ class MetadataExtractorService
      *     duration_estimated?: bool,
      * }|null
      */
-    public function extractInSubprocess(string $filePath, ?int $fileSize = null): ?array
+    public function extractInSubprocess(string $filePath, ?int $fileSize = null, bool $ffprobeOnly = false): ?array
     {
         $command = [
             'php',
@@ -104,6 +104,10 @@ class MetadataExtractorService
 
         if ($fileSize !== null) {
             $command[] = '--file-size=' . $fileSize;
+        }
+
+        if ($ffprobeOnly) {
+            $command[] = '--ffprobe-only';
         }
 
         $result = Process::timeout(120)->run($command);
@@ -412,5 +416,70 @@ class MetadataExtractorService
         // Duration = (file_size_in_bits) / bitrate
         // file_size_in_bits = file_size_in_bytes * 8
         return ($fileSize * 8) / $bitrate;
+    }
+
+    /**
+     * Extract duration using ffprobe.
+     *
+     * This is more reliable than getID3 for certain files and is used
+     * as a fallback when getID3 fails to extract duration.
+     *
+     * @param string $filePath Path to the audio file
+     * @return float|null Duration in seconds, or null if extraction failed
+     */
+    public function extractDurationWithFfprobe(string $filePath): ?float
+    {
+        $result = Process::timeout(30)->run([
+            'ffprobe',
+            '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            $filePath,
+        ]);
+
+        if (!$result->successful()) {
+            return null;
+        }
+
+        $output = trim($result->output());
+
+        if ($output === '' || $output === 'N/A') {
+            return null;
+        }
+
+        $duration = (float) $output;
+
+        return $duration > 0 ? $duration : null;
+    }
+
+    /**
+     * Extract bitrate using ffprobe.
+     *
+     * @param string $filePath Path to the audio file
+     * @return int|null Bitrate in bits per second, or null if extraction failed
+     */
+    public function extractBitrateWithFfprobe(string $filePath): ?int
+    {
+        $result = Process::timeout(30)->run([
+            'ffprobe',
+            '-v', 'error',
+            '-show_entries', 'format=bit_rate',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            $filePath,
+        ]);
+
+        if (!$result->successful()) {
+            return null;
+        }
+
+        $output = trim($result->output());
+
+        if ($output === '' || $output === 'N/A') {
+            return null;
+        }
+
+        $bitrate = (int) $output;
+
+        return $bitrate > 0 ? $bitrate : null;
     }
 }

@@ -17,7 +17,8 @@ class ExtractMetadataCommand extends Command
 {
     protected $signature = 'internal:extract-metadata
         {file : Path to the audio file}
-        {--file-size= : Actual file size for duration estimation}';
+        {--file-size= : Actual file size for duration estimation}
+        {--ffprobe-only : Use ffprobe only, skip getID3 (faster but no tags)}';
 
     protected $description = 'Extract metadata from an audio file (internal use)';
 
@@ -29,7 +30,7 @@ class ExtractMetadataCommand extends Command
         $filePath = $this->argument('file');
 
         if (!file_exists($filePath)) {
-            $this->output->writeln(json_encode(['error' => 'File not found']));
+            $this->output->writeln((string) json_encode(['error' => 'File not found']));
             return Command::FAILURE;
         }
 
@@ -39,16 +40,34 @@ class ExtractMetadataCommand extends Command
             if ($fileSizeOption !== null && $fileSizeOption !== '') {
                 $parsedSize = filter_var($fileSizeOption, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
                 if ($parsedSize === false) {
-                    $this->output->writeln(json_encode(['error' => 'Invalid file-size: must be a positive integer']));
+                    $this->output->writeln((string) json_encode(['error' => 'Invalid file-size: must be a positive integer']));
                     return Command::FAILURE;
                 }
                 $fileSize = $parsedSize;
             }
 
-            if ($fileSize !== null) {
+            // If ffprobe-only mode, skip getID3 entirely
+            if ($this->option('ffprobe-only')) {
+                $metadata = $this->extractWithFfprobeOnly($extractor, $filePath, $fileSize);
+            } elseif ($fileSize !== null) {
                 $metadata = $extractor->extractWithEstimation($filePath, $fileSize);
+                // If getID3 failed to get duration, try ffprobe as fallback
+                if ($metadata['duration'] <= 0) {
+                    $ffprobeDuration = $extractor->extractDurationWithFfprobe($filePath);
+                    if ($ffprobeDuration !== null) {
+                        $metadata['duration'] = $ffprobeDuration;
+                        $metadata['duration_estimated'] = false;
+                    }
+                }
             } else {
                 $metadata = $extractor->extract($filePath);
+                // If getID3 failed to get duration, try ffprobe as fallback
+                if ($metadata['duration'] <= 0) {
+                    $ffprobeDuration = $extractor->extractDurationWithFfprobe($filePath);
+                    if ($ffprobeDuration !== null) {
+                        $metadata['duration'] = $ffprobeDuration;
+                    }
+                }
             }
 
             // Remove cover_art from output - it's binary data that doesn't serialize well
@@ -58,7 +77,7 @@ class ExtractMetadataCommand extends Command
             // Use JSON_INVALID_UTF8_SUBSTITUTE to handle non-UTF8 strings in metadata
             $json = json_encode($metadata, JSON_INVALID_UTF8_SUBSTITUTE);
             if ($json === false) {
-                $this->output->writeln(json_encode([
+                $this->output->writeln((string) json_encode([
                     'error' => 'Failed to encode metadata: ' . json_last_error_msg(),
                     'type' => 'JsonEncodingException',
                 ]));
@@ -68,11 +87,56 @@ class ExtractMetadataCommand extends Command
             $this->output->writeln($json);
             return Command::SUCCESS;
         } catch (\Throwable $e) {
-            $this->output->writeln(json_encode([
+            $this->output->writeln((string) json_encode([
                 'error' => $e->getMessage(),
                 'type' => get_class($e),
             ]));
             return Command::FAILURE;
         }
+    }
+
+    /**
+     * Extract metadata using ffprobe only, skipping getID3.
+     *
+     * This is useful when getID3 hangs or crashes on certain files.
+     * Only duration and bitrate are extracted; tags will be null.
+     *
+     * @return array{
+     *     title: null,
+     *     artist: null,
+     *     album: null,
+     *     year: null,
+     *     track: null,
+     *     disc: null,
+     *     genre: null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: null,
+     *     cover_art: null,
+     * }
+     */
+    private function extractWithFfprobeOnly(MetadataExtractorService $extractor, string $filePath, ?int $fileSize): array
+    {
+        $duration = $extractor->extractDurationWithFfprobe($filePath) ?? 0.0;
+        $bitrate = $extractor->extractBitrateWithFfprobe($filePath);
+
+        // If ffprobe couldn't get duration but we have bitrate and file size, estimate
+        if ($duration <= 0 && $bitrate !== null && $bitrate > 0 && $fileSize !== null) {
+            $duration = $extractor->estimateDuration($bitrate, $fileSize);
+        }
+
+        return [
+            'title' => null,
+            'artist' => null,
+            'album' => null,
+            'year' => null,
+            'track' => null,
+            'disc' => null,
+            'genre' => null,
+            'duration' => $duration,
+            'bitrate' => $bitrate,
+            'lyrics' => null,
+            'cover_art' => null,
+        ];
     }
 }

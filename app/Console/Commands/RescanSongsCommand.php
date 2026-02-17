@@ -25,7 +25,8 @@ class RescanSongsCommand extends Command
         {--unknown-only : Only rescan songs with unknown artist}
         {--zero-duration : Only rescan songs with 0 duration}
         {--limit= : Limit number of songs to process}
-        {--dry-run : Show what would be done without making changes}';
+        {--dry-run : Show what would be done without making changes}
+        {--ffprobe-only : Use ffprobe only for duration (skip getID3, faster but no tags)}';
 
     /**
      * The console command description.
@@ -131,8 +132,9 @@ class RescanSongsCommand extends Command
 
                     // Extract metadata using subprocess to avoid OOM crashes
                     // Use estimation for zero-duration fixes
+                    $ffprobeOnly = (bool) $this->option('ffprobe-only');
                     if ($fixingDuration) {
-                        $metadata = $extractor->safeExtractWithEstimation($tempFile, $song->file_size);
+                        $metadata = $extractor->safeExtractWithEstimation($tempFile, $song->file_size, $ffprobeOnly);
                     } else {
                         $metadata = $extractor->safeExtract($tempFile);
                     }
