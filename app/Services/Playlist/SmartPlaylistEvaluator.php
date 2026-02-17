@@ -298,17 +298,34 @@ class SmartPlaylistEvaluator
     /**
      * Apply is_favorite rule.
      *
+     * Uses raw SQL to handle PostgreSQL UUID vs varchar comparison.
+     * The favorites table uses varchar for favoritable_id (polymorphic),
+     * but songs.id is UUID type, requiring explicit cast.
+     *
      * @param Builder<Song> $query
      */
     private function applyIsFavoriteRule(Builder $query, SmartPlaylistOperator $operator, string $method, User $user): void
     {
-        // Only handle IS and IS_NOT operators explicitly, ignore unsupported operators
+        $morphType = (new Song())->getMorphClass();
+
         match ($operator) {
-            SmartPlaylistOperator::IS => $query->$method(function (Builder $q) use ($user) {
-                $q->whereHas('favorites', fn (Builder $fq) => $fq->where('user_id', $user->id));
+            SmartPlaylistOperator::IS => $query->$method(function (Builder $q) use ($user, $morphType) {
+                $q->whereExists(function ($subquery) use ($user, $morphType) {
+                    $subquery->selectRaw('1')
+                        ->from('favorites')
+                        ->whereColumn('favorites.favoritable_id', '=', \DB::raw('songs.id::text'))
+                        ->where('favorites.favoritable_type', $morphType)
+                        ->where('favorites.user_id', $user->id);
+                });
             }),
-            SmartPlaylistOperator::IS_NOT => $query->$method(function (Builder $q) use ($user) {
-                $q->whereDoesntHave('favorites', fn (Builder $fq) => $fq->where('user_id', $user->id));
+            SmartPlaylistOperator::IS_NOT => $query->$method(function (Builder $q) use ($user, $morphType) {
+                $q->whereNotExists(function ($subquery) use ($user, $morphType) {
+                    $subquery->selectRaw('1')
+                        ->from('favorites')
+                        ->whereColumn('favorites.favoritable_id', '=', \DB::raw('songs.id::text'))
+                        ->where('favorites.favoritable_type', $morphType)
+                        ->where('favorites.user_id', $user->id);
+                });
             }),
             default => null, // Ignore unsupported operators
         };
