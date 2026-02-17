@@ -237,8 +237,11 @@ class MetadataExtractorService
         $tags = [];
 
         // Priority: ID3v2 > ID3v1 > Vorbis > QuickTime (M4A/AAC) > APE
+        // Also check id3v2.comments as fallback - this contains parsed tags even when
+        // getID3 can't determine the file format (e.g., with partial file downloads)
         $tagSources = [
             'tags.id3v2' => $info['tags']['id3v2'] ?? [],
+            'id3v2.comments' => $info['id3v2']['comments'] ?? [],
             'tags.id3v1' => $info['tags']['id3v1'] ?? [],
             'tags.vorbiscomment' => $info['tags']['vorbiscomment'] ?? [],
             'tags.quicktime' => $info['tags']['quicktime'] ?? [],
@@ -249,9 +252,9 @@ class MetadataExtractorService
             'title' => ['title', 'TIT2'],
             'artist' => ['artist', 'TPE1', 'band'],
             'album' => ['album', 'TALB'],
-            'year' => ['year', 'date', 'TDRC', 'TYER'],
+            'year' => ['year', 'date', 'TDRC', 'TYER', 'recording_time'],
             'track' => ['track_number', 'tracknumber', 'TRCK', 'track'],
-            'disc' => ['disc_number', 'discnumber', 'TPOS', 'part_of_set'],
+            'disc' => ['disc_number', 'discnumber', 'TPOS', 'part_of_set', 'part_of_a_set'],
             'genre' => ['genre', 'TCON'],
             'unsynchronised_lyric' => ['unsynchronised_lyric', 'USLT', 'lyrics'],
         ];
