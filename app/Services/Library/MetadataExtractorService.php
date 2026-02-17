@@ -482,4 +482,102 @@ class MetadataExtractorService
 
         return $bitrate > 0 ? $bitrate : null;
     }
+
+    /**
+     * Extract all metadata using ffprobe (duration, bitrate, and tags).
+     *
+     * This is an alternative to getID3 that works when getID3 hangs.
+     *
+     * @param string $filePath Path to the audio file
+     * @param int|null $fileSize File size for duration estimation fallback
+     * @return array{
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
+     *     duration: float,
+     *     bitrate: int|null,
+     *     lyrics: string|null,
+     *     cover_art: null,
+     * }
+     */
+    public function extractWithFfprobe(string $filePath, ?int $fileSize = null): array
+    {
+        // Get duration and bitrate
+        $result = Process::timeout(30)->run([
+            'ffprobe',
+            '-v', 'error',
+            '-show_entries', 'format=duration,bit_rate:format_tags',
+            '-of', 'json',
+            $filePath,
+        ]);
+
+        $duration = 0.0;
+        $bitrate = null;
+        $tags = [];
+
+        if ($result->successful()) {
+            /** @var array{format?: array{duration?: string, bit_rate?: string, tags?: array<string, string>}}|null $data */
+            $data = json_decode($result->output(), true);
+
+            if ($data !== null && isset($data['format'])) {
+                $format = $data['format'];
+
+                if (isset($format['duration']) && is_numeric($format['duration'])) {
+                    $duration = (float) $format['duration'];
+                }
+
+                if (isset($format['bit_rate']) && is_numeric($format['bit_rate'])) {
+                    $bitrate = (int) $format['bit_rate'];
+                }
+
+                if (isset($format['tags'])) {
+                    $tags = $format['tags'];
+                }
+            }
+        }
+
+        // If duration is still 0 and we have bitrate and file size, estimate
+        if ($duration <= 0 && $bitrate !== null && $bitrate > 0 && $fileSize !== null) {
+            $duration = $this->estimateDuration($bitrate, $fileSize);
+        }
+
+        // Extract year from date field
+        $year = null;
+        $yearSource = $tags['date'] ?? $tags['TDRC'] ?? $tags['TYER'] ?? $tags['year'] ?? null;
+        if ($yearSource !== null && preg_match('/^(\d{4})/', $yearSource, $matches)) {
+            $year = (int) $matches[1];
+        }
+
+        // Extract track number
+        $track = null;
+        $trackSource = $tags['track'] ?? $tags['TRCK'] ?? null;
+        if ($trackSource !== null && preg_match('/^(\d+)/', $trackSource, $matches)) {
+            $track = (int) $matches[1];
+        }
+
+        // Extract disc number
+        $disc = null;
+        $discSource = $tags['disc'] ?? $tags['TPOS'] ?? null;
+        if ($discSource !== null && preg_match('/^(\d+)/', $discSource, $matches)) {
+            $disc = (int) $matches[1];
+        }
+
+        return [
+            'title' => $tags['title'] ?? $tags['TIT2'] ?? null,
+            'artist' => $tags['artist'] ?? $tags['TPE1'] ?? null,
+            'album' => $tags['album'] ?? $tags['TALB'] ?? null,
+            'year' => $year,
+            'track' => $track,
+            'disc' => $disc,
+            'genre' => $tags['genre'] ?? $tags['TCON'] ?? null,
+            'duration' => $duration,
+            'bitrate' => $bitrate,
+            'lyrics' => $tags['lyrics'] ?? $tags['USLT'] ?? null,
+            'cover_art' => null, // ffprobe doesn't easily extract cover art
+        ];
+    }
 }

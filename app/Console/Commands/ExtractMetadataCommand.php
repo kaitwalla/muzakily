@@ -99,44 +99,23 @@ class ExtractMetadataCommand extends Command
      * Extract metadata using ffprobe only, skipping getID3.
      *
      * This is useful when getID3 hangs or crashes on certain files.
-     * Only duration and bitrate are extracted; tags will be null.
      *
      * @return array{
-     *     title: null,
-     *     artist: null,
-     *     album: null,
-     *     year: null,
-     *     track: null,
-     *     disc: null,
-     *     genre: null,
+     *     title: string|null,
+     *     artist: string|null,
+     *     album: string|null,
+     *     year: int|null,
+     *     track: int|null,
+     *     disc: int|null,
+     *     genre: string|null,
      *     duration: float,
      *     bitrate: int|null,
-     *     lyrics: null,
+     *     lyrics: string|null,
      *     cover_art: null,
      * }
      */
     private function extractWithFfprobeOnly(MetadataExtractorService $extractor, string $filePath, ?int $fileSize): array
     {
-        $duration = $extractor->extractDurationWithFfprobe($filePath) ?? 0.0;
-        $bitrate = $extractor->extractBitrateWithFfprobe($filePath);
-
-        // If ffprobe couldn't get duration but we have bitrate and file size, estimate
-        if ($duration <= 0 && $bitrate !== null && $bitrate > 0 && $fileSize !== null) {
-            $duration = $extractor->estimateDuration($bitrate, $fileSize);
-        }
-
-        return [
-            'title' => null,
-            'artist' => null,
-            'album' => null,
-            'year' => null,
-            'track' => null,
-            'disc' => null,
-            'genre' => null,
-            'duration' => $duration,
-            'bitrate' => $bitrate,
-            'lyrics' => null,
-            'cover_art' => null,
-        ];
+        return $extractor->extractWithFfprobe($filePath, $fileSize);
     }
 }
