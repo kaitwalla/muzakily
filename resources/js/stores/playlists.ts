@@ -8,6 +8,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
     const playlists = ref<Playlist[]>([]);
     const currentPlaylist = ref<Playlist | null>(null);
     const currentPlaylistSongs = ref<Song[]>([]);
+    const currentPlaylistSongCount = ref<number>(0);
     const loading = ref(false);
     const error = ref<string | null>(null);
     const meta = ref<PaginationMeta | null>(null);
@@ -75,9 +76,10 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         loading.value = true;
         error.value = null;
         try {
-            const songs = await playlistsApi.getPlaylistSongs(playlistId);
-            currentPlaylistSongs.value = songs;
-            return songs;
+            const result = await playlistsApi.getPlaylistSongs(playlistId);
+            currentPlaylistSongs.value = result.songs;
+            currentPlaylistSongCount.value = result.total;
+            return result.songs;
         } catch (e) {
             error.value = 'Failed to load playlist songs';
             throw e;
@@ -131,6 +133,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
             if (currentPlaylist.value?.id === id) {
                 currentPlaylist.value = null;
                 currentPlaylistSongs.value = [];
+                currentPlaylistSongCount.value = 0;
             }
         } catch (e) {
             error.value = 'Failed to delete playlist';
@@ -238,6 +241,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
     function clearCurrentPlaylist(): void {
         currentPlaylist.value = null;
         currentPlaylistSongs.value = [];
+        currentPlaylistSongCount.value = 0;
     }
 
     function updateSongInPlaylist(updatedSong: Song, index: number): void {
@@ -250,6 +254,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         playlists,
         currentPlaylist,
         currentPlaylistSongs,
+        currentPlaylistSongCount,
         loading,
         error,
         meta,

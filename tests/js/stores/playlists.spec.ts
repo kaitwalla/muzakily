@@ -143,13 +143,14 @@ describe('usePlaylistsStore', () => {
     describe('fetchPlaylistSongs', () => {
         it('should fetch and set playlist songs', async () => {
             const mockSongs = [createMockSong({ id: '1' }), createMockSong({ id: '2' })];
-            vi.mocked(playlistsApi.getPlaylistSongs).mockResolvedValue(mockSongs);
+            vi.mocked(playlistsApi.getPlaylistSongs).mockResolvedValue({ songs: mockSongs, total: 2 });
 
             const store = usePlaylistsStore();
             const result = await store.fetchPlaylistSongs('1');
 
             expect(result).toEqual(mockSongs);
             expect(store.currentPlaylistSongs).toEqual(mockSongs);
+            expect(store.currentPlaylistSongCount).toBe(2);
         });
     });
 
@@ -231,7 +232,7 @@ describe('usePlaylistsStore', () => {
     describe('addSongsToPlaylist', () => {
         it('should call API and refresh songs', async () => {
             vi.mocked(playlistsApi.addSongsToPlaylist).mockResolvedValue();
-            vi.mocked(playlistsApi.getPlaylistSongs).mockResolvedValue([createMockSong()]);
+            vi.mocked(playlistsApi.getPlaylistSongs).mockResolvedValue({ songs: [createMockSong()], total: 1 });
 
             const store = usePlaylistsStore();
             store.currentPlaylist = createMockPlaylist({ id: '1' });

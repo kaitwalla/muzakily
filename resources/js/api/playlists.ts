@@ -52,9 +52,46 @@ export async function deletePlaylist(id: string): Promise<void> {
     await apiClient.delete(`/playlists/${id}`);
 }
 
-export async function getPlaylistSongs(playlistId: string): Promise<Song[]> {
-    const response = await apiClient.get<ApiResponse<Song[]>>(`/playlists/${playlistId}/songs`);
-    return response.data.data;
+interface PlaylistSongsResponse {
+    data: Song[];
+    meta: {
+        total: number;
+        limit: number;
+        offset: number;
+        has_more: boolean;
+    };
+}
+
+export interface PlaylistSongsResult {
+    songs: Song[];
+    total: number;
+}
+
+export async function getPlaylistSongs(playlistId: string): Promise<PlaylistSongsResult> {
+    const allSongs: Song[] = [];
+    let offset = 0;
+    const limit = 500; // Max allowed by API
+    let hasMore = true;
+    let total = 0;
+
+    while (hasMore) {
+        const response = await apiClient.get<PlaylistSongsResponse>(`/playlists/${playlistId}/songs`, {
+            params: { offset, limit }
+        });
+
+        const newSongs = response.data.data;
+        allSongs.push(...newSongs);
+        total = response.data.meta.total;
+        hasMore = response.data.meta.has_more;
+        offset += limit;
+
+        // Safeguard against infinite loops
+        if (newSongs.length === 0 || offset >= total) {
+            break;
+        }
+    }
+
+    return { songs: allSongs, total };
 }
 
 export async function addSongsToPlaylist(playlistId: string, songIds: string[]): Promise<void> {

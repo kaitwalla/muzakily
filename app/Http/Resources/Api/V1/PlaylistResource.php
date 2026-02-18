@@ -7,6 +7,7 @@ namespace App\Http\Resources\Api\V1;
 use App\Models\Playlist;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @mixin Playlist
@@ -45,7 +46,7 @@ class PlaylistResource extends JsonResource
             'slug' => $this->id, // Use UUID as slug for routing
             'name' => $this->name,
             'description' => $this->description,
-            'cover_url' => $this->cover,
+            'cover_url' => $this->cover ? Storage::disk('public')->url($this->cover) : null,
             'user_id' => $this->user_id,
             'is_public' => false, // TODO: Add is_public column when needed
             'is_smart' => $this->is_smart,

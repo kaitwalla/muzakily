@@ -253,7 +253,7 @@ async function handleCoverUpload(event: Event): Promise<void> {
                         {{ playlistsStore.currentPlaylist.description }}
                     </p>
                     <div class="flex items-center gap-2 text-surface-400">
-                        <span>{{ playlistsStore.currentPlaylistSongs.length }} songs</span>
+                        <span>{{ playlistsStore.currentPlaylistSongCount }} songs</span>
                         <span>&bull;</span>
                         <span>{{ getTotalDuration() }}</span>
                     </div>
