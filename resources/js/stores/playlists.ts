@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { Playlist, Song } from '@/types/models';
 import type { PaginationMeta } from '@/types/api';
 import * as playlistsApi from '@/api/playlists';
+import { getCachedPlaylistSongs, cachePlaylistSongs } from '@/utils/playlistCache';
 
 export const usePlaylistsStore = defineStore('playlists', () => {
     const playlists = ref<Playlist[]>([]);
@@ -10,6 +11,8 @@ export const usePlaylistsStore = defineStore('playlists', () => {
     const currentPlaylistSongs = ref<Song[]>([]);
     const currentPlaylistSongCount = ref<number>(0);
     const loading = ref(false);
+    const loadingSongs = ref(false);
+    const loadingSongsProgress = ref<{ loaded: number; total: number } | null>(null);
     const error = ref<string | null>(null);
     const meta = ref<PaginationMeta | null>(null);
     const currentFilters = ref<playlistsApi.PlaylistFilters>({});
@@ -73,18 +76,54 @@ export const usePlaylistsStore = defineStore('playlists', () => {
     }
 
     async function fetchPlaylistSongs(playlistId: string): Promise<Song[]> {
-        loading.value = true;
         error.value = null;
+        loadingSongs.value = true;
+        loadingSongsProgress.value = null;
+
         try {
-            const result = await playlistsApi.getPlaylistSongs(playlistId);
-            currentPlaylistSongs.value = result.songs;
-            currentPlaylistSongCount.value = result.total;
+            // Check cache first using current playlist's updated_at
+            const playlistUpdatedAt = currentPlaylist.value?.updated_at;
+            if (playlistUpdatedAt) {
+                const cachedSongs = await getCachedPlaylistSongs(playlistId, playlistUpdatedAt);
+                if (cachedSongs) {
+                    currentPlaylistSongs.value = cachedSongs;
+                    currentPlaylistSongCount.value = cachedSongs.length;
+                    loadingSongs.value = false;
+                    return cachedSongs;
+                }
+            }
+
+            // Cache miss - do incremental loading
+            const result = await playlistsApi.getPlaylistSongsIncremental(
+                playlistId,
+                (batch) => {
+                    // Guard against stale updates if user navigated away
+                    if (currentPlaylist.value?.id !== playlistId) {
+                        return;
+                    }
+                    currentPlaylistSongs.value = batch.songs;
+                    currentPlaylistSongCount.value = batch.total;
+                    loadingSongsProgress.value = {
+                        loaded: batch.loaded,
+                        total: batch.total,
+                    };
+                }
+            );
+
+            // Cache the complete result
+            if (playlistUpdatedAt) {
+                cachePlaylistSongs(playlistId, playlistUpdatedAt, result.songs).catch(() => {
+                    // Ignore cache write errors
+                });
+            }
+
             return result.songs;
         } catch (e) {
             error.value = 'Failed to load playlist songs';
             throw e;
         } finally {
-            loading.value = false;
+            loadingSongs.value = false;
+            loadingSongsProgress.value = null;
         }
     }
 
@@ -256,6 +295,8 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         currentPlaylistSongs,
         currentPlaylistSongCount,
         loading,
+        loadingSongs,
+        loadingSongsProgress,
         error,
         meta,
         hasPlaylists,

@@ -67,6 +67,13 @@ export interface PlaylistSongsResult {
     total: number;
 }
 
+export interface PlaylistSongsBatch {
+    songs: Song[];
+    total: number;
+    loaded: number;
+    hasMore: boolean;
+}
+
 export async function getPlaylistSongs(playlistId: string): Promise<PlaylistSongsResult> {
     const allSongs: Song[] = [];
     let offset = 0;
@@ -84,6 +91,51 @@ export async function getPlaylistSongs(playlistId: string): Promise<PlaylistSong
         total = response.data.meta.total;
         hasMore = response.data.meta.has_more;
         offset += limit;
+
+        // Safeguard against infinite loops
+        if (newSongs.length === 0 || offset >= total) {
+            break;
+        }
+    }
+
+    return { songs: allSongs, total };
+}
+
+/**
+ * Incrementally load playlist songs, calling onBatch with each batch as it arrives.
+ * Returns the complete list of all songs when done.
+ */
+export async function getPlaylistSongsIncremental(
+    playlistId: string,
+    onBatch: (batch: PlaylistSongsBatch) => void
+): Promise<PlaylistSongsResult> {
+    const allSongs: Song[] = [];
+    let offset = 0;
+    const limit = 500;
+    let hasMore = true;
+    let total = 0;
+
+    while (hasMore) {
+        const response = await apiClient.get<PlaylistSongsResponse>(`/playlists/${playlistId}/songs`, {
+            params: { offset, limit }
+        });
+
+        const newSongs = response.data.data;
+        allSongs.push(...newSongs);
+        total = response.data.meta.total;
+        hasMore = response.data.meta.has_more;
+        offset += limit;
+
+        // Compute effective hasMore considering safeguards
+        const effectiveHasMore = hasMore && newSongs.length > 0 && offset < total;
+
+        // Notify with current batch
+        onBatch({
+            songs: [...allSongs],
+            total,
+            loaded: allSongs.length,
+            hasMore: effectiveHasMore,
+        });
 
         // Safeguard against infinite loops
         if (newSongs.length === 0 || offset >= total) {

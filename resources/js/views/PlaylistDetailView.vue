@@ -292,7 +292,7 @@ async function handleCoverUpload(event: Event): Promise<void> {
             </div>
 
             <!-- Songs List -->
-            <div v-if="playlistsStore.currentPlaylistSongs.length > 0" class="bg-surface-800/50 rounded-lg overflow-hidden">
+            <div v-if="playlistsStore.currentPlaylistSongs.length > 0 || playlistsStore.loadingSongs" class="bg-surface-800/50 rounded-lg overflow-hidden">
                 <table class="w-full">
                     <thead class="border-b border-surface-700">
                         <tr class="text-left text-sm text-surface-400">
@@ -316,9 +316,23 @@ async function handleCoverUpload(event: Event): Promise<void> {
                         />
                     </tbody>
                 </table>
+
+                <!-- Loading more songs indicator -->
+                <div
+                    v-if="playlistsStore.loadingSongs && playlistsStore.loadingSongsProgress"
+                    class="flex items-center justify-center gap-3 py-4 border-t border-surface-700"
+                >
+                    <svg class="w-5 h-5 text-surface-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    <span class="text-surface-400 text-sm">
+                        Loading songs... {{ playlistsStore.loadingSongsProgress.loaded }} / {{ playlistsStore.loadingSongsProgress.total }}
+                    </span>
+                </div>
             </div>
 
-            <div v-else class="text-center py-12 bg-surface-800/50 rounded-lg">
+            <div v-else-if="!playlistsStore.loadingSongs" class="text-center py-12 bg-surface-800/50 rounded-lg">
                 <p class="text-surface-400">This playlist is empty</p>
                 <p v-if="isSmartPlaylist" class="text-surface-500 text-sm mt-2">No songs match the current rules</p>
                 <p v-else class="text-surface-500 text-sm mt-2">Add songs to get started</p>
