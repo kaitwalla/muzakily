@@ -67,3 +67,10 @@ docker compose exec app composer <command>
 - `app/Models/` - Eloquent models
 - `tests/` - PHPUnit tests (Unit, Feature, Contracts)
 - `database/factories/` - Model factories for testing
+
+## API Contracts
+
+- **All paginated endpoints must use Laravel's standard pagination** (`page`, `per_page` params; `current_page`, `last_page`, `per_page`, `total` in response meta)
+- **Contract tests in `tests/Contracts/`** verify response structures that clients depend on
+- When adding or modifying API endpoints, add/update contract tests to prevent breaking changes
+- Both web (Vue) and mobile (Swift) clients depend on these contracts

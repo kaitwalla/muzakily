@@ -36,14 +36,14 @@ class PlaylistSongsEndpointTest extends TestCase
         $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs");
 
         $response->assertOk()
-            ->assertJsonCount(75, 'data')
+            ->assertJsonCount(50, 'data')
             ->assertJsonPath('meta.total', 100)
-            ->assertJsonPath('meta.limit', 75)
-            ->assertJsonPath('meta.offset', 0)
-            ->assertJsonPath('meta.has_more', true);
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.per_page', 50)
+            ->assertJsonPath('meta.last_page', 2);
     }
 
-    public function test_songs_endpoint_respects_custom_limit(): void
+    public function test_songs_endpoint_respects_custom_per_page(): void
     {
         $playlist = Playlist::factory()->create(['user_id' => $this->user->id]);
         $songs = Song::factory()->count(50)->create();
@@ -52,15 +52,15 @@ class PlaylistSongsEndpointTest extends TestCase
             $playlist->songs()->attach($song->id, ['position' => $index]);
         }
 
-        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?limit=20");
+        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?per_page=20");
 
         $response->assertOk()
             ->assertJsonCount(20, 'data')
-            ->assertJsonPath('meta.limit', 20)
-            ->assertJsonPath('meta.has_more', true);
+            ->assertJsonPath('meta.per_page', 20)
+            ->assertJsonPath('meta.last_page', 3);
     }
 
-    public function test_songs_endpoint_respects_offset(): void
+    public function test_songs_endpoint_respects_page(): void
     {
         $playlist = Playlist::factory()->create(['user_id' => $this->user->id]);
         $songs = Song::factory()->count(30)->create();
@@ -69,38 +69,38 @@ class PlaylistSongsEndpointTest extends TestCase
             $playlist->songs()->attach($song->id, ['position' => $index]);
         }
 
-        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?limit=10&offset=20");
+        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?per_page=10&page=3");
 
         $response->assertOk()
             ->assertJsonCount(10, 'data')
-            ->assertJsonPath('meta.offset', 20)
-            ->assertJsonPath('meta.has_more', false);
+            ->assertJsonPath('meta.current_page', 3)
+            ->assertJsonPath('meta.last_page', 3);
     }
 
-    public function test_songs_endpoint_enforces_max_limit(): void
+    public function test_songs_endpoint_enforces_max_per_page(): void
     {
         $playlist = Playlist::factory()->create(['user_id' => $this->user->id]);
         Song::factory()->count(5)->create()->each(function ($song, $index) use ($playlist) {
             $playlist->songs()->attach($song->id, ['position' => $index]);
         });
 
-        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?limit=1000");
+        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?per_page=1000");
 
         $response->assertOk()
-            ->assertJsonPath('meta.limit', 500);
+            ->assertJsonPath('meta.per_page', 500);
     }
 
-    public function test_songs_endpoint_handles_negative_offset(): void
+    public function test_songs_endpoint_handles_invalid_page(): void
     {
         $playlist = Playlist::factory()->create(['user_id' => $this->user->id]);
         Song::factory()->count(5)->create()->each(function ($song, $index) use ($playlist) {
             $playlist->songs()->attach($song->id, ['position' => $index]);
         });
 
-        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?offset=-10");
+        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?page=-10");
 
         $response->assertOk()
-            ->assertJsonPath('meta.offset', 0);
+            ->assertJsonPath('meta.current_page', 1);
     }
 
     public function test_songs_endpoint_works_for_smart_playlist_materialized(): void
@@ -122,12 +122,12 @@ class PlaylistSongsEndpointTest extends TestCase
             $playlist->songs()->attach($song->id, ['position' => $index]);
         }
 
-        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?limit=25");
+        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?per_page=25");
 
         $response->assertOk()
             ->assertJsonCount(25, 'data')
             ->assertJsonPath('meta.total', 100)
-            ->assertJsonPath('meta.has_more', true);
+            ->assertJsonPath('meta.last_page', 4);
     }
 
     public function test_songs_endpoint_works_for_smart_playlist_dynamic(): void
@@ -148,12 +148,12 @@ class PlaylistSongsEndpointTest extends TestCase
         // Force dynamic evaluation by setting materialized_at to null
         $playlist->update(['materialized_at' => null]);
 
-        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?limit=20");
+        $response = $this->actingAs($this->user)->getJson("/api/v1/playlists/{$playlist->id}/songs?per_page=20");
 
         $response->assertOk()
             ->assertJsonCount(20, 'data')
             ->assertJsonPath('meta.total', 50)
-            ->assertJsonPath('meta.has_more', true);
+            ->assertJsonPath('meta.last_page', 3);
     }
 
     public function test_songs_endpoint_requires_authentication(): void

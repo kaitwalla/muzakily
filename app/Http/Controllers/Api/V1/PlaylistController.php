@@ -26,6 +26,7 @@ use App\Services\Playlist\SmartPlaylistEvaluator;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 
 class PlaylistController extends Controller
@@ -132,40 +133,34 @@ class PlaylistController extends Controller
     {
         $this->authorize('view', $playlist);
 
-        $limit = max(1, min($request->integer('limit', 75), 500));
-        $offset = max($request->integer('offset', 0), 0);
+        $perPage = min($request->integer('per_page', 50), 500);
+        $page = max($request->integer('page', 1), 1);
 
-        if ($playlist->is_smart) {
-            // Use materialized results if available and up-to-date
-            if ($playlist->materialized_at !== null && !$playlist->needsRematerialization()) {
-                $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
-                $total = $query->count();
-                $songs = $query->skip($offset)->take($limit)->get();
-            } else {
-                // Dynamic evaluation with pagination
-                $result = $this->smartPlaylistEvaluator->evaluatePaginated(
-                    $playlist,
-                    $request->user(),
-                    $limit,
-                    $offset
-                );
-                $songs = $result['songs'];
-                $total = $result['total'];
-            }
-        } else {
-            $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
-            $total = $query->count();
-            $songs = $query->skip($offset)->take($limit)->get();
+        if ($playlist->is_smart && ($playlist->materialized_at === null || $playlist->needsRematerialization())) {
+            // Dynamic evaluation for non-materialized smart playlists
+            $offset = ($page - 1) * $perPage;
+            $result = $this->smartPlaylistEvaluator->evaluatePaginated(
+                $playlist,
+                $request->user(),
+                $perPage,
+                $offset
+            );
+
+            $paginator = new LengthAwarePaginator(
+                $result['songs'],
+                $result['total'],
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+
+            return SongResource::collection($paginator);
         }
 
-        return SongResource::collection($songs)->additional([
-            'meta' => [
-                'total' => $total,
-                'limit' => $limit,
-                'offset' => $offset,
-                'has_more' => ($offset + $songs->count()) < $total,
-            ],
-        ]);
+        // Regular or materialized smart playlists
+        $query = $playlist->songs()->with(['artist', 'album', 'genres', 'tags']);
+
+        return SongResource::collection($query->paginate($perPage));
     }
 
     /**

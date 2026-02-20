@@ -56,9 +56,9 @@ interface PlaylistSongsResponse {
     data: Song[];
     meta: {
         total: number;
-        limit: number;
-        offset: number;
-        has_more: boolean;
+        per_page: number;
+        current_page: number;
+        last_page: number;
     };
 }
 
@@ -76,24 +76,24 @@ export interface PlaylistSongsBatch {
 
 export async function getPlaylistSongs(playlistId: string): Promise<PlaylistSongsResult> {
     const allSongs: Song[] = [];
-    let offset = 0;
-    const limit = 500; // Max allowed by API
+    let page = 1;
+    const perPage = 500; // Max allowed by API
     let hasMore = true;
     let total = 0;
 
     while (hasMore) {
         const response = await apiClient.get<PlaylistSongsResponse>(`/playlists/${playlistId}/songs`, {
-            params: { offset, limit }
+            params: { page, per_page: perPage }
         });
 
         const newSongs = response.data.data;
         allSongs.push(...newSongs);
         total = response.data.meta.total;
-        hasMore = response.data.meta.has_more;
-        offset += limit;
+        hasMore = response.data.meta.current_page < response.data.meta.last_page;
+        page++;
 
         // Safeguard against infinite loops
-        if (newSongs.length === 0 || offset >= total) {
+        if (newSongs.length === 0) {
             break;
         }
     }
@@ -110,35 +110,32 @@ export async function getPlaylistSongsIncremental(
     onBatch: (batch: PlaylistSongsBatch) => void
 ): Promise<PlaylistSongsResult> {
     const allSongs: Song[] = [];
-    let offset = 0;
-    const limit = 500;
+    let page = 1;
+    const perPage = 500; // Max allowed by API
     let hasMore = true;
     let total = 0;
 
     while (hasMore) {
         const response = await apiClient.get<PlaylistSongsResponse>(`/playlists/${playlistId}/songs`, {
-            params: { offset, limit }
+            params: { page, per_page: perPage }
         });
 
         const newSongs = response.data.data;
         allSongs.push(...newSongs);
         total = response.data.meta.total;
-        hasMore = response.data.meta.has_more;
-        offset += limit;
-
-        // Compute effective hasMore considering safeguards
-        const effectiveHasMore = hasMore && newSongs.length > 0 && offset < total;
+        hasMore = response.data.meta.current_page < response.data.meta.last_page;
+        page++;
 
         // Notify with current batch
         onBatch({
             songs: [...allSongs],
             total,
             loaded: allSongs.length,
-            hasMore: effectiveHasMore,
+            hasMore: hasMore && newSongs.length > 0,
         });
 
         // Safeguard against infinite loops
-        if (newSongs.length === 0 || offset >= total) {
+        if (newSongs.length === 0) {
             break;
         }
     }
