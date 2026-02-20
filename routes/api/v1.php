@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AlbumController;
 use App\Http\Controllers\Api\V1\ArtistController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\ConfigController;
 use App\Http\Controllers\Api\V1\FavoriteController;
 use App\Http\Controllers\Api\V1\InteractionController;
 use App\Http\Controllers\Api\V1\LocalStreamController;
@@ -34,6 +35,9 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->name('auth.login');
 });
+
+// Public config
+Route::get('config', ConfigController::class)->name('config');
 
 // Local streaming (uses signed URL for auth)
 Route::get('stream/local', [LocalStreamController::class, 'stream'])->name('stream.local');

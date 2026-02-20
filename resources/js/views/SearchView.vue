@@ -14,7 +14,8 @@ const playerStore = usePlayerStore();
 const searchInput = ref('');
 
 const debouncedSearch = useDebounceFn((query: string) => {
-    if (query.trim()) {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2) {
         router.replace({ query: { q: query } });
         searchStore.search(query);
     } else {
@@ -31,7 +32,9 @@ onMounted(() => {
     const query = route.query.q as string | undefined;
     if (query) {
         searchInput.value = query;
-        searchStore.search(query);
+        if (query.trim().length >= 2) {
+            searchStore.search(query);
+        }
     }
 });
 
