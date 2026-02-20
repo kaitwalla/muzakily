@@ -23,10 +23,12 @@ Each rule has three parts:
 
 | Field | Operator | Value | Matches |
 |-------|----------|-------|---------|
-| Artist | equals | Beatles | Songs by The Beatles |
-| Year | between | 1980-1989 | 80s music |
+| Artist | is | Beatles | Songs by The Beatles |
+| Year | is between | 1980-1989 | 80s music |
 | Genre | contains | Rock | Rock, Classic Rock, Alternative Rock |
-| Play Count | greater than | 10 | Frequently played songs |
+| Play Count | is greater than | 10 | Frequently played songs |
+| Is Favorite | is | - | Favorited songs |
+| Tag | has | Workout | Songs tagged "Workout" |
 
 ## Available Fields
 
@@ -39,7 +41,7 @@ Each rule has three parts:
 | Album | Album name |
 | Genre | Music genre |
 
-**Operators**: equals, contains, starts with, ends with, not equals
+**Operators**: is, is not, contains, does not contain, begins with, ends with
 
 ### Numeric Fields
 
@@ -50,7 +52,7 @@ Each rule has three parts:
 | Length | Duration in seconds |
 | Play Count | Times played |
 
-**Operators**: equals, greater than, less than, between
+**Operators**: is, is not, is greater than, is less than, is between
 
 ### Boolean Fields
 
@@ -58,16 +60,32 @@ Each rule has three parts:
 |-------|-------------|
 | Is Favorite | Favorited songs |
 
-**Operators**: equals (true/false)
+**Operators**: is (favorited), is not (not favorited)
 
-### Special Fields
+### Tag Fields
+
+| Field | Description |
+|-------|-------------|
+| Tag | Assigned tags |
+
+**Operators**: has (song has tag), does not have (song doesn't have tag)
+
+You can also use text-style operators for partial matching: contains, does not contain, begins with, ends with
+
+### Date Fields
+
+| Field | Description |
+|-------|-------------|
+| Date Added | When added to library |
+| Last Played | When last played |
+
+**Operators**: in the last (N days), not in the last (N days)
+
+### Other Fields
 
 | Field | Description |
 |-------|-------------|
 | Audio Format | File format (MP3, AAC, FLAC) |
-| Smart Folder | Storage folder |
-| Tag | Assigned tags |
-| Date Added | When added to library |
 
 ## Combining Rules
 
@@ -76,9 +94,9 @@ Each rule has three parts:
 All conditions must match:
 
 ```
-Genre equals "Rock"
-AND Year between 1970-1979
-AND Is Favorite equals true
+Genre is "Rock"
+AND Year is between 1970-1979
+AND Is Favorite is true
 ```
 
 Result: Favorited rock songs from the 70s
@@ -88,9 +106,9 @@ Result: Favorited rock songs from the 70s
 Any condition can match:
 
 ```
-Artist equals "Beatles"
-OR Artist equals "Rolling Stones"
-OR Artist equals "The Who"
+Artist is "Beatles"
+OR Artist is "Rolling Stones"
+OR Artist is "The Who"
 ```
 
 Result: Songs by any of these artists
@@ -100,9 +118,9 @@ Result: Songs by any of these artists
 Combine AND and OR:
 
 ```
-(Genre equals "Rock" OR Genre equals "Metal")
-AND Year greater than 2000
-AND Play Count greater than 5
+(Genre is "Rock" OR Genre is "Metal")
+AND Year is greater than 2000
+AND Play Count is greater than 5
 ```
 
 Result: Popular rock/metal from the 2000s+
@@ -112,40 +130,40 @@ Result: Popular rock/metal from the 2000s+
 ### Recently Added
 
 ```
-Date Added: in last 30 days
+Date Added: in the last 30 days
 ```
 
 ### High Quality Files
 
 ```
-Audio Format: equals FLAC
+Audio Format: is FLAC
 ```
 
 ### Unplayed Songs
 
 ```
-Play Count: equals 0
+Play Count: is 0
 ```
 
 ### Long Songs
 
 ```
-Length: greater than 600
+Length: is greater than 600
 ```
 (Songs over 10 minutes)
 
 ### 90s Favorites
 
 ```
-Year: between 1990-1999
-AND Is Favorite: equals true
+Year: is between 1990-1999
+AND Is Favorite: is true
 ```
 
-### By Folder and Genre
+### By Genre
 
 ```
-Smart Folder: equals "Music/Vinyl Rips"
-AND Genre: contains "Jazz"
+Genre: contains "Jazz"
+AND Year: is greater than 1950
 ```
 
 ### Tagged Content
@@ -154,6 +172,15 @@ AND Genre: contains "Jazz"
 Tag: has "Workout"
 OR Tag: has "Energy"
 ```
+
+### Favorites with Tag
+
+```
+Is Favorite: is true
+AND Tag: has "Christmas"
+```
+
+This creates a playlist of only your favorite Christmas songs.
 
 ## Editing Smart Playlists
 

@@ -44,8 +44,8 @@ Returns all playlists owned by the authenticated user. This endpoint returns a f
         {
           "logic": "and",
           "rules": [
-            {"field": "genre", "operator": "equals", "value": "Rock"},
-            {"field": "created_at", "operator": "in_last", "value": "30 days"}
+            {"field": "genre", "operator": "is", "value": "Rock"},
+            {"field": "date_added", "operator": "in_last", "value": 30}
           ]
         }
       ],
@@ -113,6 +113,29 @@ curl -X POST "https://api.example.com/api/v1/playlists" \
 
 > **Note:** Boolean fields like `is_favorite` don't require a meaningful value—the operator (`is` or `is_not`) determines the logic. The value field must be present but can be empty.
 
+### Smart Playlist with Tag Example
+
+```bash
+curl -X POST "https://api.example.com/api/v1/playlists" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Favorite Christmas Songs",
+    "is_smart": true,
+    "rules": [
+      {
+        "logic": "and",
+        "rules": [
+          {"field": "is_favorite", "operator": "is", "value": ""},
+          {"field": "tag", "operator": "has", "value": "christmas"}
+        ]
+      }
+    ]
+  }'
+```
+
+> **Note:** For tag rules, `has` and `has_not` operators are recommended (especially for mobile clients). They behave identically to `is` and `is_not` for exact tag name matching.
+
 ### Smart Playlist Rule Fields
 
 | Field | Operators | Value Type | Notes |
@@ -128,7 +151,7 @@ curl -X POST "https://api.example.com/api/v1/playlists" \
 | `date_added` | in_last, not_in_last, is_between | integer (days) or date range | |
 | `audio_format` | is, is_not, contains, not_contains, begins_with, ends_with | string | MP3, AAC, FLAC, etc. |
 | `is_favorite` | is, is_not | (none) | Value not required |
-| `tag` | is, is_not, contains, not_contains | string | Tag name |
+| `tag` | has, has_not, is, is_not, contains, not_contains, begins_with, ends_with | string | Tag name. `has`/`has_not` are preferred for mobile clients. |
 
 ## Get Playlist
 

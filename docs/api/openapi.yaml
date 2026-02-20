@@ -1186,10 +1186,19 @@ paths:
                           properties:
                             field:
                               type: string
+                              enum: [title, artist_name, album_name, genre, year, length, play_count, last_played, date_added, audio_format, is_favorite, tag]
                             operator:
                               type: string
+                              enum: [is, is_not, contains, not_contains, begins_with, ends_with, has, has_not, is_greater_than, is_less_than, is_between, in_last, not_in_last]
+                              description: "has/has_not are aliases for is/is_not, primarily used for tag fields by mobile clients"
                             value:
-                              type: string
+                              oneOf:
+                                - type: string
+                                - type: integer
+                                - type: array
+                                  items:
+                                    type: integer
+                              description: "Value type depends on field. Boolean fields (is_favorite) can have empty string."
                 song_ids:
                   type: array
                   items:

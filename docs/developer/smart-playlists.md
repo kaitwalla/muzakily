@@ -42,13 +42,37 @@ class Playlist extends Model
       "rules": [
         {
           "field": "genre",
-          "operator": "equals",
+          "operator": "is",
           "value": "Rock"
         },
         {
           "field": "year",
-          "operator": "between",
+          "operator": "is_between",
           "value": [1980, 1989]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Example with favorites and tags (mobile client format):**
+
+```json
+{
+  "rules": [
+    {
+      "logic": "and",
+      "rules": [
+        {
+          "field": "is_favorite",
+          "operator": "is",
+          "value": ""
+        },
+        {
+          "field": "tag",
+          "operator": "has",
+          "value": "christmas"
         }
       ]
     }
@@ -173,8 +197,26 @@ class TagFieldHandler extends FieldHandler
     public function apply(Builder $query, string $operator, mixed $value, string $method): void
     {
         match ($operator) {
-            'has' => $query->{$method . 'Has'}('tags', fn ($q) => $q->where('id', $value)),
-            'has_any' => $query->{$method . 'Has'}('tags', fn ($q) => $q->whereIn('id', $value)),
+            // 'is' and 'has' are equivalent - exact tag name match
+            'is', 'has' => $query->{$method}(function ($q) use ($value) {
+                $q->whereHas('tags', fn ($tq) => $tq->where('name', $value));
+            }),
+            // 'is_not' and 'has_not' are equivalent - exclude songs with tag
+            'is_not', 'has_not' => $query->{$method}(function ($q) use ($value) {
+                $q->whereDoesntHave('tags', fn ($tq) => $tq->where('name', $value));
+            }),
+            'contains' => $query->{$method}(function ($q) use ($value) {
+                $q->whereHas('tags', fn ($tq) => $tq->where('name', 'ilike', "%{$value}%"));
+            }),
+            'not_contains' => $query->{$method}(function ($q) use ($value) {
+                $q->whereDoesntHave('tags', fn ($tq) => $tq->where('name', 'ilike', "%{$value}%"));
+            }),
+            'begins_with' => $query->{$method}(function ($q) use ($value) {
+                $q->whereHas('tags', fn ($tq) => $tq->where('name', 'ilike', "{$value}%"));
+            }),
+            'ends_with' => $query->{$method}(function ($q) use ($value) {
+                $q->whereHas('tags', fn ($tq) => $tq->where('name', 'ilike', "%{$value}"));
+            }),
         };
     }
 }
@@ -368,11 +410,43 @@ export const smartPlaylistFields: SmartPlaylistField[] = [
     { value: 'date_added', label: 'Date Added', type: 'date' },
     { value: 'audio_format', label: 'Format', type: 'text' },
     { value: 'is_favorite', label: 'Favorite', type: 'boolean' },  // No value required
-    { value: 'tag', label: 'Tag', type: 'text' },
+    { value: 'tag', label: 'Tag', type: 'tag' },  // Uses 'has'/'has_not' operators
 ];
 ```
 
+**Operators by field type:**
+
+| Type | Available Operators |
+|------|---------------------|
+| text | `is`, `is_not`, `contains`, `not_contains`, `begins_with`, `ends_with` |
+| number | `is`, `is_not`, `is_greater_than`, `is_less_than`, `is_between` |
+| date | `in_last`, `not_in_last`, `is_between` |
+| boolean | `is`, `is_not` |
+| tag | `has`, `has_not`, `is`, `is_not`, `contains`, `not_contains`, `begins_with`, `ends_with` |
+
 **Note:** For `is_favorite` (boolean type), the frontend skips the value input—the operator (`is` or `is_not`) alone determines whether to match favorited or non-favorited songs.
+
+### Operators Reference
+
+The backend supports the following operators, defined in `App\Enums\SmartPlaylistOperator`:
+
+| Operator | Value | Description | Field Types |
+|----------|-------|-------------|-------------|
+| IS | `is` | Exact match | text, number, boolean |
+| IS_NOT | `is_not` | Not equal | text, number, boolean |
+| CONTAINS | `contains` | Substring match (case-insensitive) | text |
+| NOT_CONTAINS | `not_contains` | Does not contain substring | text |
+| BEGINS_WITH | `begins_with` | Starts with (case-insensitive) | text |
+| ENDS_WITH | `ends_with` | Ends with (case-insensitive) | text |
+| HAS | `has` | Tag exists (alias for `is` on tags) | tag |
+| HAS_NOT | `has_not` | Tag does not exist (alias for `is_not` on tags) | tag |
+| IS_GREATER_THAN | `is_greater_than` | Greater than | number |
+| IS_LESS_THAN | `is_less_than` | Less than | number |
+| IS_BETWEEN | `is_between` | Between two values (inclusive) | number, date |
+| IN_LAST | `in_last` | Within last N days | date |
+| NOT_IN_LAST | `not_in_last` | Not within last N days | date |
+
+**Tag Operators:** The mobile client uses `has` and `has_not` for tag rules, while the web client may use `is` and `is_not`. Both are supported and behave identically for tag fields.
 
 ## Materialization
 

@@ -14,6 +14,10 @@ enum SmartPlaylistOperator: string
     case BEGINS_WITH = 'begins_with';
     case ENDS_WITH = 'ends_with';
 
+    // Tag operators (alias for is/is_not, used by mobile clients)
+    case HAS = 'has';
+    case HAS_NOT = 'has_not';
+
     // Number operators
     case IS_GREATER_THAN = 'is_greater_than';
     case IS_LESS_THAN = 'is_less_than';
@@ -35,6 +39,8 @@ enum SmartPlaylistOperator: string
             self::NOT_CONTAINS => 'does not contain',
             self::BEGINS_WITH => 'begins with',
             self::ENDS_WITH => 'ends with',
+            self::HAS => 'has',
+            self::HAS_NOT => 'does not have',
             self::IS_GREATER_THAN => 'is greater than',
             self::IS_LESS_THAN => 'is less than',
             self::IS_BETWEEN => 'is between',

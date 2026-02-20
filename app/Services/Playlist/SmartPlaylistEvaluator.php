@@ -226,6 +226,8 @@ class SmartPlaylistEvaluator
             SmartPlaylistOperator::IS_BETWEEN => $this->applyBetween($query, $column, $value, $method),
             SmartPlaylistOperator::IN_LAST => $this->applyInLast($query, $column, $value, $method),
             SmartPlaylistOperator::NOT_IN_LAST => $this->applyNotInLast($query, $column, $value, $method),
+            // HAS/HAS_NOT are only valid for tags (handled above), ignore for other fields
+            SmartPlaylistOperator::HAS, SmartPlaylistOperator::HAS_NOT => null,
         };
     }
 
@@ -359,10 +361,10 @@ class SmartPlaylistEvaluator
         $tagName = (string) $value;
 
         match ($operator) {
-            SmartPlaylistOperator::IS => $query->$method(function (Builder $q) use ($tagName) {
+            SmartPlaylistOperator::IS, SmartPlaylistOperator::HAS => $query->$method(function (Builder $q) use ($tagName) {
                 $q->whereHas('tags', fn (Builder $tq) => $tq->where('name', $tagName));
             }),
-            SmartPlaylistOperator::IS_NOT => $query->$method(function (Builder $q) use ($tagName) {
+            SmartPlaylistOperator::IS_NOT, SmartPlaylistOperator::HAS_NOT => $query->$method(function (Builder $q) use ($tagName) {
                 $q->whereDoesntHave('tags', fn (Builder $tq) => $tq->where('name', $tagName));
             }),
             SmartPlaylistOperator::CONTAINS => $query->$method(function (Builder $q) use ($tagName) {
@@ -370,6 +372,12 @@ class SmartPlaylistEvaluator
             }),
             SmartPlaylistOperator::NOT_CONTAINS => $query->$method(function (Builder $q) use ($tagName) {
                 $q->whereDoesntHave('tags', fn (Builder $tq) => $tq->where('name', 'ilike', "%{$tagName}%"));
+            }),
+            SmartPlaylistOperator::BEGINS_WITH => $query->$method(function (Builder $q) use ($tagName) {
+                $q->whereHas('tags', fn (Builder $tq) => $tq->where('name', 'ilike', "{$tagName}%"));
+            }),
+            SmartPlaylistOperator::ENDS_WITH => $query->$method(function (Builder $q) use ($tagName) {
+                $q->whereHas('tags', fn (Builder $tq) => $tq->where('name', 'ilike', "%{$tagName}"));
             }),
             default => null,
         };
