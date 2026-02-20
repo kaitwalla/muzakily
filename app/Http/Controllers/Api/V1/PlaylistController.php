@@ -61,14 +61,16 @@ class PlaylistController extends Controller
 
         $playlists = $query->orderBy('name')->get();
 
-        // Calculate song counts for smart playlists
+        // Calculate song counts and total length for smart playlists
         foreach ($playlists as $playlist) {
             if ($playlist->is_smart) {
-                // Use materialized count (from withCount) if available
+                // Use materialized values if available
                 if ($playlist->materialized_at !== null) {
                     $playlist->setAttribute('smart_song_count', $playlist->songs_count);
+                    $playlist->setAttribute('smart_total_length', $playlist->songs()->sum('songs.length'));
                 } else {
                     $playlist->setAttribute('smart_song_count', $this->smartPlaylistEvaluator->count($playlist, $request->user()));
+                    $playlist->setAttribute('smart_total_length', $this->smartPlaylistEvaluator->totalLength($playlist, $request->user()));
                 }
             }
         }

@@ -106,6 +106,24 @@ class SmartPlaylistEvaluator
     }
 
     /**
+     * Calculate total length of matching songs for a smart playlist.
+     */
+    public function totalLength(Playlist $playlist, ?User $user = null): float
+    {
+        if (!$playlist->is_smart || empty($playlist->rules)) {
+            return 0;
+        }
+
+        $query = Song::query();
+
+        foreach ($playlist->rules as $ruleGroup) {
+            $this->applyRuleGroup($query, $ruleGroup, $user);
+        }
+
+        return (float) $query->sum('length');
+    }
+
+    /**
      * Evaluate a smart playlist with pagination support.
      *
      * Returns both the paginated songs and total count for efficient pagination.

@@ -52,7 +52,7 @@ class PlaylistResource extends JsonResource
             'is_smart' => $this->is_smart,
             'rules' => $this->when($this->is_smart, $this->rules),
             'songs_count' => $this->is_smart ? ($this->smart_song_count ?? 0) : $this->song_count,
-            'total_length' => $this->total_length,
+            'total_length' => $this->is_smart ? ($this->smart_total_length ?? 0) : $this->total_length,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];
