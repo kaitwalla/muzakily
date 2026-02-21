@@ -74,3 +74,15 @@ docker compose exec app composer <command>
 - **Contract tests in `tests/Contracts/`** verify response structures that clients depend on
 - When adding or modifying API endpoints, add/update contract tests to prevent breaking changes
 - Both web (Vue) and mobile (Swift) clients depend on these contracts
+
+## Documentation
+
+**Read the docs before starting work on any issue.** Comprehensive documentation is in `/docs`:
+
+- `docs/developer/` - Architecture, caching, smart playlists, testing strategies
+- `docs/api/` - API endpoints, OpenAPI spec, error codes
+- `docs/user-guide/` - Feature documentation from user perspective
+
+Key docs to review:
+- `docs/developer/smart-playlists.md` - Smart playlist rules, materialization, caching
+- `docs/api/endpoints/playlists.md` - Playlist API including tag operators
