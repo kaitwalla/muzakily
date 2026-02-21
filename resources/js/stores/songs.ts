@@ -4,6 +4,7 @@ import type { Song } from '@/types/models';
 import type { PaginationMeta } from '@/types/api';
 import * as songsApi from '@/api/songs';
 import { getStreamUrl } from '@/api/songs';
+import { updateCachedSong } from '@/utils/playlistCache';
 
 export const useSongsStore = defineStore('songs', () => {
     const songs = ref<Song[]>([]);
@@ -83,6 +84,8 @@ export const useSongsStore = defineStore('songs', () => {
         if (index >= 0 && index < songs.value.length) {
             songs.value[index] = updatedSong;
         }
+        // Also update the IndexedDB cache
+        updateCachedSong(updatedSong);
     }
 
     return {
