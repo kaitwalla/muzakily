@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property array<array{id: int, logic: string, rules: array<array{field: string, operator: string, value: mixed}>}>|null $rules
  * @property \Illuminate\Support\Carbon|null $rules_updated_at
  * @property \Illuminate\Support\Carbon|null $materialized_at
+ * @property int $position
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  * @property-read User $user
@@ -71,6 +72,7 @@ class Playlist extends Model
         'rules',
         'rules_updated_at',
         'materialized_at',
+        'position',
     ];
 
     /**
@@ -94,6 +96,14 @@ class Playlist extends Model
     protected static function boot(): void
     {
         parent::boot();
+
+        // Auto-assign position on create if not explicitly set
+        static::creating(function (Playlist $playlist): void {
+            if (!$playlist->isDirty('position')) {
+                $maxPosition = static::where('user_id', $playlist->user_id)->max('position');
+                $playlist->position = $maxPosition !== null ? $maxPosition + 1 : 0;
+            }
+        });
 
         // Automatically set rules_updated_at when rules change
         static::saving(function (Playlist $playlist): void {

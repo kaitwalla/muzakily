@@ -166,3 +166,7 @@ export async function uploadPlaylistCover(playlistId: string, file: File): Promi
     const response = await apiClient.post<ApiResponse<Playlist>>(`/playlists/${playlistId}/cover`, formData);
     return response.data.data;
 }
+
+export async function reorderPlaylists(playlistIds: string[]): Promise<void> {
+    await apiClient.put('/playlists/reorder', { playlist_ids: playlistIds });
+}

@@ -29,6 +29,7 @@ class PlaylistFactory extends Factory
             'cover' => fake()->optional(0.3)->imageUrl(300, 300, 'abstract'),
             'is_smart' => false,
             'rules' => null,
+            'position' => 0,
         ];
     }
 

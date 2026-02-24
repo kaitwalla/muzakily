@@ -13,9 +13,68 @@ const isSmartPlaylist = ref(false);
 const smartPlaylistRules = ref<SmartPlaylistRuleGroup[]>([]);
 const isCreating = ref(false);
 
+// Drag-and-drop state
+const draggedPlaylistId = ref<string | null>(null);
+const dragOverPlaylistId = ref<string | null>(null);
+
 onMounted(() => {
     playlistsStore.fetchPlaylists();
 });
+
+function handleDragStart(event: DragEvent, playlistId: string): void {
+    draggedPlaylistId.value = playlistId;
+    if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', playlistId);
+    }
+}
+
+function handleDragOver(event: DragEvent, playlistId: string): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+    }
+    dragOverPlaylistId.value = playlistId;
+}
+
+function handleDragLeave(): void {
+    dragOverPlaylistId.value = null;
+}
+
+function handleDragEnd(): void {
+    draggedPlaylistId.value = null;
+    dragOverPlaylistId.value = null;
+}
+
+async function handleDrop(event: DragEvent, targetPlaylistId: string): Promise<void> {
+    event.preventDefault();
+    const sourcePlaylistId = draggedPlaylistId.value;
+    draggedPlaylistId.value = null;
+    dragOverPlaylistId.value = null;
+
+    if (!sourcePlaylistId || sourcePlaylistId === targetPlaylistId) {
+        return;
+    }
+
+    // Calculate new order
+    const currentOrder = playlistsStore.playlists.map(p => p.id);
+    const sourceIndex = currentOrder.indexOf(sourcePlaylistId);
+    const targetIndex = currentOrder.indexOf(targetPlaylistId);
+
+    if (sourceIndex === -1 || targetIndex === -1) {
+        return;
+    }
+
+    // Remove from source and insert at target
+    currentOrder.splice(sourceIndex, 1);
+    currentOrder.splice(targetIndex, 0, sourcePlaylistId);
+
+    try {
+        await playlistsStore.reorderPlaylists(currentOrder);
+    } catch {
+        // Error handled by store
+    }
+}
 
 function resetCreateForm(): void {
     newPlaylistName.value = '';
@@ -95,6 +154,16 @@ async function createPlaylist(): Promise<void> {
                 :key="playlist.id"
                 :to="{ name: 'playlist-detail', params: { slug: playlist.slug } }"
                 class="bg-surface-800 rounded-lg p-4 hover:bg-surface-700 transition-colors group"
+                :class="{
+                    'opacity-50': draggedPlaylistId === playlist.id,
+                    'ring-2 ring-green-500': dragOverPlaylistId === playlist.id && draggedPlaylistId !== playlist.id,
+                }"
+                draggable="true"
+                @dragstart="handleDragStart($event, playlist.id)"
+                @dragover="handleDragOver($event, playlist.id)"
+                @dragleave="handleDragLeave"
+                @dragend="handleDragEnd"
+                @drop="handleDrop($event, playlist.id)"
             >
                 <div class="aspect-square bg-surface-700 rounded-lg mb-3 overflow-hidden">
                     <img

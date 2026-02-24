@@ -230,6 +230,28 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         }
     }
 
+    async function reorderPlaylists(playlistIds: string[]): Promise<void> {
+        error.value = null;
+        // Optimistic update - reorder immediately in UI
+        const previousOrder = [...playlists.value];
+        const reorderedPlaylists = playlistIds
+            .map(id => playlists.value.find(p => p.id === id))
+            .filter((p): p is Playlist => p !== undefined);
+
+        // Keep any playlists not in the reorder list at the end
+        const notReordered = playlists.value.filter(p => !playlistIds.includes(p.id));
+        playlists.value = [...reorderedPlaylists, ...notReordered];
+
+        try {
+            await playlistsApi.reorderPlaylists(playlistIds);
+        } catch (e) {
+            // Rollback on error
+            playlists.value = previousOrder;
+            error.value = 'Failed to reorder playlists';
+            throw e;
+        }
+    }
+
     async function refreshPlaylistCover(playlistId: string): Promise<Playlist> {
         loading.value = true;
         error.value = null;
@@ -311,6 +333,7 @@ export const usePlaylistsStore = defineStore('playlists', () => {
         addSongsToPlaylist,
         removeSongsFromPlaylist,
         reorderPlaylistSongs,
+        reorderPlaylists,
         refreshPlaylistCover,
         uploadPlaylistCover,
         clearPlaylists,

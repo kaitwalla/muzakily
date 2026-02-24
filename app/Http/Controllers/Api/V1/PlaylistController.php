@@ -8,6 +8,7 @@ use App\Actions\Playlists\AddSongsToPlaylist;
 use App\Actions\Playlists\CreatePlaylist;
 use App\Actions\Playlists\RefreshPlaylistCover;
 use App\Actions\Playlists\RemoveSongsFromPlaylist;
+use App\Actions\Playlists\ReorderPlaylists;
 use App\Actions\Playlists\ReorderPlaylistSongs;
 use App\Actions\Playlists\UploadPlaylistCover;
 use App\Exceptions\SmartPlaylistModificationException;
@@ -16,6 +17,7 @@ use App\Http\Requests\Api\V1\CreatePlaylistRequest;
 use App\Http\Requests\Api\V1\UpdatePlaylistRequest;
 use App\Http\Requests\Api\V1\AddPlaylistSongsRequest;
 use App\Http\Requests\Api\V1\RemovePlaylistSongsRequest;
+use App\Http\Requests\Api\V1\ReorderPlaylistsRequest;
 use App\Http\Requests\Api\V1\ReorderPlaylistSongsRequest;
 use App\Http\Requests\Api\V1\UploadPlaylistCoverRequest;
 use App\Http\Resources\Api\V1\PlaylistResource;
@@ -35,6 +37,7 @@ class PlaylistController extends Controller
         private readonly CreatePlaylist $createPlaylist,
         private readonly AddSongsToPlaylist $addSongsToPlaylist,
         private readonly RemoveSongsFromPlaylist $removeSongsFromPlaylist,
+        private readonly ReorderPlaylists $reorderPlaylistsAction,
         private readonly ReorderPlaylistSongs $reorderPlaylistSongs,
         private readonly RefreshPlaylistCover $refreshPlaylistCoverAction,
         private readonly UploadPlaylistCover $uploadPlaylistCoverAction,
@@ -59,7 +62,7 @@ class PlaylistController extends Controller
             }
         }
 
-        $playlists = $query->orderBy('name')->get();
+        $playlists = $query->orderBy('position')->orderBy('name')->get();
 
         // Calculate song counts and total length for smart playlists
         foreach ($playlists as $playlist) {
@@ -126,6 +129,19 @@ class PlaylistController extends Controller
         $playlist->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Reorder the user's playlists.
+     */
+    public function reorder(ReorderPlaylistsRequest $request): JsonResponse
+    {
+        $this->reorderPlaylistsAction->execute(
+            $request->user(),
+            $request->validated('playlist_ids')
+        );
+
+        return response()->json(['message' => 'Playlists reordered successfully']);
     }
 
     /**

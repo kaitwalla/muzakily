@@ -75,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('artists/{artist}/songs', [ArtistController::class, 'songs'])->name('artists.songs');
 
     // Playlists
+    Route::put('playlists/reorder', [PlaylistController::class, 'reorder'])->name('playlists.reorder');
     Route::apiResource('playlists', PlaylistController::class);
     Route::get('playlists/{playlist}/songs', [PlaylistController::class, 'songs'])->name('playlists.songs');
     Route::post('playlists/{playlist}/songs', [PlaylistController::class, 'addSongs'])->name('playlists.songs.add');
