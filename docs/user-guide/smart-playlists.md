@@ -206,6 +206,15 @@ To force an immediate refresh:
 
 This is useful after bulk-adding new music to ensure all matching songs appear immediately.
 
+## Playlist Statistics
+
+Smart playlists display:
+
+- **Song count** - Number of matching songs
+- **Total duration** - Combined length of all matching songs
+
+These update automatically when the playlist refreshes.
+
 ## Limitations
 
 Smart playlists are dynamic:

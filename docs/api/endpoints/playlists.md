@@ -8,7 +8,7 @@ Endpoints for managing regular and smart playlists.
 GET /api/v1/playlists
 ```
 
-Returns all playlists owned by the authenticated user. This endpoint returns a flat list (not paginated) since users typically have a manageable number of playlists.
+Returns all playlists owned by the authenticated user, ordered by position. This endpoint returns a flat list (not paginated) since users typically have a manageable number of playlists.
 
 ### Query Parameters
 
@@ -31,6 +31,7 @@ Returns all playlists owned by the authenticated user. This endpoint returns a f
       "rules": null,
       "song_count": 25,
       "total_length": 5400,
+      "position": 0,
       "created_at": "2024-01-15T10:30:00.000000Z",
       "updated_at": "2024-01-20T15:45:00.000000Z"
     },
@@ -50,11 +51,29 @@ Returns all playlists owned by the authenticated user. This endpoint returns a f
         }
       ],
       "song_count": 15,
-      "total_length": 3200
+      "total_length": 3200,
+      "position": 1
     }
   ]
 }
 ```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | integer | Playlist ID |
+| `name` | string | Playlist name |
+| `slug` | string | URL-safe identifier |
+| `description` | string | Optional description |
+| `cover` | string | Cover image URL |
+| `is_smart` | boolean | Whether this is a smart playlist |
+| `rules` | array | Smart playlist rules (null for regular playlists) |
+| `song_count` | integer | Number of songs in the playlist |
+| `total_length` | integer | Total duration in seconds. For smart playlists, this is calculated from matching songs. |
+| `position` | integer | Display order position (lower = earlier) |
+| `created_at` | string | Creation timestamp |
+| `updated_at` | string | Last update timestamp |
 
 ## Create Playlist
 
@@ -302,6 +321,46 @@ curl -X PUT "https://api.example.com/api/v1/playlists/1/songs/reorder" \
 ```
 
 The `song_ids` array must contain all songs currently in the playlist in the desired order.
+
+## Reorder Playlists
+
+```
+PUT /api/v1/playlists/reorder
+```
+
+Reorder the user's playlists. Playlists are displayed in position order (lowest first).
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `playlist_ids` | array | Yes | Ordered array of playlist IDs |
+
+The array should contain all playlist IDs in the desired order. Playlists not included in the array will be moved to the end.
+
+### Example Request
+
+```bash
+curl -X PUT "https://api.example.com/api/v1/playlists/reorder" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "playlist_ids": [3, 1, 5, 2, 4]
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "message": "Playlists reordered successfully"
+}
+```
+
+### Notes
+
+- Newly created playlists are automatically assigned the next available position
+- Playlists are returned in position order by the List Playlists endpoint
 
 ## Upload Playlist Cover
 

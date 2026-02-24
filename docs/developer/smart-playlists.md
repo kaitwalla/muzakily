@@ -119,6 +119,12 @@ class SmartPlaylistEvaluator
      * Count matching songs without loading them.
      */
     public function count(Playlist $playlist, ?User $user = null): int;
+
+    /**
+     * Calculate total length (duration) of matching songs in seconds.
+     * Uses materialized results if available, otherwise evaluates dynamically.
+     */
+    public function totalLength(Playlist $playlist, ?User $user = null): int;
 }
 ```
 

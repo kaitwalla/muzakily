@@ -60,6 +60,17 @@ Changes save automatically.
 3. Modify the name or description
 4. Click **Save**
 
+### Reordering Playlists
+
+Organize your playlists in your preferred order:
+
+1. In the sidebar, hover over a playlist
+2. Click and hold the drag handle (six dots icon)
+3. Drag the playlist to its new position
+4. Release to drop
+
+Changes save automatically. Your playlist order syncs across all devices.
+
 ### Deleting a Playlist
 
 1. Right-click the playlist in the sidebar
