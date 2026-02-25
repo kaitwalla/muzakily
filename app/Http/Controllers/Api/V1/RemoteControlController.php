@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Events\Player\RemoteCommand;
-use App\Events\Player\QueueUpdated;
+use App\Actions\Player\GetPlaybackState;
+use App\Actions\Player\SendRemoteCommand;
+use App\Actions\Player\SyncDeviceQueue;
+use App\Exceptions\DeviceNotFoundException;
 use App\Http\Controllers\Controller;
-use App\Http\Resources\Api\V1\SongResource;
-use App\Models\PlayerDevice;
-use App\Models\Song;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RemoteControlController extends Controller
 {
+    public function __construct(
+        private readonly SendRemoteCommand $sendRemoteCommand,
+        private readonly GetPlaybackState $getPlaybackState,
+        private readonly SyncDeviceQueue $syncDeviceQueue,
+    ) {}
     /**
      * Send a remote control command to a device.
      */
@@ -26,27 +30,25 @@ class RemoteControlController extends Controller
             'payload' => ['nullable', 'array'],
         ]);
 
-        $user = $request->user();
         $targetDeviceId = $request->input('target_device_id');
         $command = $request->input('command');
         $payload = $request->input('payload', []);
 
-        // Verify the target device belongs to the user
-        $device = PlayerDevice::where('id', $targetDeviceId)
-            ->where('user_id', $user->id)
-            ->first();
-
-        if (!$device) {
+        try {
+            $this->sendRemoteCommand->execute(
+                $request->user(),
+                $targetDeviceId,
+                $command,
+                $payload
+            );
+        } catch (DeviceNotFoundException) {
             return response()->json([
                 'error' => [
                     'code' => 'NOT_FOUND',
-                    'message' => 'Target device not found',
+                    'message' => 'The specified device was not found.',
                 ],
             ], 404);
         }
-
-        // Broadcast the command
-        broadcast(new RemoteCommand($user, $targetDeviceId, $command, $payload));
 
         return response()->json([
             'data' => [
@@ -62,48 +64,10 @@ class RemoteControlController extends Controller
      */
     public function state(Request $request): JsonResponse
     {
-        $user = $request->user();
-
-        // Get the most recently active device
-        $activeDevice = PlayerDevice::where('user_id', $user->id)
-            ->orderBy('last_seen', 'desc')
-            ->first();
-
-        if (!$activeDevice) {
-            return response()->json([
-                'data' => [
-                    'active_device' => null,
-                    'is_playing' => false,
-                    'current_song' => null,
-                    'position' => 0,
-                    'volume' => 1,
-                    'queue' => [],
-                ],
-            ]);
-        }
-
-        $currentSong = $activeDevice->current_song_id
-            ? Song::with(['artist', 'album'])->find($activeDevice->current_song_id)
-            : null;
-
-        /** @var array<int, string> $queue */
-        $queue = $activeDevice->state['queue'] ?? [];
-        $queueSongsMap = Song::whereIn('id', $queue)->get()->keyBy('id');
-        // Preserve queue order
-        $queueSongs = collect($queue)->map(fn (string $id) => $queueSongsMap->get($id))->filter()->values();
+        $state = $this->getPlaybackState->execute($request->user());
 
         return response()->json([
-            'data' => [
-                'active_device' => [
-                    'device_id' => $activeDevice->id,
-                    'name' => $activeDevice->name,
-                ],
-                'is_playing' => $activeDevice->is_playing,
-                'current_song' => $currentSong ? new SongResource($currentSong) : null,
-                'position' => $activeDevice->position ?? 0,
-                'volume' => $activeDevice->volume ?? 1,
-                'queue' => SongResource::collection($queueSongs),
-            ],
+            'data' => $state,
         ]);
     }
 
@@ -119,18 +83,12 @@ class RemoteControlController extends Controller
             'position' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $user = $request->user();
-        $queue = $request->input('queue');
-        $currentIndex = $request->input('current_index', 0);
-        $position = $request->input('position', 0);
-
-        // Broadcast queue update to all user's devices
-        broadcast(new QueueUpdated($user, $queue, $currentIndex, $position));
-
-        // Count online devices
-        $devicesNotified = PlayerDevice::where('user_id', $user->id)
-            ->where('last_seen', '>=', now()->subMinutes(1))
-            ->count();
+        $devicesNotified = $this->syncDeviceQueue->execute(
+            $request->user(),
+            $request->input('queue'),
+            (int) $request->input('current_index', 0),
+            (float) $request->input('position', 0)
+        );
 
         return response()->json([
             'data' => [

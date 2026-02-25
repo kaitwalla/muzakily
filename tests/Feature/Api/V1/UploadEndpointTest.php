@@ -86,7 +86,7 @@ class UploadEndpointTest extends TestCase
 
         $response->assertAccepted()
             ->assertJsonStructure([
-                'data' => ['job_id', 'status', 'filename'],
+                'data' => ['upload_id', 'status', 'filename'],
             ])
             ->assertJsonPath('data.status', 'processing')
             ->assertJsonPath('data.filename', 'song.mp3');

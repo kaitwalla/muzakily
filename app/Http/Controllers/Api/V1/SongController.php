@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Songs\BulkUpdateSongs;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\BulkDestroySongsRequest;
 use App\Http\Requests\Api\V1\BulkUpdateSongsRequest;
 use App\Http\Requests\Api\V1\UpdateSongRequest;
 use App\Http\Resources\Api\V1\SongResource;
@@ -13,11 +15,15 @@ use App\Models\Song;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class SongController extends Controller
 {
+    public function __construct(
+        private readonly BulkUpdateSongs $bulkUpdateSongs,
+    ) {}
     /**
      * Display a listing of songs.
      */
@@ -139,23 +145,44 @@ class SongController extends Controller
         /** @var array<int>|null $removeTagIds */
         $removeTagIds = $request->validated('remove_tag_ids');
 
-        DB::transaction(function () use ($songs, $updateData, $addTagIds, $removeTagIds): void {
+        $updatedSongs = $this->bulkUpdateSongs->execute($songs, $updateData, $addTagIds, $removeTagIds);
+
+        return response()->json([
+            'data' => SongResource::collection($updatedSongs),
+        ]);
+    }
+
+    /**
+     * Delete the specified song.
+     */
+    public function destroy(Song $song): Response
+    {
+        $this->authorize('delete', $song);
+
+        $song->delete();
+
+        return response()->noContent();
+    }
+
+    /**
+     * Bulk delete multiple songs.
+     */
+    public function bulkDestroy(BulkDestroySongsRequest $request): Response
+    {
+        $songs = Song::whereIn('id', $request->song_ids)->get();
+
+        // Authorize each song before deleting
+        foreach ($songs as $song) {
+            $this->authorize('delete', $song);
+        }
+
+        DB::transaction(function () use ($songs): void {
             foreach ($songs as $song) {
-                if (count($updateData) > 0) {
-                    $song->update($updateData);
-                }
-                if ($addTagIds !== null && count($addTagIds) > 0) {
-                    $song->tags()->syncWithoutDetaching($addTagIds);
-                }
-                if ($removeTagIds !== null && count($removeTagIds) > 0) {
-                    $song->tags()->detach($removeTagIds);
-                }
+                $song->delete();
             }
         });
 
-        return response()->json([
-            'data' => SongResource::collection($songs->fresh(['artist', 'album', 'genres', 'tags'])),
-        ]);
+        return response()->noContent();
     }
 
     /**

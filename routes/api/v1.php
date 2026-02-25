@@ -57,7 +57,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Songs
     Route::get('songs/recently-played', [SongController::class, 'recentlyPlayed'])->name('songs.recently-played');
     Route::put('songs/bulk', [SongController::class, 'bulkUpdate'])->name('songs.bulk-update');
-    Route::apiResource('songs', SongController::class)->only(['index', 'show', 'update']);
+    Route::delete('songs/bulk', [SongController::class, 'bulkDestroy'])->name('songs.bulk-destroy');
+    Route::apiResource('songs', SongController::class)->only(['index', 'show', 'update', 'destroy']);
     Route::get('songs/{song}/stream', [StreamController::class, 'stream'])->name('songs.stream');
     Route::get('songs/{song}/download', [StreamController::class, 'download'])->name('songs.download');
     Route::post('songs/{song}/tags', [SongTagController::class, 'store'])->name('songs.tags.store');

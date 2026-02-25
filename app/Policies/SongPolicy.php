@@ -18,6 +18,14 @@ class SongPolicy
     }
 
     /**
+     * Determine whether the user can delete the song.
+     */
+    public function delete(User $user, Song $song): bool
+    {
+        return $user->isAdmin();
+    }
+
+    /**
      * Determine whether the user can tag the song.
      * All authenticated users can tag songs.
      */
