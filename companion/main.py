@@ -6,6 +6,7 @@ downloads the track via the configured Tidal downloader, and uploads it to muzak
 """
 
 import logging
+import os
 import time
 
 import pysher
@@ -57,6 +58,13 @@ def handle_download_requested(data: dict) -> None:
         logger.info("Upload complete: %s", result)
     except requests.HTTPError as e:
         logger.error("Upload failed: %s", e)
+        return
+    finally:
+        try:
+            os.remove(file_path)
+            logger.info("Cleaned up: %s", file_path)
+        except OSError as e:
+            logger.warning("Failed to clean up %s: %s", file_path, e)
 
 
 def connect() -> None:
