@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Actions\Interactions\RecordSongPlay;
 use App\Http\Controllers\Controller;
-use App\Models\Interaction;
 use App\Models\Song;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class InteractionController extends Controller
 {
+    public function __construct(
+        private readonly RecordSongPlay $recordSongPlay,
+    ) {}
+
     /**
      * Record a song play.
      */
@@ -22,7 +26,7 @@ class InteractionController extends Controller
         ]);
 
         $song = Song::findOrFail($request->input('song_id'));
-        $interaction = Interaction::recordPlay($request->user(), $song);
+        $interaction = $this->recordSongPlay->execute($request->user(), $song);
 
         return response()->json([
             'data' => [
