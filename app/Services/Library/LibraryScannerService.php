@@ -169,6 +169,11 @@ class LibraryScannerService
         }
 
         if ($metadata === null) {
+            // File exists in storage but metadata extraction failed.
+            // Update last_scanned_at so cleanup doesn't treat this as an orphan
+            // and delete the file from storage and any existing song from the DB.
+            $cache->markScanned();
+            Log::warning('Metadata extraction failed, skipping file', ['key' => $object['key']]);
             return null;
         }
 

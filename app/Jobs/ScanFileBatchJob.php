@@ -146,6 +146,11 @@ class ScanFileBatchJob implements ShouldQueue
         }
 
         if ($metadata === null) {
+            // File exists in R2 but metadata extraction failed.
+            // Update last_scanned_at so cleanup doesn't treat this as an orphan
+            // and delete the file from R2 and any existing song from the DB.
+            $cache->markScanned();
+            Log::warning('Metadata extraction failed, skipping file', ['key' => $object['key']]);
             return;
         }
 
