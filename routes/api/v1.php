@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\SongTagController;
 use App\Http\Controllers\Api\V1\StreamController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TagController;
+use App\Http\Controllers\Api\V1\DownloadRequestController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\Admin\LibraryController;
 use App\Http\Controllers\Api\V1\Admin\MetadataController;
@@ -107,6 +108,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Upload
     Route::post('upload', [UploadController::class, 'upload'])->name('upload');
+
+    // Download requests (for Apple Shortcut / companion integration)
+    Route::apiResource('downloads', DownloadRequestController::class)
+        ->only(['index', 'store', 'show'])
+        ->parameters(['downloads' => 'download']);
 
     // Player Control
     Route::prefix('player')->group(function () {

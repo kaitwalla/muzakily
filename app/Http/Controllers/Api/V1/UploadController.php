@@ -23,17 +23,21 @@ class UploadController extends Controller
     {
         $this->authorize('upload', \App\Models\Song::class);
 
-        $request->validate([
+        $validated = $request->validate([
             'file' => [
                 'required',
                 'file',
                 'max:102400', // 100MB
                 'mimes:mp3,mp4,m4a,flac',
             ],
+            'download_request_id' => ['nullable', 'string', 'uuid', 'exists:download_requests,id'],
         ]);
 
         try {
-            $result = $this->uploadSong->execute($request->file('file'));
+            $result = $this->uploadSong->execute(
+                $request->file('file'),
+                $validated['download_request_id'] ?? null,
+            );
         } catch (UnsupportedAudioFormatException) {
             return response()->json([
                 'error' => [

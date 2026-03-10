@@ -25,7 +25,7 @@ final readonly class UploadSong
      * @return array{upload_id: string, status: string, filename: string}
      * @throws UnsupportedAudioFormatException
      */
-    public function execute(UploadedFile $file): array
+    public function execute(UploadedFile $file, ?string $downloadRequestId = null): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
         $format = AudioFormat::fromExtension($extension);
@@ -50,7 +50,7 @@ final readonly class UploadSong
         $dispatched = false;
         try {
             $this->storage->upload($storagePath, $fullTempPath);
-            ProcessUploadedSongJob::dispatch($storagePath, $file->getClientOriginalName());
+            ProcessUploadedSongJob::dispatch($storagePath, $file->getClientOriginalName(), $downloadRequestId);
             $dispatched = true;
         } finally {
             @unlink($fullTempPath);

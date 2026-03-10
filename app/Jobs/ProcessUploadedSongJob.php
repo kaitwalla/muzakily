@@ -6,8 +6,10 @@ namespace App\Jobs;
 
 use App\Contracts\MusicStorageInterface;
 use App\Enums\AudioFormat;
+use App\Enums\DownloadRequestStatus;
 use App\Models\Album;
 use App\Models\Artist;
+use App\Models\DownloadRequest;
 use App\Models\Song;
 use App\Services\Library\MetadataExtractorService;
 use App\Services\Library\TagService;
@@ -53,6 +55,7 @@ class ProcessUploadedSongJob implements ShouldQueue
     public function __construct(
         public string $storagePath,
         public string $originalFilename,
+        public ?string $downloadRequestId = null,
     ) {}
 
     /**
@@ -133,6 +136,25 @@ class ProcessUploadedSongJob implements ShouldQueue
                     }
                 }
 
+                // Apply tags from download request, if present
+                if ($this->downloadRequestId !== null) {
+                    $downloadRequest = DownloadRequest::find($this->downloadRequestId);
+                    if ($downloadRequest !== null) {
+                        $downloadRequest->update(['status' => DownloadRequestStatus::PROCESSING]);
+
+                        /** @var list<int> $tagIds */
+                        $tagIds = array_map('intval', $downloadRequest->tag_ids ?? []);
+                        if (count($tagIds) > 0) {
+                            $tagService->addTagsToSong($song, $tagIds);
+                        }
+
+                        $downloadRequest->update([
+                            'status' => DownloadRequestStatus::COMPLETED,
+                            'song_id' => $song->id,
+                        ]);
+                    }
+                }
+
                 return $song;
             });
 
@@ -162,5 +184,12 @@ class ProcessUploadedSongJob implements ShouldQueue
             'exception' => $exception->getMessage(),
             'attempts' => $this->attempts(),
         ]);
+
+        if ($this->downloadRequestId !== null) {
+            DownloadRequest::where('id', $this->downloadRequestId)->update([
+                'status' => DownloadRequestStatus::FAILED,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }
