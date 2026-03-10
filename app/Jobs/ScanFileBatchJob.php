@@ -156,8 +156,8 @@ class ScanFileBatchJob implements ShouldQueue
             return;
         }
 
-        // Wrap all database operations in a transaction
-        DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache, $tagService, $coverArtService) {
+        // Wrap song/artist/album creation in a transaction
+        $song = DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache, $coverArtService) {
             // Find or create artist
             $artist = null;
             if ($metadata['artist'] ?? null) {
@@ -209,14 +209,24 @@ class ScanFileBatchJob implements ShouldQueue
                 $song = Song::create($songData);
             }
 
-            // Assign tag based on folder path
-            if (config('muzakily.tags.auto_create_from_folders', true)) {
-                $tagService->assignFromPath($song);
-            }
-
             // Update cache
             $cache->updateFromScan($object['etag'], $object['size'], $object['last_modified']);
+
+            return $song;
         });
+
+        // Assign tags outside the transaction so tag failures don't prevent song creation
+        if (config('muzakily.tags.auto_create_from_folders', true)) {
+            try {
+                $tagService->assignFromPath($song);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to assign tags from path', [
+                    'key' => $object['key'],
+                    'error' => $e->getMessage(),
+                ]);
+                report($e);
+            }
+        }
     }
 
     /**

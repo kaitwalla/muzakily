@@ -180,11 +180,29 @@ class Tag extends Model
             // Check by name first (case-insensitive for consistency)
             $tag = static::whereRaw('LOWER(name) = ?', [strtolower($tagName)])->first();
             if (!$tag) {
-                $tag = static::create([
-                    'name' => $tagName,
-                    'slug' => static::generateUniqueSlug($tagName),
-                    'depth' => 1,
-                ]);
+                try {
+                    $tag = static::create([
+                        'name' => $tagName,
+                        'slug' => static::generateUniqueSlug($tagName),
+                        'depth' => 1,
+                    ]);
+                } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                    // Race condition: another worker created this tag concurrently
+                    $tag = static::whereRaw('LOWER(name) = ?', [strtolower($tagName)])->first();
+                    if (!$tag) {
+                        // Slug collision with unrelated tag - retry with fresh slug
+                        try {
+                            $tag = static::create([
+                                'name' => $tagName,
+                                'slug' => static::generateUniqueSlug($tagName),
+                                'depth' => 1,
+                            ]);
+                        } catch (\Illuminate\Database\UniqueConstraintViolationException) {
+                            // Final attempt: tag must exist by now
+                            $tag = static::whereRaw('LOWER(name) = ?', [strtolower($tagName)])->firstOrFail();
+                        }
+                    }
+                }
             }
             $tags[] = $tag;
         }

@@ -15,6 +15,7 @@ use App\Models\Tag;
 use App\Services\Library\TagService;
 use Closure;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LibraryScannerService
 {
@@ -178,8 +179,8 @@ class LibraryScannerService
             return null;
         }
 
-        // Wrap all database operations in a transaction to prevent partial state
-        return DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache) {
+        // Wrap song/artist/album creation in a transaction to prevent partial state
+        $song = DB::transaction(function () use ($object, $metadata, $format, $existingSong, $cache) {
             // Find or create artist
             $artist = null;
             if ($metadata['artist'] ?? null) {
@@ -231,22 +232,32 @@ class LibraryScannerService
             if ($existingSong) {
                 $existingSong->update($songData);
                 $song = $existingSong;
-                $result = 'updated';
             } else {
                 $song = Song::create($songData);
-                $result = 'new';
-            }
-
-            // Assign tag based on folder path
-            if (config('muzakily.tags.auto_create_from_folders', true)) {
-                $this->tagService->assignFromPath($song);
             }
 
             // Update cache
             $cache->updateFromScan($object['etag'], $object['size'], $object['last_modified']);
 
-            return $result;
+            return $song;
         });
+
+        $result = $existingSong ? 'updated' : 'new';
+
+        // Assign tags outside the transaction so tag failures don't prevent song creation
+        if (config('muzakily.tags.auto_create_from_folders', true)) {
+            try {
+                $this->tagService->assignFromPath($song);
+            } catch (\Throwable $e) {
+                Log::warning('Failed to assign tags from path', [
+                    'key' => $object['key'],
+                    'error' => $e->getMessage(),
+                ]);
+                report($e);
+            }
+        }
+
+        return $result;
     }
 
     /**
