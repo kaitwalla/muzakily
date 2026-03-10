@@ -556,6 +556,58 @@ class LibraryScannerServiceTest extends TestCase
     }
 
     #[Test]
+    public function metadata_extraction_failure_preserves_existing_song(): void
+    {
+        // An existing song should NOT be deleted when metadata extraction fails.
+        // Previously, the ScanCache was not updated on failure, causing cleanup
+        // to treat the file as an orphan and delete both the song and the R2 file.
+        $objectKey = 'music/song.mp3';
+        $fileSize = 10_000_000;
+        $oldEtag = 'old-etag';
+        $newEtag = 'new-etag'; // file changed
+
+        $existingSong = Song::factory()->create(['storage_path' => $objectKey]);
+
+        ScanCache::create([
+            'bucket' => 'test-bucket',
+            'object_key' => $objectKey,
+            'key_hash' => ScanCache::hashKey($objectKey),
+            'etag' => $oldEtag,
+            'size' => $fileSize,
+            'last_scanned_at' => now()->subHours(1),
+        ]);
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([
+                [
+                    'key' => $objectKey,
+                    'size' => $fileSize,
+                    'last_modified' => new DateTimeImmutable(),
+                    'etag' => $newEtag, // changed etag triggers re-extraction
+                ],
+            ]));
+
+        $this->storageMock->shouldReceive('getLocalPath')->once()->with($objectKey)->andReturn(null);
+        $this->storageMock->shouldReceive('downloadPartial')->once()->andReturn(null);
+        $this->storageMock->shouldReceive('download')->once()->andReturn(false); // full download fails
+
+        // Extraction fails for both attempts
+        $this->service->scan();
+
+        // Song must be preserved - not deleted as a false orphan
+        $this->assertDatabaseHas('songs', ['id' => $existingSong->id]);
+
+        // ScanCache must be updated so cleanup doesn't treat this as an orphan
+        $this->assertDatabaseHas('scan_cache', [
+            'object_key' => $objectKey,
+        ]);
+        $cache = ScanCache::where('object_key', $objectKey)->first();
+        $this->assertNotNull($cache?->last_scanned_at);
+    }
+
+    #[Test]
     public function scan_respects_limit_parameter(): void
     {
         config(['muzakily.storage.driver' => 'local']);
