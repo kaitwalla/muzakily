@@ -1,4 +1,4 @@
-# Apple Shortcut: Queue Tidal Download
+# Apple Shortcut: Queue Apple Music Download
 
 This shortcut grabs the current browser URL, lets you pick tags from muzakily, and queues
 a download via the companion daemon.
@@ -30,7 +30,7 @@ end tell
 > end tell
 > ```
 
-Store the result in a variable named `tidalURL`.
+Store the result in a variable named `trackURL`.
 
 ### 2. Fetch tag list from muzakily
 
@@ -80,7 +80,7 @@ Add a **Get Contents of URL** action:
 - Request Body: JSON
   ```json
   {
-    "url": "tidalURL",
+    "url": "trackURL",
     "tag_ids": "selectedTagIds"
   }
   ```
@@ -106,5 +106,5 @@ Add a **Show Notification** action:
 - If Chrome is not your browser, adapt the AppleScript in step 1
 - You can hardcode your token directly in the shortcut or store it in a Text variable
   at the top for easier updates
-- The shortcut works on Tidal web player URLs in the format:
-  `https://tidal.com/browse/track/XXXXXXX`
+- The shortcut works on Apple Music web URLs in the format:
+  `https://music.apple.com/us/album/song-name/1234567890?i=1234567891`
