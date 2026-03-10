@@ -53,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('logout', [AuthController::class, 'logout'])->name('auth.logout');
         Route::get('me', [AuthController::class, 'me'])->name('auth.me');
         Route::patch('me', [AuthController::class, 'updateProfile'])->name('auth.update-profile');
+        Route::get('tokens', [AuthController::class, 'listTokens'])->name('auth.tokens.index');
+        Route::post('tokens', [AuthController::class, 'createToken'])->name('auth.tokens.store');
+        Route::delete('tokens/{tokenId}', [AuthController::class, 'revokeToken'])->name('auth.tokens.destroy');
     });
 
     // Songs

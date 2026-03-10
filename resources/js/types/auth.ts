@@ -39,3 +39,15 @@ export interface AuthResponse {
     user: User;
     token: string;
 }
+
+export interface ApiToken {
+    id: number;
+    name: string;
+    last_used_at: string | null;
+    created_at: string;
+    is_current: boolean;
+}
+
+export interface NewApiToken extends ApiToken {
+    token: string;
+}

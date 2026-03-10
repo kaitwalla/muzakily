@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
+import { listTokens, createToken, revokeToken } from '@/api/auth';
+import type { ApiToken, NewApiToken } from '@/types/auth';
 
 const authStore = useAuthStore();
 const saving = ref(false);
@@ -164,6 +166,58 @@ const crossfade = computed({
 const userInitial = computed(() => {
     return authStore.user?.name?.charAt(0).toUpperCase() ?? '?';
 });
+
+// API Tokens
+const tokens = ref<ApiToken[]>([]);
+const newTokenName = ref('');
+const creatingToken = ref(false);
+const tokenError = ref<string | null>(null);
+const revealedToken = ref<NewApiToken | null>(null);
+const copiedTokenId = ref<number | null>(null);
+
+onMounted(async () => {
+    try {
+        tokens.value = await listTokens();
+    } catch {
+        // non-fatal
+    }
+});
+
+async function handleCreateToken(): Promise<void> {
+    if (creatingToken.value || !newTokenName.value.trim()) return;
+    creatingToken.value = true;
+    tokenError.value = null;
+    try {
+        const created = await createToken(newTokenName.value.trim());
+        revealedToken.value = created;
+        tokens.value.unshift(created);
+        newTokenName.value = '';
+    } catch {
+        tokenError.value = 'Failed to create token';
+    } finally {
+        creatingToken.value = false;
+    }
+}
+
+async function handleRevokeToken(id: number): Promise<void> {
+    try {
+        await revokeToken(id);
+        tokens.value = tokens.value.filter(t => t.id !== id);
+        if (revealedToken.value?.id === id) revealedToken.value = null;
+    } catch {
+        tokenError.value = 'Failed to revoke token';
+    }
+}
+
+async function copyToClipboard(text: string, id: number): Promise<void> {
+    await navigator.clipboard.writeText(text);
+    copiedTokenId.value = id;
+    setTimeout(() => { copiedTokenId.value = null; }, 2000);
+}
+
+function formatDate(iso: string): string {
+    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
 </script>
 
 <template>
@@ -282,6 +336,19 @@ const userInitial = computed(() => {
                         <label class="block text-sm font-medium text-surface-400 mb-1">Email</label>
                         <p class="text-white">{{ authStore.user?.email ?? '-' }}</p>
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium text-surface-400 mb-1">User ID</label>
+                        <div class="flex items-center gap-2">
+                            <p class="text-surface-300 font-mono text-sm">{{ authStore.user?.uuid ?? '-' }}</p>
+                            <button
+                                v-if="authStore.user?.uuid"
+                                @click="copyToClipboard(authStore.user!.uuid, -1)"
+                                class="text-primary-400 hover:text-primary-300 text-xs"
+                            >
+                                {{ copiedTokenId === -1 ? 'Copied!' : 'Copy' }}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -328,6 +395,75 @@ const userInitial = computed(() => {
                     {{ changingPassword ? 'Changing...' : 'Change Password' }}
                 </button>
             </div>
+        </section>
+
+        <!-- API Tokens Section -->
+        <section class="bg-surface-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-1">API Tokens</h2>
+            <p class="text-surface-400 text-sm mb-4">Use these tokens to authenticate the muzakily companion or other API clients.</p>
+
+            <div v-if="tokenError" class="mb-4 p-3 bg-red-500/20 border border-red-500 rounded-lg text-red-400 text-sm">
+                {{ tokenError }}
+            </div>
+
+            <!-- Newly created token — show once -->
+            <div v-if="revealedToken" class="mb-4 p-4 bg-green-500/10 border border-green-500/50 rounded-lg">
+                <p class="text-green-400 text-sm font-medium mb-2">Token created — copy it now, it won't be shown again.</p>
+                <div class="flex items-center gap-2">
+                    <code class="flex-1 bg-surface-900 rounded px-3 py-2 text-green-300 font-mono text-xs break-all">{{ revealedToken.token }}</code>
+                    <button
+                        @click="copyToClipboard(revealedToken!.token, revealedToken!.id)"
+                        class="flex-shrink-0 px-3 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-medium rounded-lg transition-colors"
+                    >
+                        {{ copiedTokenId === revealedToken.id ? 'Copied!' : 'Copy' }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Create token form -->
+            <div class="flex items-center gap-2 mb-6 max-w-md">
+                <input
+                    v-model="newTokenName"
+                    type="text"
+                    placeholder="Token name (e.g. Mac Companion)"
+                    class="flex-1 bg-surface-700 border border-surface-600 rounded-lg px-3 py-2 text-white text-sm placeholder:text-surface-500"
+                    @keyup.enter="handleCreateToken"
+                />
+                <button
+                    @click="handleCreateToken"
+                    :disabled="creatingToken || !newTokenName.trim()"
+                    class="flex-shrink-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                >
+                    {{ creatingToken ? 'Creating...' : 'Create' }}
+                </button>
+            </div>
+
+            <!-- Token list -->
+            <div v-if="tokens.length > 0" class="space-y-2">
+                <div
+                    v-for="token in tokens"
+                    :key="token.id"
+                    class="flex items-center justify-between px-4 py-3 bg-surface-700 rounded-lg"
+                >
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <p class="text-white text-sm font-medium">{{ token.name }}</p>
+                            <span v-if="token.is_current" class="text-xs px-1.5 py-0.5 bg-primary-500/20 text-primary-400 rounded">current session</span>
+                        </div>
+                        <p class="text-surface-400 text-xs mt-0.5">
+                            Created {{ formatDate(token.created_at) }}
+                            <span v-if="token.last_used_at"> · Last used {{ formatDate(token.last_used_at) }}</span>
+                        </p>
+                    </div>
+                    <button
+                        @click="handleRevokeToken(token.id)"
+                        class="text-surface-400 hover:text-red-400 text-sm transition-colors"
+                    >
+                        Revoke
+                    </button>
+                </div>
+            </div>
+            <p v-else class="text-surface-500 text-sm">No tokens yet.</p>
         </section>
 
         <!-- Playback Section -->

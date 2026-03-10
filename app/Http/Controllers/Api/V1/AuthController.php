@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -62,6 +63,71 @@ class AuthController extends Controller
         return response()->json([
             'data' => new UserResource($request->user()),
         ]);
+    }
+
+    /**
+     * List all API tokens for the authenticated user.
+     */
+    public function listTokens(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        /** @var \Laravel\Sanctum\PersonalAccessToken $currentToken */
+        $currentToken = $user->currentAccessToken();
+
+        $tokens = $user->tokens()->orderByDesc('created_at')->get()->map(function (PersonalAccessToken $token) use ($currentToken): array {
+            return [
+                'id' => $token->id,
+                'name' => $token->name,
+                'last_used_at' => $token->last_used_at?->toIso8601String(),
+                'created_at' => $token->created_at?->toIso8601String(),
+                'is_current' => $token->id === $currentToken->id,
+            ];
+        });
+
+        return response()->json(['data' => $tokens]);
+    }
+
+    /**
+     * Create a new named API token.
+     */
+    public function createToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        $newToken = $user->createToken($validated['name']);
+
+        return response()->json([
+            'data' => [
+                'id' => $newToken->accessToken->id,
+                'name' => $newToken->accessToken->name,
+                'token' => $newToken->plainTextToken,
+                'created_at' => $newToken->accessToken->created_at?->toIso8601String(),
+            ],
+        ], 201);
+    }
+
+    /**
+     * Revoke a specific API token.
+     */
+    public function revokeToken(Request $request, int $tokenId): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $deleted = $user->tokens()->where('id', $tokenId)->delete();
+
+        if (!$deleted) {
+            abort(404);
+        }
+
+        return response()->json(null, 204);
     }
 
     /**

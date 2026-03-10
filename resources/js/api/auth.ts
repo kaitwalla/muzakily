@@ -1,5 +1,5 @@
 import { apiClient, setAuthToken, clearAuthToken } from './client';
-import type { User, LoginRequest, RegisterRequest, AuthResponse, UpdateProfileRequest } from '@/types/auth';
+import type { User, LoginRequest, RegisterRequest, AuthResponse, UpdateProfileRequest, ApiToken, NewApiToken } from '@/types/auth';
 
 export async function login(credentials: LoginRequest): Promise<AuthResponse> {
     const response = await apiClient.post<{ data: AuthResponse }>('/auth/login', credentials);
@@ -53,4 +53,18 @@ export async function updateProfile(data: UpdateProfileRequest): Promise<User> {
 
     const response = await apiClient.patch<{ data: User }>('/auth/me', data);
     return response.data.data;
+}
+
+export async function listTokens(): Promise<ApiToken[]> {
+    const response = await apiClient.get<{ data: ApiToken[] }>('/auth/tokens');
+    return response.data.data;
+}
+
+export async function createToken(name: string): Promise<NewApiToken> {
+    const response = await apiClient.post<{ data: NewApiToken }>('/auth/tokens', { name });
+    return response.data.data;
+}
+
+export async function revokeToken(id: number): Promise<void> {
+    await apiClient.delete(`/auth/tokens/${id}`);
 }
