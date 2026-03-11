@@ -2,8 +2,13 @@
 import { onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useArtistsStore } from '@/stores/artists';
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
 
 const artistsStore = useArtistsStore();
+const { sentinel } = useInfiniteScroll(
+    () => artistsStore.hasMore,
+    () => artistsStore.loadMore()
+);
 
 onMounted(() => {
     artistsStore.fetchArtists();
@@ -51,14 +56,9 @@ onMounted(() => {
             </RouterLink>
         </div>
 
-        <div v-if="artistsStore.hasMore" class="mt-6 text-center">
-            <button
-                @click="artistsStore.loadMore"
-                :disabled="artistsStore.loading"
-                class="px-6 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-full transition-colors disabled:opacity-50"
-            >
-                {{ artistsStore.loading ? 'Loading...' : 'Load More' }}
-            </button>
+        <div ref="sentinel" class="h-1" aria-hidden="true" />
+        <div v-if="artistsStore.loading && artistsStore.hasArtists" class="mt-4 text-center text-surface-400 text-sm">
+            Loading...
         </div>
     </div>
 </template>

@@ -3,9 +3,14 @@ import { onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { usePlaylistsStore } from '@/stores/playlists';
 import SmartPlaylistEditor from '@/components/playlist/SmartPlaylistEditor.vue';
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
 import type { SmartPlaylistRuleGroup } from '@/config/smartPlaylist';
 
 const playlistsStore = usePlaylistsStore();
+const { sentinel } = useInfiniteScroll(
+    () => playlistsStore.hasMore,
+    () => playlistsStore.loadMore()
+);
 const showCreateModal = ref(false);
 const newPlaylistName = ref('');
 const newPlaylistDescription = ref('');
@@ -185,14 +190,9 @@ async function createPlaylist(): Promise<void> {
             </RouterLink>
         </div>
 
-        <div v-if="playlistsStore.hasMore" class="mt-6 text-center">
-            <button
-                @click="playlistsStore.loadMore"
-                :disabled="playlistsStore.loading"
-                class="px-6 py-2 bg-surface-700 hover:bg-surface-600 text-white rounded-full transition-colors disabled:opacity-50"
-            >
-                {{ playlistsStore.loading ? 'Loading...' : 'Load More' }}
-            </button>
+        <div ref="sentinel" class="h-1" aria-hidden="true" />
+        <div v-if="playlistsStore.loading && playlistsStore.hasPlaylists" class="mt-4 text-center text-surface-400 text-sm">
+            Loading...
         </div>
 
         <!-- Create Playlist Modal -->

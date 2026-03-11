@@ -2,7 +2,9 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { listTokens, createToken, revokeToken } from '@/api/auth';
+import { getStats } from '@/api/stats';
 import type { ApiToken, NewApiToken } from '@/types/auth';
+import type { LibraryStats } from '@/api/stats';
 
 const authStore = useAuthStore();
 const saving = ref(false);
@@ -167,6 +169,26 @@ const userInitial = computed(() => {
     return authStore.user?.name?.charAt(0).toUpperCase() ?? '?';
 });
 
+// Library stats
+const stats = ref<LibraryStats | null>(null);
+
+function formatDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h >= 24) {
+        const days = Math.floor(h / 24);
+        const hours = h % 24;
+        return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+    }
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function formatSize(bytes: number): string {
+    if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
+    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)} MB`;
+    return `${(bytes / 1024).toFixed(0)} KB`;
+}
+
 // API Tokens
 const tokens = ref<ApiToken[]>([]);
 const newTokenName = ref('');
@@ -176,11 +198,10 @@ const revealedToken = ref<NewApiToken | null>(null);
 const copiedTokenId = ref<number | null>(null);
 
 onMounted(async () => {
-    try {
-        tokens.value = await listTokens();
-    } catch {
-        // non-fatal
-    }
+    await Promise.allSettled([
+        listTokens().then(t => { tokens.value = t; }),
+        getStats().then(s => { stats.value = s; }),
+    ]);
 });
 
 async function handleCreateToken(): Promise<void> {
@@ -351,6 +372,38 @@ function formatDate(iso: string): string {
                     </div>
                 </div>
             </div>
+        </section>
+
+        <!-- Library Stats Section -->
+        <section class="bg-surface-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-4">Library</h2>
+            <div v-if="stats" class="grid grid-cols-2 gap-4">
+                <div class="bg-surface-700 rounded-lg p-4">
+                    <p class="text-surface-400 text-sm">Songs</p>
+                    <p class="text-white text-2xl font-semibold mt-1">{{ stats.songs.toLocaleString() }}</p>
+                </div>
+                <div class="bg-surface-700 rounded-lg p-4">
+                    <p class="text-surface-400 text-sm">Albums</p>
+                    <p class="text-white text-2xl font-semibold mt-1">{{ stats.albums.toLocaleString() }}</p>
+                </div>
+                <div class="bg-surface-700 rounded-lg p-4">
+                    <p class="text-surface-400 text-sm">Artists</p>
+                    <p class="text-white text-2xl font-semibold mt-1">{{ stats.artists.toLocaleString() }}</p>
+                </div>
+                <div class="bg-surface-700 rounded-lg p-4">
+                    <p class="text-surface-400 text-sm">Playlists</p>
+                    <p class="text-white text-2xl font-semibold mt-1">{{ stats.playlists.toLocaleString() }}</p>
+                </div>
+                <div class="bg-surface-700 rounded-lg p-4">
+                    <p class="text-surface-400 text-sm">Total Duration</p>
+                    <p class="text-white text-2xl font-semibold mt-1">{{ formatDuration(stats.total_duration) }}</p>
+                </div>
+                <div class="bg-surface-700 rounded-lg p-4">
+                    <p class="text-surface-400 text-sm">Storage Used</p>
+                    <p class="text-white text-2xl font-semibold mt-1">{{ formatSize(stats.total_size) }}</p>
+                </div>
+            </div>
+            <div v-else class="text-surface-500 text-sm">Loading...</div>
         </section>
 
         <!-- Password Section -->

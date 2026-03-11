@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\StreamController;
 use App\Http\Controllers\Api\V1\SyncController;
 use App\Http\Controllers\Api\V1\TagController;
 use App\Http\Controllers\Api\V1\DownloadRequestController;
+use App\Http\Controllers\Api\V1\StatsController;
 use App\Http\Controllers\Api\V1\UploadController;
 use App\Http\Controllers\Api\V1\Admin\LibraryController;
 use App\Http\Controllers\Api\V1\Admin\MetadataController;
@@ -108,6 +109,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sync
     Route::get('deleted', [SyncController::class, 'deleted'])->name('sync.deleted');
     Route::get('sync/status', [SyncController::class, 'status'])->name('sync.status');
+
+    // Library stats
+    Route::get('stats', StatsController::class)->name('stats');
 
     // Upload
     Route::post('upload', [UploadController::class, 'upload'])->name('upload');

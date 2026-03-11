@@ -4,10 +4,15 @@ import { useSongsStore } from '@/stores/songs';
 import { usePlayerStore } from '@/stores/player';
 import SongRow from '@/components/song/SongRow.vue';
 import BulkEditModal from '@/components/song/BulkEditModal.vue';
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll';
 import type { Song } from '@/types/models';
 
 const songsStore = useSongsStore();
 const playerStore = usePlayerStore();
+const { sentinel } = useInfiniteScroll(
+    () => songsStore.hasMore,
+    () => songsStore.loadMore()
+);
 
 const selectionMode = ref(false);
 const selectedSongIds = ref<Set<string>>(new Set());
@@ -186,14 +191,9 @@ function handleBulkUpdated(updatedSongs: Song[]): void {
             </table>
         </div>
 
-        <div v-if="songsStore.hasMore" class="mt-6 text-center">
-            <button
-                @click="songsStore.loadMore"
-                :disabled="songsStore.loading"
-                class="px-6 py-2 bg-surface-700 hover:bg-surface-600 text-surface-50 rounded-full transition-colors disabled:opacity-50"
-            >
-                {{ songsStore.loading ? 'Loading...' : 'Load More' }}
-            </button>
+        <div ref="sentinel" class="h-1" aria-hidden="true" />
+        <div v-if="songsStore.loading && songsStore.hasSongs" class="mt-4 text-center text-surface-400 text-sm">
+            Loading...
         </div>
 
         <!-- Bulk Edit Modal -->
