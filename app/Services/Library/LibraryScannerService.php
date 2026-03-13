@@ -168,20 +168,28 @@ class LibraryScannerService
             }
         }
 
-        if ($metadata === null) {
-            // File exists in storage but metadata extraction failed.
-            // Update last_scanned_at so cleanup doesn't treat this as an orphan
-            // and delete the file from storage and any existing song from the DB.
-            $cache->markScanned();
-            Log::warning('Metadata extraction failed, skipping file', ['key' => $object['key']]);
-            return null;
-        }
-
         // Determine audio format
         $format = AudioFormat::fromExtension(pathinfo($object['key'], PATHINFO_EXTENSION));
 
         if (!$format) {
+            // Unknown format — can't index, but mark scanned so cleanup doesn't delete it.
+            $cache->markScanned();
             return null;
+        }
+
+        if ($metadata === null) {
+            if ($existingSong) {
+                // Preserve existing song data — metadata failure may be transient.
+                $cache->markScanned();
+                Log::warning('Metadata extraction failed, preserving existing song', ['key' => $object['key']]);
+                return null;
+            }
+
+            // New file with no extractable metadata — index with filename fallback so it's discoverable.
+            // Mark scanned now so cleanup doesn't consider it an orphan if the transaction below fails.
+            $cache->markScanned();
+            Log::warning('Metadata extraction failed, indexing new file with filename fallback', ['key' => $object['key']]);
+            $metadata = [];
         }
 
         // Wrap song/artist/album creation in a transaction to prevent partial state
@@ -221,7 +229,7 @@ class LibraryScannerService
                 'title' => $metadata['title'] ?? pathinfo($object['key'], PATHINFO_FILENAME),
                 'album_name' => $metadata['album'] ?? null,
                 'artist_name' => $metadata['artist'] ?? null,
-                'length' => $metadata['duration'],
+                'length' => $metadata['duration'] ?? 0,
                 'track' => $metadata['track'] ?? null,
                 'disc' => $metadata['disc'] ?? 1,
                 'year' => $metadata['year'] ?? null,

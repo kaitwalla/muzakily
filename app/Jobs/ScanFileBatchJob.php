@@ -145,20 +145,28 @@ class ScanFileBatchJob implements ShouldQueue
             }
         }
 
-        if ($metadata === null) {
-            // File exists in R2 but metadata extraction failed.
-            // Update last_scanned_at so cleanup doesn't treat this as an orphan
-            // and delete the file from R2 and any existing song from the DB.
+        // Determine audio format
+        $format = AudioFormat::fromExtension(pathinfo($object['key'], PATHINFO_EXTENSION));
+
+        if (!$format) {
+            // Unknown format — can't index, but mark scanned so cleanup doesn't delete it.
             $cache->markScanned();
-            Log::warning('Metadata extraction failed, skipping file', ['key' => $object['key']]);
             return;
         }
 
-        // Determine audio format
-        $format = AudioFormat::fromExtension(strtolower(pathinfo($object['key'], PATHINFO_EXTENSION)));
+        if ($metadata === null) {
+            if ($existingSong) {
+                // Preserve existing song data — metadata failure may be transient (download error, etc.)
+                $cache->markScanned();
+                Log::warning('Metadata extraction failed, preserving existing song', ['key' => $object['key']]);
+                return;
+            }
 
-        if (!$format) {
-            return;
+            // New file with no extractable metadata — index with filename fallback so it's discoverable.
+            // Mark scanned now so cleanup doesn't consider it an orphan if the transaction below fails.
+            $cache->markScanned();
+            Log::warning('Metadata extraction failed, indexing new file with filename fallback', ['key' => $object['key']]);
+            $metadata = [];
         }
 
         // Wrap song/artist/album creation in a transaction

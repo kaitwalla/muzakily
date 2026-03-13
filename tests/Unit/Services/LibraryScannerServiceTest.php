@@ -608,6 +608,44 @@ class LibraryScannerServiceTest extends TestCase
     }
 
     #[Test]
+    public function new_file_with_metadata_failure_is_indexed_with_filename_fallback(): void
+    {
+        // A new file (no existing song) that fails metadata extraction should still
+        // be indexed using the filename as the title so it's discoverable.
+        $objectKey = 'music/some-track.mp3';
+        $fileSize = 5_000_000;
+        $etag = 'abc123';
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([
+                [
+                    'key' => $objectKey,
+                    'size' => $fileSize,
+                    'last_modified' => new DateTimeImmutable(),
+                    'etag' => $etag,
+                ],
+            ]));
+
+        $this->storageMock->shouldReceive('getLocalPath')->once()->with($objectKey)->andReturn(null);
+        $this->storageMock->shouldReceive('downloadPartial')->once()->andReturn(null);
+        $this->storageMock->shouldReceive('download')->once()->andReturn(false);
+
+        $this->service->scan();
+
+        // Song must be created with filename as title
+        $this->assertDatabaseHas('songs', [
+            'storage_path' => $objectKey,
+            'title' => 'some-track',
+        ]);
+
+        // ScanCache must be marked scanned
+        $cache = ScanCache::where('object_key', $objectKey)->first();
+        $this->assertNotNull($cache?->last_scanned_at);
+    }
+
+    #[Test]
     public function scan_respects_limit_parameter(): void
     {
         config(['muzakily.storage.driver' => 'local']);

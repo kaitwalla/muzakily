@@ -78,13 +78,17 @@ class R2StorageService implements MusicStorageInterface
      */
     public function download(string $key, string $localPath): bool
     {
-        $contents = Storage::disk('r2')->get($key);
+        try {
+            $this->client->getObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+                'SaveAs' => $localPath,
+            ]);
 
-        if ($contents === null) {
+            return true;
+        } catch (\Exception $e) {
             return false;
         }
-
-        return (bool) file_put_contents($localPath, $contents);
     }
 
     /**
@@ -100,7 +104,16 @@ class R2StorageService implements MusicStorageInterface
      */
     public function delete(string $key): bool
     {
-        return Storage::disk('r2')->delete($key);
+        try {
+            $this->client->deleteObject([
+                'Bucket' => $this->bucket,
+                'Key' => $key,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 
     /**

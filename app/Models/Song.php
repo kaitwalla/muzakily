@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
+use App\Contracts\MusicStorageInterface;
 use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 
@@ -153,10 +153,10 @@ class Song extends Model
      */
     protected static function booted(): void
     {
-        // Delete the backing file from R2 storage when song is force deleted
+        // Delete the backing file from storage when song is force deleted
         static::forceDeleting(function (Song $song): void {
             if ($song->storage_path) {
-                Storage::disk('r2')->delete($song->storage_path);
+                app(MusicStorageInterface::class)->delete($song->storage_path);
             }
         });
     }
