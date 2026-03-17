@@ -7,6 +7,7 @@ downloads the track via the configured Tidal downloader, and uploads it to muzak
 
 import logging
 import os
+import shutil
 import time
 
 import pysher
@@ -56,23 +57,32 @@ def handle_download_requested(data: dict) -> None:
 
 
 def connect() -> None:
-    """Connect to Pusher and subscribe to the user's private channel."""
-    channel_name = f"private-user.{config.MUZAKILY_USER_ID}"
+    """Connect to Pusher and subscribe to the relevant channels."""
+    gamdl_available = shutil.which(config.GAMDL_CMD) is not None
 
     pusher_client = pysher.Pusher(
         key=config.PUSHER_APP_KEY,
         cluster=config.PUSHER_APP_CLUSTER,
         auth_endpoint=f"{config.MUZAKILY_URL}/broadcasting/auth",
-        auth_endpoint_headers={"Authorization": f"Bearer {config.MUZAKILY_TOKEN}"},
+        auth_endpoint_headers={
+            "Authorization": f"Bearer {config.MUZAKILY_TOKEN}",
+            "X-Companion": "1",
+            "X-Companion-Gamdl": "1" if gamdl_available else "0",
+        },
     )
 
     def on_connect(data: str) -> None:
-        logger.info("Connected to Pusher")
-        channel = pusher_client.subscribe(channel_name)
-        channel.bind("download.requested", lambda data: handle_download_requested(
+        logger.info("Connected to Pusher (gamdl available: %s)", gamdl_available)
+
+        # Presence channel — signals to the web UI that the companion is connected
+        pusher_client.subscribe(f"presence-companion.{config.MUZAKILY_USER_ID}")
+
+        # Private channel — receives download.requested events
+        private_channel = pusher_client.subscribe(f"private-user.{config.MUZAKILY_USER_ID}")
+        private_channel.bind("download.requested", lambda data: handle_download_requested(
             __import__("json").loads(data)
         ))
-        logger.info("Subscribed to %s", channel_name)
+        logger.info("Subscribed to companion presence and private download channels")
 
     pusher_client.connection.bind("pusher:connection_established", on_connect)
     pusher_client.connect()
