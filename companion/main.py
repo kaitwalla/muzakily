@@ -56,6 +56,27 @@ def handle_download_requested(data: dict) -> None:
             logger.warning("Failed to clean up %s: %s", file_path, e)
 
 
+def preflight_check() -> None:
+    """Verify the API token is valid and MUZAKILY_USER_ID matches the authenticated user."""
+    response = requests.get(
+        f"{config.MUZAKILY_URL}/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {config.MUZAKILY_TOKEN}"},
+        timeout=10,
+    )
+    if response.status_code == 401:
+        raise RuntimeError("MUZAKILY_TOKEN is invalid or expired.")
+    response.raise_for_status()
+
+    actual_uuid = response.json().get("uuid")
+    if actual_uuid != config.MUZAKILY_USER_ID:
+        raise RuntimeError(
+            f"MUZAKILY_USER_ID mismatch: config has '{config.MUZAKILY_USER_ID}' "
+            f"but token belongs to user '{actual_uuid}'."
+        )
+
+    logger.info("Preflight OK — authenticated as %s", actual_uuid)
+
+
 def connect() -> None:
     """Connect to Pusher and subscribe to the relevant channels."""
     gamdl_available = shutil.which(config.GAMDL_CMD) is not None
@@ -98,4 +119,5 @@ def connect() -> None:
 
 
 if __name__ == "__main__":
+    preflight_check()
     connect()
