@@ -67,7 +67,7 @@ def preflight_check() -> None:
         raise RuntimeError("MUZAKILY_TOKEN is invalid or expired.")
     response.raise_for_status()
 
-    actual_uuid = response.json().get("uuid")
+    actual_uuid = response.json().get("data", {}).get("uuid")
     if actual_uuid != config.MUZAKILY_USER_ID:
         raise RuntimeError(
             f"MUZAKILY_USER_ID mismatch: config has '{config.MUZAKILY_USER_ID}' "
