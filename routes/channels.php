@@ -5,6 +5,10 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
+Broadcast::channel('user.{userId}', function (User $user, string $userId): bool {
+    return $user->uuid === $userId;
+});
+
 Broadcast::channel('companion.{userId}', function (User $user, string $userId): array|false {
     if ($user->uuid !== $userId) {
         return false;

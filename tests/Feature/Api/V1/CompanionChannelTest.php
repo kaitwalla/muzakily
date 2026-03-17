@@ -108,6 +108,31 @@ class CompanionChannelTest extends TestCase
         $this->assertFalse($channelData['user_info']['gamdl_available']);
     }
 
+    public function test_owner_can_auth_private_user_channel(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/broadcasting/auth', [
+            'socket_id' => '123456.7890',
+            'channel_name' => "private-user.{$user->uuid}",
+        ]);
+
+        $response->assertOk()->assertJsonStructure(['auth']);
+    }
+
+    public function test_other_user_cannot_auth_private_user_channel(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+
+        $response = $this->actingAs($other)->postJson('/broadcasting/auth', [
+            'socket_id' => '123456.7890',
+            'channel_name' => "private-user.{$owner->uuid}",
+        ]);
+
+        $response->assertForbidden();
+    }
+
     public function test_other_user_cannot_join_channel(): void
     {
         $owner = User::factory()->create();
