@@ -23,18 +23,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def pusher_auth(socket_id: str, channel_name: str) -> str:
-    """Authenticate with muzakily's broadcasting auth endpoint."""
-    response = requests.post(
-        f"{config.MUZAKILY_URL}/broadcasting/auth",
-        headers={"Authorization": f"Bearer {config.MUZAKILY_TOKEN}"},
-        json={"socket_id": socket_id, "channel_name": channel_name},
-        timeout=10,
-    )
-    response.raise_for_status()
-    return response.text
-
-
 def handle_download_requested(data: dict) -> None:
     """Handle a download.requested event from Pusher."""
     download_request_id: str = data.get("download_request_id", "")
@@ -74,7 +62,8 @@ def connect() -> None:
     pusher_client = pysher.Pusher(
         key=config.PUSHER_APP_KEY,
         cluster=config.PUSHER_APP_CLUSTER,
-        auth_endpoint=pusher_auth,
+        auth_endpoint=f"{config.MUZAKILY_URL}/broadcasting/auth",
+        auth_endpoint_headers={"Authorization": f"Bearer {config.MUZAKILY_TOKEN}"},
     )
 
     def on_connect(data: str) -> None:
