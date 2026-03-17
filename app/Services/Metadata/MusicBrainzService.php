@@ -16,7 +16,7 @@ class MusicBrainzService
     /**
      * Search for a recording by title, artist, and album.
      *
-     * @return array{musicbrainz_id: string|null, artist_mbid: string|null, album_mbid: string|null, album_cover: string|null, artist_bio: string|null}|null
+     * @return array{musicbrainz_id: string|null, title: string|null, artist_name: string|null, artist_mbid: string|null, album_name: string|null, album_mbid: string|null, album_cover: string|null, artist_bio: string|null}|null
      */
     public function search(string $title, ?string $artist = null, ?string $album = null): ?array
     {
@@ -63,23 +63,97 @@ class MusicBrainzService
 
             $result = [
                 'musicbrainz_id' => $recording['id'] ?? null,
+                'title' => $recording['title'] ?? null,
+                'artist_name' => null,
                 'artist_mbid' => null,
+                'album_name' => null,
                 'album_mbid' => null,
                 'album_cover' => null,
                 'artist_bio' => null,
             ];
 
-            // Get artist MBID
+            // Get artist MBID and name
             if (!empty($recording['artist-credit'])) {
-                $result['artist_mbid'] = $recording['artist-credit'][0]['artist']['id'] ?? null;
+                $artist = $recording['artist-credit'][0]['artist'] ?? null;
+                $result['artist_mbid'] = $artist['id'] ?? null;
+                $result['artist_name'] = $artist['name'] ?? null;
             }
 
-            // Get release (album) MBID
+            // Get release (album) MBID, name, and cover art
             if (!empty($recording['releases'])) {
                 $release = $recording['releases'][0];
                 $result['album_mbid'] = $release['id'] ?? null;
+                $result['album_name'] = $release['title'] ?? null;
 
-                // Try to get cover art
+                if ($result['album_mbid']) {
+                    $result['album_cover'] = $this->getCoverArt($result['album_mbid']);
+                }
+            }
+
+            return $result;
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
+    }
+
+    /**
+     * Look up a recording by its MusicBrainz ID and return the same metadata
+     * structure as search(), for use after an AcoustID fingerprint match.
+     *
+     * @return array{musicbrainz_id: string|null, title: string|null, artist_name: string|null, artist_mbid: string|null, album_name: string|null, album_mbid: string|null, album_cover: string|null, artist_bio: string|null}|null
+     */
+    public function lookupRecording(string $recordingId): ?array
+    {
+        $this->rateLimit();
+
+        try {
+            $response = Http::withUserAgent(self::USER_AGENT)
+                ->accept('application/json')
+                ->withOptions([
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_FRESH_CONNECT => true,
+                    ],
+                ])
+                ->timeout(15)
+                ->get(self::BASE_URL . '/recording/' . $recordingId, [
+                    'inc' => 'artists+releases',
+                    'fmt' => 'json',
+                ]);
+
+            if (!$response->successful()) {
+                return null;
+            }
+
+            $recording = $response->json();
+
+            if (empty($recording['id'])) {
+                return null;
+            }
+
+            $result = [
+                'musicbrainz_id' => $recording['id'],
+                'title' => $recording['title'] ?? null,
+                'artist_name' => null,
+                'artist_mbid' => null,
+                'album_name' => null,
+                'album_mbid' => null,
+                'album_cover' => null,
+                'artist_bio' => null,
+            ];
+
+            if (!empty($recording['artist-credit'])) {
+                $artist = $recording['artist-credit'][0]['artist'] ?? null;
+                $result['artist_mbid'] = $artist['id'] ?? null;
+                $result['artist_name'] = $artist['name'] ?? null;
+            }
+
+            if (!empty($recording['releases'])) {
+                $release = $recording['releases'][0];
+                $result['album_mbid'] = $release['id'] ?? null;
+                $result['album_name'] = $release['title'] ?? null;
+
                 if ($result['album_mbid']) {
                     $result['album_cover'] = $this->getCoverArt($result['album_mbid']);
                 }

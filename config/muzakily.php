@@ -154,6 +154,13 @@ return [
             'api_key' => env('FANARTTV_API_KEY'),
         ],
 
+        // AcoustID settings (acoustic fingerprinting fallback for songs with no metadata)
+        'acoustid' => [
+            'enabled' => env('ACOUSTID_ENABLED', true),
+            'api_key' => env('ACOUSTID_API_KEY'),
+            'min_score' => env('ACOUSTID_MIN_SCORE', 0.5), // minimum confidence threshold
+        ],
+
         // Unsplash settings (for smart playlist cover images)
         'unsplash' => [
             'enabled' => env('UNSPLASH_ENABLED', false),

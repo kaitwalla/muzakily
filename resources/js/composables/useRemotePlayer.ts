@@ -24,11 +24,24 @@ type EchoChannel = {
     stopListening: (event: string) => EchoChannel;
 };
 
+export type EchoPresenceChannel = {
+    here: (callback: (members: EchoPresenceMember[]) => void) => EchoPresenceChannel;
+    joining: (callback: (member: EchoPresenceMember) => void) => EchoPresenceChannel;
+    leaving: (callback: (member: EchoPresenceMember) => void) => EchoPresenceChannel;
+};
+
+export interface EchoPresenceMember {
+    id: string;
+    type: string;
+    [key: string]: unknown;
+}
+
 // Echo type declaration for when laravel-echo is installed
 declare global {
     interface Window {
         Echo?: {
             private: (channel: string) => EchoChannel;
+            join: (channel: string) => EchoPresenceChannel;
             leave: (channel: string) => void;
         };
     }

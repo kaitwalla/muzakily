@@ -3,10 +3,12 @@ import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useAuthStore } from '@/stores/auth';
 import { listTokens, createToken, revokeToken } from '@/api/auth';
 import { getStats } from '@/api/stats';
+import { useCompanionStatus } from '@/composables/useCompanionStatus';
 import type { ApiToken, NewApiToken } from '@/types/auth';
 import type { LibraryStats } from '@/api/stats';
 
 const authStore = useAuthStore();
+const { isConnected: companionConnected, gamdlAvailable } = useCompanionStatus();
 const saving = ref(false);
 
 const saveError = ref<string | null>(null);
@@ -517,6 +519,44 @@ function formatDate(iso: string): string {
                 </div>
             </div>
             <p v-else class="text-surface-500 text-sm">No tokens yet.</p>
+        </section>
+
+        <!-- Companion Section -->
+        <section class="bg-surface-800 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-1">Companion</h2>
+            <p class="text-surface-400 text-sm mb-4">Status of the muzakily companion app on this device.</p>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between py-2">
+                    <div>
+                        <p class="text-white font-medium">Connection</p>
+                        <p class="text-surface-400 text-sm">Companion app reachable via WebSocket</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="w-2 h-2 rounded-full"
+                            :class="companionConnected ? 'bg-green-400' : 'bg-surface-600'"
+                        />
+                        <span class="text-sm" :class="companionConnected ? 'text-green-400' : 'text-surface-500'">
+                            {{ companionConnected ? 'Connected' : 'Not connected' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between py-2">
+                    <div>
+                        <p class="text-white font-medium">gamdl</p>
+                        <p class="text-surface-400 text-sm">Google Play Music / YouTube Music downloader</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span
+                            class="w-2 h-2 rounded-full"
+                            :class="gamdlAvailable ? 'bg-green-400' : 'bg-surface-600'"
+                        />
+                        <span class="text-sm" :class="gamdlAvailable ? 'text-green-400' : 'text-surface-500'">
+                            {{ gamdlAvailable ? 'Available' : 'Unavailable' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Playback Section -->
