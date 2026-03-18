@@ -76,6 +76,21 @@ def preflight_check() -> None:
 
     logger.info("Preflight OK — authenticated as %s", actual_uuid)
 
+    # Test broadcast auth endpoint with a dummy socket_id
+    auth_response = requests.post(
+        f"{config.MUZAKILY_URL}/broadcasting/auth",
+        headers={
+            "Authorization": f"Bearer {config.MUZAKILY_TOKEN}",
+            "X-Companion": "1",
+        },
+        data={
+            "socket_id": "000000.000000",
+            "channel_name": f"presence-companion.{config.MUZAKILY_USER_ID}",
+        },
+        timeout=10,
+    )
+    logger.info("Broadcast auth test: HTTP %s — %s", auth_response.status_code, auth_response.text[:300])
+
 
 def connect() -> None:
     """Connect to Pusher and subscribe to the relevant channels."""
