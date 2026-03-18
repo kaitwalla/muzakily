@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
+
 Broadcast::channel('user.{userId}', function (User $user, string $userId): bool {
     return $user->uuid === $userId;
 });
