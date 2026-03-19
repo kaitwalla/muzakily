@@ -132,9 +132,9 @@ def connect() -> None:
 
     # Intercept send_message to inject the real channel_data (cached by our patched
     # _generate_presence_token) before the subscribe event reaches Pusher.
-    _orig_send = pusher_client.connection.send_message
+    _orig_send = pusher_client.connection.send_event
 
-    def _presence_send_message(event: str, data: dict) -> None:
+    def _presence_send_event(event: str, data: dict) -> None:
         if event == "pusher:subscribe":
             channel = data.get("channel", "")
             if channel.startswith("presence-") and channel in _presence_channel_data_cache:
@@ -142,7 +142,7 @@ def connect() -> None:
                 data["channel_data"] = _presence_channel_data_cache[channel]
         return _orig_send(event, data)
 
-    pusher_client.connection.send_message = _presence_send_message
+    pusher_client.connection.send_event = _presence_send_event
 
     def on_connect(data: str) -> None:
         logger.info("Connected to Pusher (gamdl available: %s)", gamdl_available)
