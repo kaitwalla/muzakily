@@ -30,6 +30,8 @@ def _patched_generate_presence_token(self: pysher.Pusher, channel_name: str) -> 
         headers=self.auth_endpoint_headers,
         timeout=10,
     )
+    if response.status_code != 200:
+        logger.error("Presence auth failed: HTTP %s — %s", response.status_code, response.text[:500])
     assert response.status_code == 200, f"Failed to get auth token from {self.auth_endpoint}"
     resp = response.json()
     _presence_channel_data_cache[channel_name] = resp.get("channel_data", "{}")
@@ -101,7 +103,7 @@ def preflight_check() -> None:
 
     # Test broadcast auth endpoint with a dummy socket_id
     auth_response = requests.post(
-        f"{config.MUZAKILY_URL}/broadcasting/auth",
+        f"{config.MUZAKILY_URL}/api/v1/broadcasting/auth",
         headers={
             "Authorization": f"Bearer {config.MUZAKILY_TOKEN}",
             "X-Companion": "1",
@@ -122,7 +124,7 @@ def connect() -> None:
     pusher_client = pysher.Pusher(
         key=config.PUSHER_APP_KEY,
         cluster=config.PUSHER_APP_CLUSTER,
-        auth_endpoint=f"{config.MUZAKILY_URL}/broadcasting/auth",
+        auth_endpoint=f"{config.MUZAKILY_URL}/api/v1/broadcasting/auth",
         auth_endpoint_headers={
             "Authorization": f"Bearer {config.MUZAKILY_TOKEN}",
             "X-Companion": "1",

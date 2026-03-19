@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AlbumController;
+use App\Models\User;
 use App\Http\Controllers\Api\V1\ArtistController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\ConfigController;
@@ -37,6 +38,34 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('login', [AuthController::class, 'login'])->name('auth.login');
 });
+
+// Broadcasting auth for the companion app.
+// The companion sends Bearer tokens (no CSRF), so this lives in the API routes
+// rather than /broadcasting/auth which is under the web (CSRF) middleware group.
+// Presence channel subscriptions get a distinct Pusher user_id ("companion:{uuid}")
+// so Pusher fires member_added separately from the web UI's subscription.
+Route::middleware('auth:sanctum')->post('broadcasting/auth', function (\Illuminate\Http\Request $request) {
+    $channel  = (string) $request->input('channel_name', '');
+    $socketId = (string) $request->input('socket_id', '');
+
+    if (str_starts_with($channel, 'presence-')) {
+        /** @var User $user */
+        $user        = $request->user();
+        $userId      = 'companion:' . $user->uuid;
+        $gamdl       = $request->header('X-Companion-Gamdl') === '1';
+        $channelData = (string) json_encode([
+            'user_id'   => $userId,
+            'user_info' => ['id' => 'companion', 'type' => 'companion', 'gamdl_available' => $gamdl],
+        ]);
+        $secret    = (string) config('broadcasting.connections.pusher.secret');
+        $key       = (string) config('broadcasting.connections.pusher.key');
+        $signature = hash_hmac('sha256', "{$socketId}:{$channel}:{$channelData}", $secret);
+
+        return response()->json(['auth' => "{$key}:{$signature}", 'channel_data' => $channelData]);
+    }
+
+    return \Illuminate\Support\Facades\Broadcast::auth($request);
+})->name('companion.broadcasting.auth');
 
 // Public config
 Route::get('config', ConfigController::class)->name('config');
