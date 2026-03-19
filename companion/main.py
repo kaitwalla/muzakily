@@ -11,9 +11,32 @@ import shutil
 import time
 
 import pysher
+import pysher.pusher as _pysher_mod
 import requests
 
 import config
+
+# pysher hardcodes channel_data='{}' for presence subscriptions and ignores the
+# server-returned channel_data, causing an HMAC mismatch on Pusher's end.
+# Fix: patch _generate_presence_token to cache the real channel_data, and patch
+# connection.send_message (per-instance, after client creation) to inject it.
+_presence_channel_data_cache: dict[str, str] = {}
+
+
+def _patched_generate_presence_token(self: pysher.Pusher, channel_name: str) -> str:
+    response = requests.post(
+        self.auth_endpoint,
+        data={"socket_id": self.connection.socket_id, "channel_name": channel_name},
+        headers=self.auth_endpoint_headers,
+        timeout=10,
+    )
+    assert response.status_code == 200, f"Failed to get auth token from {self.auth_endpoint}"
+    resp = response.json()
+    _presence_channel_data_cache[channel_name] = resp.get("channel_data", "{}")
+    return resp["auth"]
+
+
+_pysher_mod.Pusher._generate_presence_token = _patched_generate_presence_token
 import downloader
 import uploader
 
@@ -107,32 +130,25 @@ def connect() -> None:
         },
     )
 
+    # Intercept send_message to inject the real channel_data (cached by our patched
+    # _generate_presence_token) before the subscribe event reaches Pusher.
+    _orig_send = pusher_client.connection.send_message
+
+    def _presence_send_message(event: str, data: dict) -> None:
+        if event == "pusher:subscribe":
+            channel = data.get("channel", "")
+            if channel.startswith("presence-") and channel in _presence_channel_data_cache:
+                data = dict(data)
+                data["channel_data"] = _presence_channel_data_cache[channel]
+        return _orig_send(event, data)
+
+    pusher_client.connection.send_message = _presence_send_message
+
     def on_connect(data: str) -> None:
         logger.info("Connected to Pusher (gamdl available: %s)", gamdl_available)
 
         # Presence channel — signals to the web UI that the companion is connected.
-        # pysher hardcodes channel_data='{}' and ignores the server's channel_data,
-        # so we call the auth endpoint ourselves and pass both auth + channel_data
-        # explicitly to get the correct HMAC and member info through to Pusher.
-        presence_channel = f"presence-companion.{config.MUZAKILY_USER_ID}"
-        socket_id = pusher_client.connection.socket_id
-        presence_auth = requests.post(
-            f"{config.MUZAKILY_URL}/broadcasting/auth",
-            headers={
-                "Authorization": f"Bearer {config.MUZAKILY_TOKEN}",
-                "X-Companion": "1",
-                "X-Companion-Gamdl": "1" if gamdl_available else "0",
-            },
-            data={"socket_id": socket_id, "channel_name": presence_channel},
-            timeout=10,
-        )
-        presence_auth.raise_for_status()
-        presence_resp = presence_auth.json()
-        pusher_client.subscribe(
-            presence_channel,
-            auth=presence_resp["auth"],
-            channel_data=presence_resp.get("channel_data", "{}"),
-        )
+        pusher_client.subscribe(f"presence-companion.{config.MUZAKILY_USER_ID}")
 
         # Private channel — receives download.requested events
         private_channel = pusher_client.subscribe(f"private-user.{config.MUZAKILY_USER_ID}")
