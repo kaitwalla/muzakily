@@ -110,8 +110,29 @@ def connect() -> None:
     def on_connect(data: str) -> None:
         logger.info("Connected to Pusher (gamdl available: %s)", gamdl_available)
 
-        # Presence channel — signals to the web UI that the companion is connected
-        pusher_client.subscribe(f"presence-companion.{config.MUZAKILY_USER_ID}")
+        # Presence channel — signals to the web UI that the companion is connected.
+        # pysher hardcodes channel_data='{}' and ignores the server's channel_data,
+        # so we call the auth endpoint ourselves and pass both auth + channel_data
+        # explicitly to get the correct HMAC and member info through to Pusher.
+        presence_channel = f"presence-companion.{config.MUZAKILY_USER_ID}"
+        socket_id = pusher_client.connection.socket_id
+        presence_auth = requests.post(
+            f"{config.MUZAKILY_URL}/broadcasting/auth",
+            headers={
+                "Authorization": f"Bearer {config.MUZAKILY_TOKEN}",
+                "X-Companion": "1",
+                "X-Companion-Gamdl": "1" if gamdl_available else "0",
+            },
+            data={"socket_id": socket_id, "channel_name": presence_channel},
+            timeout=10,
+        )
+        presence_auth.raise_for_status()
+        presence_resp = presence_auth.json()
+        pusher_client.subscribe(
+            presence_channel,
+            auth=presence_resp["auth"],
+            channel_data=presence_resp.get("channel_data", "{}"),
+        )
 
         # Private channel — receives download.requested events
         private_channel = pusher_client.subscribe(f"private-user.{config.MUZAKILY_USER_ID}")
