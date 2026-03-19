@@ -14,6 +14,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="manifest" href="/site.webmanifest">
 
+    <script>window.__PUSHER_CONFIG__ = { key: '{{ config('broadcasting.connections.pusher.key') }}', cluster: '{{ config('broadcasting.connections.pusher.options.cluster') }}' };</script>
     @vite(['resources/css/app.css', 'resources/js/app.ts'])
 </head>
 <body class="antialiased">

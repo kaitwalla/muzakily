@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { User, LoginRequest, RegisterRequest, UpdateProfileRequest, UserPreferences } from '@/types/auth';
 import * as authApi from '@/api/auth';
 import { getAuthToken } from '@/api/client';
+import { initEcho, disconnectEcho } from '@/echo';
 
 export const useAuthStore = defineStore('auth', () => {
     const user = ref<User | null>(null);
@@ -26,6 +27,7 @@ export const useAuthStore = defineStore('auth', () => {
                 try {
                     loading.value = true;
                     user.value = await authApi.getCurrentUser();
+                    initEcho(token);
                 } catch {
                     user.value = null;
                 } finally {
@@ -43,6 +45,8 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             const response = await authApi.login(credentials);
             user.value = response.user;
+            const token = getAuthToken();
+            if (token) initEcho(token);
         } finally {
             loading.value = false;
         }
@@ -63,6 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
         try {
             await authApi.logout();
             user.value = null;
+            disconnectEcho();
         } finally {
             loading.value = false;
         }
