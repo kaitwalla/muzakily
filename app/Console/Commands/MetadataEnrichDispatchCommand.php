@@ -17,7 +17,8 @@ class MetadataEnrichDispatchCommand extends Command
      */
     protected $signature = 'metadata:enrich:dispatch
         {--chunk=100 : Number of songs per batch job}
-        {--force : Include songs that already have MusicBrainz IDs}';
+        {--missing-musicbrainz : Target songs missing a MusicBrainz ID instead of incomplete metadata}
+        {--force : Include all songs regardless of metadata status}';
 
     /**
      * The console command description.
@@ -32,12 +33,23 @@ class MetadataEnrichDispatchCommand extends Command
     public function handle(): int
     {
         $force = (bool) $this->option('force');
+        $missingMusicbrainz = (bool) $this->option('missing-musicbrainz');
         $chunkSize = max(1, (int) $this->option('chunk'));
 
         $query = Song::query()->select('id');
 
         if (!$force) {
-            $query->whereNull('musicbrainz_id');
+            if ($missingMusicbrainz) {
+                $query->whereNull('musicbrainz_id');
+            } else {
+                $query->where(function ($q) {
+                    $q->whereNull('album_id')
+                        ->orWhereNull('artist_id')
+                        ->orWhere('artist_name', '')
+                        ->orWhere('artist_name', 'Unknown')
+                        ->orWhere('artist_name', 'Unknown Artist');
+                });
+            }
         }
 
         $ids = $query->pluck('id')->toArray();
