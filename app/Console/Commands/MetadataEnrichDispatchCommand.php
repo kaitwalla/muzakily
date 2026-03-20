@@ -16,7 +16,6 @@ class MetadataEnrichDispatchCommand extends Command
      * @var string
      */
     protected $signature = 'metadata:enrich:dispatch
-        {--chunk=100 : Number of songs per batch job}
         {--missing-musicbrainz : Target songs missing a MusicBrainz ID instead of incomplete metadata}
         {--force : Include all songs regardless of metadata status}';
 
@@ -34,7 +33,6 @@ class MetadataEnrichDispatchCommand extends Command
     {
         $force = (bool) $this->option('force');
         $missingMusicbrainz = (bool) $this->option('missing-musicbrainz');
-        $chunkSize = max(1, (int) $this->option('chunk'));
 
         $query = Song::query()->select('id');
 
@@ -60,16 +58,13 @@ class MetadataEnrichDispatchCommand extends Command
             return Command::SUCCESS;
         }
 
-        $chunks = array_chunk($ids, $chunkSize);
-        $jobCount = count($chunks);
+        $this->info("Found {$total} songs — dispatching {$total} jobs");
 
-        $this->info("Found {$total} songs — dispatching {$jobCount} jobs (chunk size: {$chunkSize})");
-
-        foreach ($chunks as $chunk) {
-            EnrichMetadataJob::dispatch($chunk);
+        foreach ($ids as $id) {
+            EnrichMetadataJob::dispatch($id);
         }
 
-        $this->info("Done. {$jobCount} jobs queued.");
+        $this->info("Done. {$total} jobs queued.");
 
         return Command::SUCCESS;
     }

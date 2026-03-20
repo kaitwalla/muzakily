@@ -44,11 +44,9 @@ class EnrichMetadataJob implements ShouldQueue
 
     /**
      * Create a new job instance.
-     *
-     * @param array<string>|null $songIds
      */
     public function __construct(
-        public ?array $songIds = null,
+        public string $songId,
     ) {}
 
     /**
@@ -56,15 +54,13 @@ class EnrichMetadataJob implements ShouldQueue
      */
     public function handle(MetadataAggregatorService $aggregator): void
     {
-        $query = Song::query()->with(['artist', 'album']);
+        $song = Song::query()->with(['artist', 'album'])->find($this->songId);
 
-        if ($this->songIds !== null) {
-            $query->whereIn('id', $this->songIds);
+        if ($song === null) {
+            return;
         }
 
-        $query->cursor()->each(function (Song $song) use ($aggregator) {
-            $aggregator->enrich($song);
-        });
+        $aggregator->enrich($song);
     }
 
     /**
@@ -73,9 +69,8 @@ class EnrichMetadataJob implements ShouldQueue
     public function failed(\Throwable $exception): void
     {
         Log::error('EnrichMetadataJob failed permanently', [
-            'song_ids' => $this->songIds,
+            'song_id' => $this->songId,
             'exception' => $exception->getMessage(),
-            'attempts' => $this->attempts(),
         ]);
     }
 }

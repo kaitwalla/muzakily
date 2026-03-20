@@ -159,7 +159,7 @@ class ProcessUploadedSongJob implements ShouldQueue
             });
 
             // Queue metadata enrichment (outside transaction as it dispatches a job)
-            EnrichMetadataJob::dispatch([$song->id]);
+            EnrichMetadataJob::dispatch($song->id);
         } finally {
             @unlink($tempPath);
         }

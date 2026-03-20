@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\EnrichMetadataJob;
+use App\Models\Song;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,17 +22,19 @@ class MetadataController extends Controller
             'song_ids.*' => ['uuid'],
         ]);
 
-        $songIds = $request->input('song_ids');
+        $songIds = $request->input('song_ids')
+            ?? Song::query()->select('id')->pluck('id')->all();
 
-        // Dispatch enrichment job
-        EnrichMetadataJob::dispatch($songIds);
+        foreach ($songIds as $songId) {
+            EnrichMetadataJob::dispatch($songId);
+        }
+
+        $count = count($songIds);
 
         return response()->json([
             'data' => [
                 'status' => 'started',
-                'message' => $songIds
-                    ? 'Enriching metadata for ' . count($songIds) . ' songs'
-                    : 'Enriching metadata for all songs',
+                'message' => "Enriching metadata for {$count} songs",
             ],
         ], 202);
     }

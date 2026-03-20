@@ -29,11 +29,11 @@ class MetadataEnrichDispatchCommandTest extends TestCase
         $this->album = Album::factory()->create(['artist_id' => $this->artist->id]);
     }
 
-    private function makeSong(bool $withMbid = false): Song
+    private function makeSong(bool $withMbid = false, bool $incomplete = true): Song
     {
         return Song::factory()->create([
             'artist_id' => $this->artist->id,
-            'album_id' => $this->album->id,
+            'album_id' => $incomplete ? null : $this->album->id,
             'musicbrainz_id' => $withMbid ? 'some-mbid' : null,
         ]);
     }
@@ -41,8 +41,8 @@ class MetadataEnrichDispatchCommandTest extends TestCase
     #[Test]
     public function it_dispatches_no_jobs_when_all_songs_are_enriched(): void
     {
-        $this->makeSong(withMbid: true);
-        $this->makeSong(withMbid: true);
+        $this->makeSong(withMbid: true, incomplete: false);
+        $this->makeSong(withMbid: true, incomplete: false);
 
         $this->artisan('metadata:enrich:dispatch')
             ->assertSuccessful()
@@ -52,7 +52,7 @@ class MetadataEnrichDispatchCommandTest extends TestCase
     }
 
     #[Test]
-    public function it_dispatches_a_single_job_for_a_small_library(): void
+    public function it_dispatches_one_job_per_song(): void
     {
         $songs = collect([
             $this->makeSong(),
@@ -63,40 +63,27 @@ class MetadataEnrichDispatchCommandTest extends TestCase
         $this->artisan('metadata:enrich:dispatch')
             ->assertSuccessful();
 
-        Queue::assertPushed(EnrichMetadataJob::class, 1);
-
-        Queue::assertPushed(EnrichMetadataJob::class, function (EnrichMetadataJob $job) use ($songs) {
-            return collect($job->songIds)->sort()->values()->toArray()
-                === $songs->pluck('id')->sort()->values()->toArray();
-        });
-    }
-
-    #[Test]
-    public function it_dispatches_multiple_jobs_when_songs_exceed_chunk_size(): void
-    {
-        for ($i = 0; $i < 5; $i++) {
-            $this->makeSong();
-        }
-
-        $this->artisan('metadata:enrich:dispatch', ['--chunk' => 2])
-            ->assertSuccessful();
-
-        // 5 songs with chunk size 2 = 3 jobs (2 + 2 + 1)
         Queue::assertPushed(EnrichMetadataJob::class, 3);
+
+        $songs->each(function (Song $song) {
+            Queue::assertPushed(EnrichMetadataJob::class, function (EnrichMetadataJob $job) use ($song) {
+                return $job->songId === $song->id;
+            });
+        });
     }
 
     #[Test]
     public function it_skips_already_enriched_songs(): void
     {
-        $this->makeSong();
-        $this->makeSong(withMbid: true);
+        $unenriched = $this->makeSong();
+        $this->makeSong(withMbid: true, incomplete: false);
 
         $this->artisan('metadata:enrich:dispatch')
             ->assertSuccessful();
 
         Queue::assertPushed(EnrichMetadataJob::class, 1);
-        Queue::assertPushed(EnrichMetadataJob::class, function (EnrichMetadataJob $job) {
-            return count($job->songIds) === 1;
+        Queue::assertPushed(EnrichMetadataJob::class, function (EnrichMetadataJob $job) use ($unenriched) {
+            return $job->songId === $unenriched->id;
         });
     }
 
@@ -104,29 +91,12 @@ class MetadataEnrichDispatchCommandTest extends TestCase
     public function it_includes_enriched_songs_when_force_flag_is_used(): void
     {
         $this->makeSong();
-        $this->makeSong(withMbid: true);
+        $this->makeSong(withMbid: true, incomplete: false);
 
         $this->artisan('metadata:enrich:dispatch', ['--force' => true])
             ->assertSuccessful();
 
-        Queue::assertPushed(EnrichMetadataJob::class, 1);
-        Queue::assertPushed(EnrichMetadataJob::class, function (EnrichMetadataJob $job) {
-            return count($job->songIds) === 2;
-        });
-    }
-
-    #[Test]
-    public function it_respects_the_chunk_option(): void
-    {
-        for ($i = 0; $i < 10; $i++) {
-            $this->makeSong();
-        }
-
-        $this->artisan('metadata:enrich:dispatch', ['--chunk' => 3])
-            ->assertSuccessful();
-
-        // 10 songs / 3 per chunk = 4 jobs (3 + 3 + 3 + 1)
-        Queue::assertPushed(EnrichMetadataJob::class, 4);
+        Queue::assertPushed(EnrichMetadataJob::class, 2);
     }
 
     #[Test]
@@ -136,9 +106,9 @@ class MetadataEnrichDispatchCommandTest extends TestCase
             $this->makeSong();
         }
 
-        $this->artisan('metadata:enrich:dispatch', ['--chunk' => 2])
+        $this->artisan('metadata:enrich:dispatch')
             ->assertSuccessful()
             ->expectsOutputToContain('5 songs')
-            ->expectsOutputToContain('3 jobs');
+            ->expectsOutputToContain('5 jobs');
     }
 }
