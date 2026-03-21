@@ -198,6 +198,7 @@ class R2StorageService implements MusicStorageInterface
             $headResult = $this->client->headObject([
                 'Bucket' => $this->bucket,
                 'Key' => $key,
+                '@http' => ['timeout' => 30, 'connect_timeout' => 10],
             ]);
 
             $fileSize = (int) $headResult['ContentLength'];
@@ -221,6 +222,7 @@ class R2StorageService implements MusicStorageInterface
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'Range' => 'bytes=0-' . ($headerSize - 1),
+                '@http' => ['timeout' => 30, 'connect_timeout' => 10],
             ]);
 
             // Fetch footer (last N bytes)
@@ -229,6 +231,7 @@ class R2StorageService implements MusicStorageInterface
                 'Bucket' => $this->bucket,
                 'Key' => $key,
                 'Range' => 'bytes=' . $footerStart . '-' . ($fileSize - 1),
+                '@http' => ['timeout' => 30, 'connect_timeout' => 10],
             ]);
 
             return [
