@@ -48,6 +48,10 @@ class MusicBrainzService
                     'fmt' => 'json',
                 ]);
 
+            if ($response->status() === 429) {
+                throw new \RuntimeException('MusicBrainz rate limit exceeded');
+            }
+
             if (!$response->successful()) {
                 return null;
             }
@@ -121,6 +125,10 @@ class MusicBrainzService
                     'inc' => 'artists+releases',
                     'fmt' => 'json',
                 ]);
+
+            if ($response->status() === 429) {
+                throw new \RuntimeException('MusicBrainz rate limit exceeded');
+            }
 
             if (!$response->successful()) {
                 return null;

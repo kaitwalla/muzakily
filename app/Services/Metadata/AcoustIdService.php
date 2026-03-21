@@ -79,6 +79,10 @@ class AcoustIdService
                 'format' => 'json',
             ]);
 
+            if ($response->status() === 429) {
+                throw new \RuntimeException('AcoustID rate limit exceeded');
+            }
+
             if (!$response->successful()) {
                 return null;
             }
