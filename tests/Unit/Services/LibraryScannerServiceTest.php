@@ -488,7 +488,7 @@ class LibraryScannerServiceTest extends TestCase
     // ==========================================
 
     #[Test]
-    public function scan_prunes_orphaned_songs(): void
+    public function scan_does_not_prune_orphans_by_default(): void
     {
         $orphanSong = Song::factory()->create([
             'storage_path' => 'music/orphan.mp3',
@@ -509,6 +509,38 @@ class LibraryScannerServiceTest extends TestCase
             ->andReturn($this->createGenerator([]));
 
         $this->service->scan();
+
+        $this->assertDatabaseHas('songs', [
+            'id' => $orphanSong->id,
+        ]);
+
+        $this->assertDatabaseHas('scan_cache', [
+            'id' => $orphanCache->id,
+        ]);
+    }
+
+    #[Test]
+    public function scan_prunes_orphaned_songs_when_flag_is_set(): void
+    {
+        $orphanSong = Song::factory()->create([
+            'storage_path' => 'music/orphan.mp3',
+        ]);
+
+        $orphanCache = ScanCache::create([
+            'bucket' => 'test-bucket',
+            'object_key' => 'music/orphan.mp3',
+            'key_hash' => ScanCache::hashKey('music/orphan.mp3'),
+            'etag' => 'old-etag',
+            'size' => 1000,
+            'last_scanned_at' => now()->subHours(1),
+        ]);
+
+        $this->storageMock
+            ->shouldReceive('listObjects')
+            ->once()
+            ->andReturn($this->createGenerator([]));
+
+        $this->service->scan(pruneOrphans: true);
 
         $this->assertDatabaseMissing('songs', [
             'id' => $orphanSong->id,

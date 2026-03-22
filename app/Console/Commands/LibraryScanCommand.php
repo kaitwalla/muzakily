@@ -20,7 +20,8 @@ class LibraryScanCommand extends Command
         {--limit= : Limit number of files to scan}
         {--force : Force re-scan of all files}
         {--enrich : Enrich metadata from MusicBrainz after scanning}
-        {--sync : Run synchronously instead of queuing}';
+        {--sync : Run synchronously instead of queuing}
+        {--prune-orphans : Delete songs whose files no longer exist in storage}';
 
     /**
      * The console command description.
@@ -37,6 +38,7 @@ class LibraryScanCommand extends Command
         $force = $this->option('force');
         $enrich = $this->option('enrich');
         $sync = $this->option('sync');
+        $pruneOrphans = (bool) $this->option('prune-orphans');
         $limitOption = $this->option('limit');
         $limit = ($limitOption !== null && $limitOption !== '') ? (int) $limitOption : null;
 
@@ -51,10 +53,10 @@ class LibraryScanCommand extends Command
         }
 
         if ($sync) {
-            return $this->runSync($scanner, $aggregator, $force, $limit, $enrich);
+            return $this->runSync($scanner, $aggregator, $force, $limit, $enrich, $pruneOrphans);
         }
 
-        return $this->runQueued($force, $limit, $enrich);
+        return $this->runQueued($force, $limit, $enrich, $pruneOrphans);
     }
 
     /**
@@ -65,7 +67,8 @@ class LibraryScanCommand extends Command
         MetadataAggregatorService $aggregator,
         bool $force,
         ?int $limit,
-        bool $enrich
+        bool $enrich,
+        bool $pruneOrphans,
     ): int {
         $this->info('Starting library scan (synchronous mode)...');
 
@@ -81,9 +84,14 @@ class LibraryScanCommand extends Command
             $this->info('Metadata enrichment enabled');
         }
 
+        if ($pruneOrphans) {
+            $this->warn('Orphan pruning enabled - songs missing from storage will be deleted');
+        }
+
         $scanner->scan(
             force: $force,
             limit: $limit,
+            pruneOrphans: $pruneOrphans,
             onProgress: function (array $stats): void {
                 $this->output->write("\r");
                 $this->output->write(sprintf(
@@ -162,7 +170,7 @@ class LibraryScanCommand extends Command
     /**
      * Run the scan as a queued job.
      */
-    private function runQueued(bool $force, ?int $limit, bool $enrich): int
+    private function runQueued(bool $force, ?int $limit, bool $enrich, bool $pruneOrphans): int
     {
         $this->info('Dispatching library scan job to queue...');
 
@@ -178,7 +186,11 @@ class LibraryScanCommand extends Command
             $this->info('Metadata enrichment enabled');
         }
 
-        LibraryScanJob::dispatch($force, $limit, $enrich);
+        if ($pruneOrphans) {
+            $this->warn('Orphan pruning enabled - songs missing from storage will be deleted');
+        }
+
+        LibraryScanJob::dispatch($force, $limit, $enrich, $pruneOrphans);
 
         $this->info('Library scan job dispatched successfully.');
         $this->info('Use "php artisan library:scan:status" to check progress.');

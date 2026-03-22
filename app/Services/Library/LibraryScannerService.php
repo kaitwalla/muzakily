@@ -31,7 +31,7 @@ class LibraryScannerService
      *
      * @param Closure(array{total_files: int, scanned_files: int, new_songs: int, updated_songs: int, errors: int, removed_songs: int}): void|null $onProgress
      */
-    public function scan(bool $force = false, ?int $limit = null, ?Closure $onProgress = null): void
+    public function scan(bool $force = false, ?int $limit = null, bool $pruneOrphans = false, ?Closure $onProgress = null): void
     {
         $storageDriver = config('muzakily.storage.driver', 'r2');
         $bucket = $storageDriver === 'local' ? 'local' : (string) config('filesystems.disks.r2.bucket');
@@ -88,8 +88,8 @@ class LibraryScannerService
             }
         }
 
-        // Prune orphaned entries (files that no longer exist in R2)
-        $stats['removed_songs'] = $this->pruneOrphans($bucket, $scanStartedAt);
+        // Prune orphaned entries only when explicitly requested
+        $stats['removed_songs'] = $pruneOrphans ? $this->pruneOrphans($bucket, $scanStartedAt) : 0;
 
         // Update tag song counts
         Tag::all()->each->updateSongCount();

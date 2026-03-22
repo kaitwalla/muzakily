@@ -56,6 +56,7 @@ class LibraryScanJob implements ShouldQueue
         public bool $force = false,
         public ?int $limit = null,
         public bool $enrich = false,
+        public bool $shouldPruneOrphans = false,
     ) {}
 
     /**
@@ -139,20 +140,21 @@ class LibraryScanJob implements ShouldQueue
         ]);
 
         if (empty($jobs)) {
-            $this->runPostScanCleanup($bucket, $scanStartedAt, $aggregator);
+            $this->runPostScanCleanup($bucket, $scanStartedAt, $aggregator, $this->shouldPruneOrphans);
             return;
         }
 
         // Store scan context for the completion callback
         $enrich = $this->enrich;
+        $pruneOrphans = $this->shouldPruneOrphans;
         $scanStartedAtString = $scanStartedAt->toIso8601String();
 
         $batch = Bus::batch($jobs)
             ->name('library-scan')
             ->allowFailures()
-            ->finally(function () use ($bucket, $scanStartedAtString, $enrich) {
+            ->finally(function () use ($bucket, $scanStartedAtString, $enrich, $pruneOrphans) {
                 // Run post-scan cleanup in a separate job to ensure it runs
-                LibraryScanCleanupJob::dispatch($bucket, $scanStartedAtString, $enrich);
+                LibraryScanCleanupJob::dispatch($bucket, $scanStartedAtString, $enrich, $pruneOrphans);
             })
             ->onQueue('default')
             ->dispatch();
@@ -173,10 +175,10 @@ class LibraryScanJob implements ShouldQueue
     /**
      * Run post-scan cleanup (for empty file list case).
      */
-    private function runPostScanCleanup(string $bucket, \DateTimeInterface $scanStartedAt, MetadataAggregatorService $aggregator): void
+    private function runPostScanCleanup(string $bucket, \DateTimeInterface $scanStartedAt, MetadataAggregatorService $aggregator, bool $pruneOrphans): void
     {
-        // Prune orphans
-        $removedCount = $this->pruneOrphans($bucket, $scanStartedAt);
+        // Prune orphans only when explicitly requested
+        $removedCount = $pruneOrphans ? $this->pruneOrphans($bucket, $scanStartedAt) : 0;
 
         // Update tag counts (chunked to avoid memory issues)
         Tag::chunk(100, function ($tags) {

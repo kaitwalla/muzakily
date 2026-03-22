@@ -48,6 +48,7 @@ class LibraryScanCleanupJob implements ShouldQueue
         public string $bucket,
         public string $scanStartedAt,
         public bool $enrich = false,
+        public bool $shouldPruneOrphans = false,
     ) {}
 
     /**
@@ -68,8 +69,8 @@ class LibraryScanCleanupJob implements ShouldQueue
             throw new \InvalidArgumentException("Invalid scanStartedAt format: {$this->scanStartedAt}", 0, $e);
         }
 
-        // Prune orphans
-        $removedCount = $this->pruneOrphans($scanStartedAt);
+        // Prune orphans only when explicitly requested
+        $removedCount = $this->shouldPruneOrphans ? $this->pruneOrphans($scanStartedAt) : 0;
 
         $this->updateStatus('cleaning', 'Updating tag counts...', [
             'removed_songs' => $removedCount,
