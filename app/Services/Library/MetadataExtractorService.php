@@ -118,6 +118,15 @@ class MetadataExtractorService
                 'exit_code' => $result->exitCode(),
                 'stderr' => $result->errorOutput(),
             ]);
+
+            // If getID3 subprocess crashed (e.g. OOM), retry with ffprobe-only
+            if (!$ffprobeOnly) {
+                Log::info('Retrying metadata extraction with ffprobe-only', [
+                    'file' => basename($filePath),
+                ]);
+                return $this->extractInSubprocess($filePath, $fileSize, ffprobeOnly: true);
+            }
+
             return null;
         }
 
