@@ -70,9 +70,21 @@ class ExtractMetadataCommand extends Command
                 }
             }
 
-            // Remove cover_art from output - it's binary data that doesn't serialize well
-            // and would be too large to pass via subprocess anyway
-            unset($metadata['cover_art']);
+            // Base64 encode cover_art for JSON transport (skip if over 2MB)
+            $coverArt = $metadata['cover_art'] ?? null;
+            if (is_array($coverArt)) {
+                /** @var string $coverData */
+                $coverData = $coverArt['data'];
+                if (strlen($coverData) <= 2 * 1024 * 1024) {
+                    $metadata['cover_art'] = [
+                        'data' => base64_encode($coverData),
+                        'mime_type' => $coverArt['mime_type'],
+                        'encoding' => 'base64',
+                    ];
+                } else {
+                    $metadata['cover_art'] = null;
+                }
+            }
 
             // Use JSON_INVALID_UTF8_SUBSTITUTE to handle non-UTF8 strings in metadata
             $json = json_encode($metadata, JSON_INVALID_UTF8_SUBSTITUTE);
@@ -111,7 +123,7 @@ class ExtractMetadataCommand extends Command
      *     duration: float,
      *     bitrate: int|null,
      *     lyrics: string|null,
-     *     cover_art: null,
+     *     cover_art: array{data: string, mime_type: string}|null,
      * }
      */
     private function extractWithFfprobeOnly(MetadataExtractorService $extractor, string $filePath, ?int $fileSize): array

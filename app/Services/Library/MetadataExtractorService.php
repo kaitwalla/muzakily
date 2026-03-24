@@ -55,20 +55,7 @@ class MetadataExtractorService
     /**
      * Safely extract metadata with duration estimation, using subprocess.
      *
-     * @return array{
-     *     title: string|null,
-     *     artist: string|null,
-     *     album: string|null,
-     *     year: int|null,
-     *     track: int|null,
-     *     disc: int|null,
-     *     genre: string|null,
-     *     duration: float,
-     *     bitrate: int|null,
-     *     lyrics: string|null,
-     *     cover_art: null,
-     *     duration_estimated?: bool,
-     * }|null
+     * @return array<string, mixed>|null
      */
     public function safeExtractWithEstimation(string $filePath, int $fileSize, bool $ffprobeOnly = false): ?array
     {
@@ -78,20 +65,7 @@ class MetadataExtractorService
     /**
      * Extract metadata in a subprocess to isolate memory usage.
      *
-     * @return array{
-     *     title: string|null,
-     *     artist: string|null,
-     *     album: string|null,
-     *     year: int|null,
-     *     track: int|null,
-     *     disc: int|null,
-     *     genre: string|null,
-     *     duration: float,
-     *     bitrate: int|null,
-     *     lyrics: string|null,
-     *     cover_art: null,
-     *     duration_estimated?: bool,
-     * }|null
+     * @return array<string, mixed>|null
      */
     public function extractInSubprocess(string $filePath, ?int $fileSize = null, bool $ffprobeOnly = false): ?array
     {
@@ -136,7 +110,7 @@ class MetadataExtractorService
             return null;
         }
 
-        /** @var array{error?: string}|array{title: string|null, artist: string|null, album: string|null, year: int|null, track: int|null, disc: int|null, genre: string|null, duration: float, bitrate: int|null, lyrics: string|null}|null $data */
+        /** @var array<string, mixed>|null $data */
         $data = json_decode($output, true);
 
         if ($data === null || isset($data['error'])) {
@@ -147,8 +121,15 @@ class MetadataExtractorService
             return null;
         }
 
-        // Subprocess extraction doesn't include cover_art
-        $data['cover_art'] = null;
+        // Decode base64 cover_art from subprocess
+        if (isset($data['cover_art']['encoding']) && $data['cover_art']['encoding'] === 'base64') {
+            $data['cover_art'] = [
+                'data' => base64_decode($data['cover_art']['data']),
+                'mime_type' => $data['cover_art']['mime_type'],
+            ];
+        } else {
+            $data['cover_art'] = null;
+        }
 
         return $data;
     }
@@ -510,7 +491,7 @@ class MetadataExtractorService
      *     duration: float,
      *     bitrate: int|null,
      *     lyrics: string|null,
-     *     cover_art: null,
+     *     cover_art: array{data: string, mime_type: string}|null,
      * }
      */
     public function extractWithFfprobe(string $filePath, ?int $fileSize = null): array
@@ -586,7 +567,50 @@ class MetadataExtractorService
             'duration' => $duration,
             'bitrate' => $bitrate,
             'lyrics' => $tags['lyrics'] ?? $tags['USLT'] ?? null,
-            'cover_art' => null, // ffprobe doesn't easily extract cover art
+            'cover_art' => $this->extractCoverArtWithFfmpeg($filePath),
         ];
+    }
+
+    /**
+     * Extract embedded cover art using ffmpeg.
+     *
+     * @return array{data: string, mime_type: string}|null
+     */
+    public function extractCoverArtWithFfmpeg(string $filePath): ?array
+    {
+        $tempCover = tempnam(sys_get_temp_dir(), 'muzakily_cover_');
+        if ($tempCover === false) {
+            return null;
+        }
+
+        // ffmpeg outputs as the original embedded format
+        $tempCover .= '.jpg';
+
+        try {
+            $result = Process::timeout(30)->run([
+                'ffmpeg', '-i', $filePath,
+                '-an', '-vcodec', 'copy',
+                '-y', $tempCover,
+            ]);
+
+            if (!$result->successful() || !file_exists($tempCover) || filesize($tempCover) === 0) {
+                return null;
+            }
+
+            $data = file_get_contents($tempCover);
+            if ($data === false || strlen($data) > 2 * 1024 * 1024) {
+                return null;
+            }
+
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->buffer($data) ?: 'image/jpeg';
+
+            return [
+                'data' => $data,
+                'mime_type' => $mimeType,
+            ];
+        } finally {
+            @unlink($tempCover);
+        }
     }
 }
